@@ -997,6 +997,10 @@ export type Database = {
         }
         Returns: string
       }
+      org_user: {
+        Args: { _user_id?: string }
+        Returns: boolean
+      }
       verify_user_role: {
         Args: { required_role: Database["public"]["Enums"]["app_role"] }
         Returns: boolean
