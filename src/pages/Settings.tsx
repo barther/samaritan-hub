@@ -115,12 +115,17 @@ Good Samaritan Assistance Team`,
 
   const handleSave = async () => {
     if (!isAdmin) {
-      toast({ title: 'Not authorized', description: 'Only administrators can modify settings.', variant: 'destructive' });
+      toast({
+        title: "Permission Denied",
+        description: "Only administrators can modify settings.",
+        variant: "destructive"
+      });
       return;
     }
+
+    setLoading(true);
     try {
-      setLoading(true);
-      
+      // Save all settings to database
       const updates = [
         { key: 'financial', value: { lowFundThreshold: settings.lowFundThreshold, defaultAssistanceAmount: settings.defaultAssistanceAmount } },
         { key: 'system', value: { autoArchiveInteractions: settings.autoArchiveInteractions, requireClientLink: settings.requireClientLink, dataRetentionMonths: settings.dataRetentionMonths, enableAuditLog: settings.enableAuditLog } },
@@ -143,12 +148,50 @@ Good Samaritan Assistance Team`,
         if (error) throw error;
       }
 
-      toast({ title: 'Settings saved', description: 'Your changes have been saved successfully.' });
+      toast({
+        title: "Settings Saved",
+        description: "All settings have been saved successfully.",
+      });
     } catch (error: any) {
       console.error('Error saving settings:', error);
-      toast({ title: 'Error', description: error.message || 'Failed to save settings', variant: 'destructive' });
+      toast({
+        title: "Save Error",
+        description: error.message || "Failed to save settings. Please try again.",
+        variant: "destructive"
+      });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleAutoSave = async (settingType: string, newValue: any) => {
+    if (!isAdmin) return;
+
+    try {
+      const { data: userRes } = await supabase.auth.getUser();
+      const userId = userRes.user?.id ?? null;
+
+      const { error } = await supabase
+        .from('settings')
+        .upsert({ 
+          key: settingType, 
+          value: newValue,
+          updated_by: userId 
+        });
+
+      if (error) throw error;
+
+      toast({
+        title: "Settings saved",
+        description: "Your changes have been saved automatically.",
+      });
+    } catch (error) {
+      console.error('Error auto-saving setting:', error);
+      toast({
+        title: "Save Error",
+        description: "Failed to save setting. Please try again.",
+        variant: "destructive"
+      });
     }
   };
 
@@ -282,7 +325,14 @@ Good Samaritan Assistance Team`,
                       id="lowFundThreshold"
                       type="number"
                       value={settings.lowFundThreshold}
-                      onChange={(e) => setSettings(prev => ({ ...prev, lowFundThreshold: Number(e.target.value) }))}
+                      onChange={(e) => {
+                        const newSettings = { ...settings, lowFundThreshold: Number(e.target.value) };
+                        setSettings(newSettings);
+                      }}
+                      onBlur={(e) => {
+                        const newSettings = { ...settings, lowFundThreshold: Number(e.target.value) };
+                        handleAutoSave('financial', { lowFundThreshold: newSettings.lowFundThreshold, defaultAssistanceAmount: settings.defaultAssistanceAmount });
+                      }}
                     />
                     <p className="text-xs text-muted-foreground mt-1">
                       Show warning when funds fall below this amount

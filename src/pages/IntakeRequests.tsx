@@ -17,8 +17,10 @@ import {
   Calendar,
   FileText,
   UserPlus,
-  MessageSquare
+  MessageSquare,
+  PlayCircle
 } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { formatDistanceToNow } from "date-fns";
 
 interface IntakeRequest {
@@ -45,6 +47,7 @@ interface IntakeRequest {
 
 const IntakeRequests = () => {
   const { toast } = useToast();
+  const navigate = useNavigate();
   const [requests, setRequests] = useState<IntakeRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedRequest, setSelectedRequest] = useState<IntakeRequest | null>(null);
@@ -326,6 +329,97 @@ const IntakeRequests = () => {
     }
   };
 
+  const handleStartTriage = async (request: IntakeRequest) => {
+    try {
+      // Search for potential client matches first
+      const matches = await searchPotentialClients(request);
+      
+      let clientId: string;
+      
+      if (matches.length > 0) {
+        // Use the best match (highest score)
+        clientId = matches[0].id;
+        
+        toast({
+          title: "Client Matched",
+          description: `Linked to existing client: ${matches[0].first_name} ${matches[0].last_name}`,
+        });
+      } else {
+        // Create new client
+        const { data: newClient, error: clientError } = await supabase
+          .from('clients')
+          .insert({
+            first_name: request.first_name,
+            last_name: request.last_name,
+            email: request.email.toLowerCase(),
+            phone: request.phone,
+            address: request.address,
+            city: request.city,
+            state: request.state,
+            zip_code: request.zip_code,
+            county: request.county,
+          })
+          .select('id')
+          .single();
+
+        if (clientError) throw clientError;
+        clientId = newClient.id;
+      }
+
+      // Create interaction
+      const { data: interaction, error: interactionError } = await supabase
+        .from('interactions')
+        .insert({
+          client_id: clientId,
+          contact_name: `${request.first_name} ${request.last_name}`,
+          summary: `Public intake triage: ${request.help_needed.substring(0, 100)}...`,
+          details: request.help_needed,
+          channel: 'public_form',
+          status: 'new',
+        })
+        .select('id')
+        .single();
+
+      if (interactionError) throw interactionError;
+
+      // Create assistance request with triage status
+      const { data: assistanceRequest, error: requestError } = await supabase
+        .from('assistance_requests')
+        .insert({
+          client_id: clientId,
+          interaction_id: interaction.id,
+          help_requested: request.help_needed,
+          circumstances: `Public intake submission: ${request.help_needed}`,
+        })
+        .select('id')
+        .single();
+
+      if (requestError) throw requestError;
+
+      // Update intake request as processing
+      await supabase
+        .from('public_intake')
+        .update({
+          status: 'processing',
+          client_id: clientId,
+          interaction_id: interaction.id,
+          assistance_request_id: assistanceRequest.id,
+        })
+        .eq('id', request.id);
+
+      // Navigate to client detail page to start triage
+      navigate(`/portal/clients/${clientId}?startTriage=${assistanceRequest.id}`);
+      
+    } catch (error) {
+      console.error('Error starting triage:', error);
+      toast({
+        title: "Error",
+        description: "Failed to start triage. Please try again.",
+        variant: "destructive"
+      });
+    }
+  };
+
   const pendingRequests = requests.filter(r => r.status === 'pending');
   const processedRequests = requests.filter(r => r.status !== 'pending');
 
@@ -378,34 +472,48 @@ const IntakeRequests = () => {
                   onClick={() => setSelectedRequest(request)}
                 >
                   <div className="flex items-start justify-between">
-                    <div className="space-y-2">
-                      <div className="flex items-center gap-2">
-                        <User className="h-4 w-4 text-muted-foreground" />
-                        <span className="font-medium">
-                          {request.first_name} {request.last_name}
-                        </span>
-                        <Badge className={getStatusColor(request.status)}>
-                          {request.status}
-                        </Badge>
-                      </div>
-                      
-                      <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                        <div className="flex items-center gap-1">
-                          <Mail className="h-3 w-3" />
-                          {request.email}
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <Phone className="h-3 w-3" />
-                          {request.phone}
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <Calendar className="h-3 w-3" />
-                          {formatDistanceToNow(new Date(request.created_at))} ago
-                        </div>
-                      </div>
-                      
-                      <p className="text-sm line-clamp-2">{request.help_needed}</p>
+                  <div className="space-y-2 flex-1">
+                    <div className="flex items-center gap-2">
+                      <User className="h-4 w-4 text-muted-foreground" />
+                      <span className="font-medium">
+                        {request.first_name} {request.last_name}
+                      </span>
+                      <Badge className={getStatusColor(request.status)}>
+                        {request.status}
+                      </Badge>
                     </div>
+                    
+                    <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                      <div className="flex items-center gap-1">
+                        <Mail className="h-3 w-3" />
+                        {request.email}
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <Phone className="h-3 w-3" />
+                        {request.phone}
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <Calendar className="h-3 w-3" />
+                        {formatDistanceToNow(new Date(request.created_at))} ago
+                      </div>
+                    </div>
+                    
+                    <p className="text-sm line-clamp-2">{request.help_needed}</p>
+                  </div>
+                  
+                  <div className="flex items-center space-x-2">
+                    <Button
+                      size="sm"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleStartTriage(request);
+                      }}
+                      className="flex items-center space-x-1"
+                    >
+                      <PlayCircle className="h-4 w-4" />
+                      <span>Start Triage</span>
+                    </Button>
+                  </div>
                   </div>
                 </div>
               ))}

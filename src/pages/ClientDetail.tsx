@@ -1,181 +1,146 @@
 import { useState, useEffect } from "react";
-import { useParams, useNavigate } from "react-router-dom";
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { useParams, useSearchParams, useNavigate } from "react-router-dom";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 import { 
-  ArrowLeft, 
   User, 
   Phone, 
   Mail, 
   MapPin, 
   Calendar,
   DollarSign,
-  MessageSquare,
+  FileText,
+  Edit,
   Plus,
-  ClipboardCheck,
-  FileText
+  Users,
+  MessageSquare,
+  Activity,
+  ArrowLeft
 } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
-import { useToast } from "@/hooks/use-toast";
-import TriageForm from "@/components/TriageForm";
+import { formatDistanceToNow } from "date-fns";
 import { NewInteractionModal } from "@/components/modals/NewInteractionModal";
-
-interface Client {
-  id: string;
-  first_name: string;
-  last_name: string;
-  email?: string;
-  phone?: string;
-  address?: string;
-  city?: string;
-  state?: string;
-  zip_code?: string;
-  created_at: string;
-}
-
-interface Interaction {
-  id: string;
-  contact_name: string;
-  channel: string;
-  summary: string;
-  details?: string;
-  status: string;
-  assistance_type?: string;
-  requested_amount?: number;
-  approved_amount?: number;
-  occurred_at: string;
-  created_at: string;
-}
-
-interface Disbursement {
-  id: string;
-  amount: number;
-  assistance_type: string;
-  recipient_name: string;
-  disbursement_date: string;
-  payment_method: string;
-  check_number?: string;
-  notes?: string;
-  created_at: string;
-}
-
-interface AssistanceRequest {
-  id: string;
-  help_requested: string;
-  circumstances?: string;
-  triage_completed_at?: string;
-  triaged_by_user_id?: string;
-  created_at: string;
-}
+import { DisbursementModal } from "@/components/modals/DisbursementModal";
+import { TriageForm } from "@/components/TriageForm";
 
 const ClientDetail = () => {
-  const { clientId } = useParams<{ clientId: string }>();
+  const { id } = useParams<{ id: string }>();
+  const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const { toast } = useToast();
-  
-  const [client, setClient] = useState<Client | null>(null);
-  const [interactions, setInteractions] = useState<Interaction[]>([]);
-  const [disbursements, setDisbursements] = useState<Disbursement[]>([]);
-  const [assistanceRequests, setAssistanceRequests] = useState<AssistanceRequest[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [triageModalOpen, setTriageModalOpen] = useState(false);
-  const [selectedRequestId, setSelectedRequestId] = useState<string | null>(null);
-  const [showInteractionModal, setShowInteractionModal] = useState(false);
+  const [client, setClient] = useState<any>(null);
+  const [interactions, setInteractions] = useState<any[]>([]);
+  const [disbursements, setDisbursements] = useState<any[]>([]);
+  const [assistanceRequests, setAssistanceRequests] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [showNewInteraction, setShowNewInteraction] = useState(false);
+  const [showDisbursement, setShowDisbursement] = useState(false);
+  const [showTriage, setShowTriage] = useState(false);
+  const [selectedAssistanceRequest, setSelectedAssistanceRequest] = useState<any>(null);
 
-  useEffect(() => {
-    if (clientId) {
-      loadClientData();
-    }
-  }, [clientId]);
-
-  const loadClientData = async () => {
+  const fetchClientDetails = async () => {
+    if (!id) return;
+    
     try {
-      setIsLoading(true);
+      setLoading(true);
       
-      // Load client info
+      // Fetch client data
       const { data: clientData, error: clientError } = await supabase
         .from('clients')
         .select('*')
-        .eq('id', clientId)
+        .eq('id', id)
         .single();
 
       if (clientError) throw clientError;
       setClient(clientData);
 
-      // Load interactions
+      // Fetch interactions
       const { data: interactionsData, error: interactionsError } = await supabase
         .from('interactions')
         .select('*')
-        .eq('client_id', clientId)
+        .eq('client_id', id)
         .order('occurred_at', { ascending: false });
 
       if (interactionsError) throw interactionsError;
       setInteractions(interactionsData || []);
 
-      // Load disbursements
+      // Fetch disbursements
       const { data: disbursementsData, error: disbursementsError } = await supabase
         .from('disbursements')
         .select('*')
-        .eq('client_id', clientId)
+        .eq('client_id', id)
         .order('disbursement_date', { ascending: false });
 
       if (disbursementsError) throw disbursementsError;
       setDisbursements(disbursementsData || []);
 
-      // Load assistance requests
+      // Fetch assistance requests
       const { data: requestsData, error: requestsError } = await supabase
         .from('assistance_requests')
         .select('*')
-        .eq('client_id', clientId)
+        .eq('client_id', id)
         .order('created_at', { ascending: false });
 
       if (requestsError) throw requestsError;
       setAssistanceRequests(requestsData || []);
 
     } catch (error) {
-      console.error('Error loading client data:', error);
+      console.error('Error fetching client details:', error);
       toast({
-        title: "Error loading client data",
-        description: "Please try again.",
+        title: "Error",
+        description: "Failed to load client details",
         variant: "destructive"
       });
     } finally {
-      setIsLoading(false);
+      setLoading(false);
     }
   };
 
-  if (isLoading) {
+  useEffect(() => {
+    if (id) {
+      fetchClientDetails();
+    }
+  }, [id]);
+
+  useEffect(() => {
+    // Check if we should auto-start triage from query param
+    const startTriageId = searchParams.get('startTriage');
+    if (startTriageId && assistanceRequests.length > 0) {
+      const requestToTriage = assistanceRequests.find(req => req.id === startTriageId);
+      if (requestToTriage) {
+        setSelectedAssistanceRequest(requestToTriage);
+        setShowTriage(true);
+      }
+    }
+  }, [searchParams, assistanceRequests]);
+
+  if (loading) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-          <p className="text-muted-foreground">Loading client information...</p>
-        </div>
+      <div className="flex items-center justify-center py-8">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
       </div>
     );
   }
 
   if (!client) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="text-center">
-          <h2 className="text-2xl font-bold mb-2">Client Not Found</h2>
-          <p className="text-muted-foreground mb-4">The requested client could not be found.</p>
-          <Button onClick={() => navigate('/portal/dashboard')}>
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Back to Dashboard
-          </Button>
-        </div>
+      <div className="text-center py-8">
+        <p>Client not found</p>
+        <Button onClick={() => navigate('/portal/dashboard')}>
+          <ArrowLeft className="h-4 w-4 mr-2" />
+          Back to Dashboard
+        </Button>
       </div>
     );
   }
 
+  const totalRequested = assistanceRequests.reduce((sum, req) => sum + (req.requested_amount || 0), 0);
+  const totalApproved = assistanceRequests.reduce((sum, req) => sum + (req.approved_amount || 0), 0);
   const totalDisbursed = disbursements.reduce((sum, d) => sum + d.amount, 0);
-  const totalRequested = interactions.reduce((sum, i) => sum + (i.requested_amount || 0), 0);
-  const totalApproved = interactions.reduce((sum, i) => sum + (i.approved_amount || 0), 0);
 
   return (
     <div className="min-h-screen bg-background">
@@ -198,10 +163,15 @@ const ClientDetail = () => {
                 <p className="text-sm text-muted-foreground">Client Details</p>
               </div>
             </div>
-            <Button onClick={() => setShowInteractionModal(true)}>
-              <Plus className="h-4 w-4 mr-2" />
-              New Interaction
-            </Button>
+            <div className="flex items-center space-x-2">
+              <Button 
+                onClick={() => setShowNewInteraction(true)}
+                size="sm"
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                New Interaction
+              </Button>
+            </div>
           </div>
         </div>
       </header>
@@ -209,236 +179,119 @@ const ClientDetail = () => {
       <main className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Client Info Card */}
         <Card className="mb-6">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <User className="h-5 w-5" />
-              Client Information
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              <div className="space-y-2">
-                <div className="flex items-center gap-2 text-sm">
-                  <User className="h-4 w-4 text-muted-foreground" />
-                  <span className="font-medium">{client.first_name} {client.last_name}</span>
-                </div>
-                {client.email && (
-                  <div className="flex items-center gap-2 text-sm">
-                    <Mail className="h-4 w-4 text-muted-foreground" />
-                    <span>{client.email}</span>
-                  </div>
-                )}
-                {client.phone && (
-                  <div className="flex items-center gap-2 text-sm">
-                    <Phone className="h-4 w-4 text-muted-foreground" />
-                    <span>{client.phone}</span>
-                  </div>
-                )}
+          <CardContent className="p-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="flex items-center space-x-2">
+                <Mail className="h-4 w-4 text-muted-foreground" />
+                <span className="text-sm">{client.email || 'No email'}</span>
               </div>
-              
-              {(client.address || client.city || client.state || client.zip_code) && (
-                <div className="space-y-2">
-                  <div className="flex items-start gap-2 text-sm">
-                    <MapPin className="h-4 w-4 text-muted-foreground mt-0.5" />
-                    <div>
-                      {client.address && <div>{client.address}</div>}
-                      <div>
-                        {client.city && client.city}
-                        {client.city && client.state && ', '}
-                        {client.state && client.state}
-                        {client.zip_code && ` ${client.zip_code}`}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
-              
-              <div className="space-y-2">
-                <div className="flex items-center gap-2 text-sm">
-                  <Calendar className="h-4 w-4 text-muted-foreground" />
-                  <span>Added: {new Date(client.created_at).toLocaleDateString()}</span>
-                </div>
-                <div className="flex items-center gap-2 text-sm">
-                  <DollarSign className="h-4 w-4 text-muted-foreground" />
-                  <span>Total Requested: ${totalRequested.toFixed(2)}</span>
-                </div>
-                <div className="flex items-center gap-2 text-sm">
-                  <DollarSign className="h-4 w-4 text-muted-foreground" />
-                  <span>Total Approved: ${totalApproved.toFixed(2)}</span>
-                </div>
-                <div className="flex items-center gap-2 text-sm">
-                  <DollarSign className="h-4 w-4 text-muted-foreground" />
-                  <span>Total Disbursed: ${totalDisbursed.toFixed(2)}</span>
-                </div>
-                <div className="flex items-center gap-2 text-sm">
-                  <MessageSquare className="h-4 w-4 text-muted-foreground" />
-                  <span>Interactions: {interactions.length}</span>
-                </div>
+              <div className="flex items-center space-x-2">
+                <Phone className="h-4 w-4 text-muted-foreground" />
+                <span className="text-sm">{client.phone || 'No phone'}</span>
+              </div>
+              <div className="flex items-center space-x-2">
+                <MapPin className="h-4 w-4 text-muted-foreground" />
+                <span className="text-sm">{client.city}, {client.state} {client.zip_code}</span>
+              </div>
+              <div className="flex items-center space-x-2">
+                <Calendar className="h-4 w-4 text-muted-foreground" />
+                <span className="text-sm">Client since {formatDistanceToNow(new Date(client.created_at))} ago</span>
               </div>
             </div>
           </CardContent>
         </Card>
 
-        {/* Financial Summary Card */}
-        <Card className="mb-6">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <DollarSign className="h-5 w-5" />
-              Financial Summary
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="text-center p-4 bg-blue-50 rounded-lg">
-                <div className="text-2xl font-bold text-blue-600">${totalRequested.toFixed(2)}</div>
-                <div className="text-sm text-muted-foreground">Total Requested</div>
-              </div>
-              <div className="text-center p-4 bg-green-50 rounded-lg">
-                <div className="text-2xl font-bold text-green-600">${totalApproved.toFixed(2)}</div>
-                <div className="text-sm text-muted-foreground">Total Approved</div>
-              </div>
-              <div className="text-center p-4 bg-purple-50 rounded-lg">
-                <div className="text-2xl font-bold text-purple-600">${totalDisbursed.toFixed(2)}</div>
-                <div className="text-sm text-muted-foreground">Total Disbursed</div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+        {/* Financial Summary */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+          <Card>
+            <CardContent className="p-4">
+              <div className="text-2xl font-bold">${totalRequested.toFixed(2)}</div>
+              <p className="text-xs text-muted-foreground">Total Requested</p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="p-4">
+              <div className="text-2xl font-bold text-warning">${totalApproved.toFixed(2)}</div>
+              <p className="text-xs text-muted-foreground">Total Approved</p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="p-4">
+              <div className="text-2xl font-bold text-success">${totalDisbursed.toFixed(2)}</div>
+              <p className="text-xs text-muted-foreground">Total Disbursed</p>
+            </CardContent>
+          </Card>
+        </div>
 
-        {/* Tabs for Interactions, Disbursements, and Assistance Requests */}
-        <Tabs defaultValue="requests" className="space-y-4">
+        {/* Main Content */}
+        <Tabs defaultValue="interactions" className="space-y-4">
           <TabsList>
-            <TabsTrigger value="requests">
-              Assistance Requests ({assistanceRequests.length})
-            </TabsTrigger>
-            <TabsTrigger value="interactions">
-              Interactions ({interactions.length})
-            </TabsTrigger>
-            <TabsTrigger value="disbursements">
-              Disbursements ({disbursements.length})
-            </TabsTrigger>
+            <TabsTrigger value="interactions">Interactions</TabsTrigger>
+            <TabsTrigger value="assistance">Assistance Requests</TabsTrigger>
+            <TabsTrigger value="disbursements">Disbursements</TabsTrigger>
           </TabsList>
 
-          <TabsContent value="requests">
+          <TabsContent value="interactions">
             <Card>
               <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <FileText className="h-5 w-5" />
-                  Assistance Requests
-                </CardTitle>
+                <CardTitle>Recent Interactions</CardTitle>
               </CardHeader>
               <CardContent>
-                {assistanceRequests.length > 0 ? (
-                  <div className="space-y-4">
-                    {assistanceRequests.map((request) => (
-                      <div key={request.id} className="border border-border rounded-lg p-4">
-                        <div className="flex items-start justify-between mb-3">
-                          <div className="flex items-center gap-2">
-                            <Badge 
-                              variant={request.triage_completed_at ? "default" : "destructive"} 
-                              className="text-xs"
-                            >
-                              {request.triage_completed_at ? "Triaged" : "Pending Triage"}
-                            </Badge>
+                {interactions.length === 0 ? (
+                  <p className="text-center text-muted-foreground py-4">No interactions found</p>
+                ) : (
+                  <div className="space-y-2">
+                    {interactions.map((interaction) => (
+                      <div key={interaction.id} className="border rounded p-3">
+                        <div className="flex justify-between items-start">
+                          <div>
+                            <h4 className="font-medium">{interaction.summary}</h4>
+                            <p className="text-sm text-muted-foreground">{interaction.details}</p>
                           </div>
-                          <div className="flex items-center gap-2">
-                            {!request.triage_completed_at && (
-                              <Button
-                                size="sm"
-                                onClick={() => {
-                                  setSelectedRequestId(request.id);
-                                  setTriageModalOpen(true);
-                                }}
-                              >
-                                <ClipboardCheck className="h-4 w-4 mr-2" />
-                                Start Triage
-                              </Button>
-                            )}
-                            <span className="text-xs text-muted-foreground">
-                              {new Date(request.created_at).toLocaleDateString()}
-                            </span>
-                          </div>
+                          <Badge variant="outline">{interaction.status}</Badge>
                         </div>
-                        
-                        <h4 className="font-medium mb-2">Help Requested:</h4>
-                        <p className="text-sm text-muted-foreground mb-3">{request.help_requested}</p>
-                        
-                        {request.circumstances && (
-                          <>
-                            <h4 className="font-medium mb-2">Circumstances:</h4>
-                            <p className="text-sm text-muted-foreground mb-3">{request.circumstances}</p>
-                          </>
-                        )}
-                        
-                        {request.triage_completed_at && (
-                          <div className="text-xs text-muted-foreground border-t pt-2">
-                            Triaged on: {new Date(request.triage_completed_at).toLocaleDateString()}
-                            {request.triaged_by_user_id && (
-                              <span> by User ID: {request.triaged_by_user_id}</span>
-                            )}
-                          </div>
-                        )}
                       </div>
                     ))}
                   </div>
-                ) : (
-                  <p className="text-center text-muted-foreground py-8">
-                    No assistance requests for this client.
-                  </p>
                 )}
               </CardContent>
             </Card>
           </TabsContent>
 
-          <TabsContent value="interactions">
+          <TabsContent value="assistance">
             <Card>
               <CardHeader>
-                <CardTitle>Interaction History</CardTitle>
+                <CardTitle>Assistance Requests</CardTitle>
               </CardHeader>
               <CardContent>
-                {interactions.length > 0 ? (
-                  <div className="space-y-4">
-                    {interactions.map((interaction) => (
-                      <div key={interaction.id} className="border border-border rounded-lg p-4">
-                        <div className="flex items-start justify-between mb-2">
-                          <div className="flex items-center gap-2">
-                            <Badge variant="outline" className="text-xs">
-                              {interaction.channel.replace('_', ' ')}
-                            </Badge>
-                            <Badge variant={interaction.status === 'new' ? 'destructive' : 'secondary'} className="text-xs">
-                              {interaction.status}
-                            </Badge>
-                            {interaction.assistance_type && (
-                              <Badge variant="default" className="text-xs">
-                                {interaction.assistance_type}
-                              </Badge>
-                            )}
+                {assistanceRequests.length === 0 ? (
+                  <p className="text-center text-muted-foreground py-4">No assistance requests found</p>
+                ) : (
+                  <div className="space-y-2">
+                    {assistanceRequests.map((request) => (
+                      <div key={request.id} className="border rounded p-3">
+                        <div className="flex justify-between items-start">
+                          <div>
+                            <h4 className="font-medium">{request.help_requested}</h4>
+                            <p className="text-sm text-muted-foreground">
+                              Requested: ${request.requested_amount || 0}
+                            </p>
                           </div>
-                          <span className="text-xs text-muted-foreground">
-                            {new Date(interaction.occurred_at).toLocaleDateString()}
-                          </span>
-                        </div>
-                        
-                        <h4 className="font-medium mb-1">{interaction.summary}</h4>
-                        {interaction.details && (
-                          <p className="text-sm text-muted-foreground mb-2">{interaction.details}</p>
-                        )}
-                        
-                        <div className="flex items-center gap-4 text-xs text-muted-foreground">
-                          {interaction.requested_amount && (
-                            <span>Requested: ${interaction.requested_amount.toFixed(2)}</span>
-                          )}
-                          {interaction.approved_amount && (
-                            <span>Approved: ${interaction.approved_amount.toFixed(2)}</span>
+                          {!request.triage_completed_at && (
+                            <Button
+                              size="sm"
+                              onClick={() => {
+                                setSelectedAssistanceRequest(request);
+                                setShowTriage(true);
+                              }}
+                            >
+                              Start Triage
+                            </Button>
                           )}
                         </div>
                       </div>
                     ))}
                   </div>
-                ) : (
-                  <p className="text-center text-muted-foreground py-8">
-                    No interactions recorded for this client.
-                  </p>
                 )}
               </CardContent>
             </Card>
@@ -447,94 +300,64 @@ const ClientDetail = () => {
           <TabsContent value="disbursements">
             <Card>
               <CardHeader>
-                <CardTitle>Disbursement History</CardTitle>
+                <CardTitle>Disbursements</CardTitle>
               </CardHeader>
               <CardContent>
-                {disbursements.length > 0 ? (
-                  <div className="space-y-4">
+                {disbursements.length === 0 ? (
+                  <p className="text-center text-muted-foreground py-4">No disbursements found</p>
+                ) : (
+                  <div className="space-y-2">
                     {disbursements.map((disbursement) => (
-                      <div key={disbursement.id} className="border border-border rounded-lg p-4">
-                        <div className="flex items-start justify-between mb-2">
-                          <div className="flex items-center gap-2">
-                            <Badge variant="default" className="text-xs">
-                              {disbursement.assistance_type}
-                            </Badge>
-                            <Badge variant="outline" className="text-xs">
-                              {disbursement.payment_method}
-                            </Badge>
-                            {disbursement.check_number && (
-                              <Badge variant="secondary" className="text-xs">
-                                Check #{disbursement.check_number}
-                              </Badge>
-                            )}
+                      <div key={disbursement.id} className="border rounded p-3">
+                        <div className="flex justify-between items-start">
+                          <div>
+                            <h4 className="font-medium">${disbursement.amount}</h4>
+                            <p className="text-sm text-muted-foreground">
+                              {disbursement.assistance_type} - {disbursement.payment_method}
+                            </p>
                           </div>
-                          <div className="text-right">
-                            <div className="text-lg font-bold text-success">
-                              ${disbursement.amount.toFixed(2)}
-                            </div>
-                            <div className="text-xs text-muted-foreground">
-                              {new Date(disbursement.disbursement_date).toLocaleDateString()}
-                            </div>
-                          </div>
-                        </div>
-                        
-                        <div className="text-sm">
-                          <p><strong>Recipient:</strong> {disbursement.recipient_name}</p>
-                          {disbursement.notes && (
-                            <p className="text-muted-foreground mt-1">{disbursement.notes}</p>
-                          )}
+                          <span className="text-sm text-muted-foreground">
+                            {formatDistanceToNow(new Date(disbursement.disbursement_date))} ago
+                          </span>
                         </div>
                       </div>
                     ))}
-                    
-                    <div className="border-t pt-4">
-                      <div className="text-right">
-                        <span className="text-lg font-bold">
-                          Total Disbursed: ${totalDisbursed.toFixed(2)}
-                        </span>
-                      </div>
-                    </div>
                   </div>
-                ) : (
-                  <p className="text-center text-muted-foreground py-8">
-                    No disbursements recorded for this client.
-                  </p>
                 )}
               </CardContent>
             </Card>
           </TabsContent>
         </Tabs>
-
-        {/* Triage Modal */}
-        <Dialog open={triageModalOpen} onOpenChange={setTriageModalOpen}>
-          <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle>Complete Triage for {client.first_name} {client.last_name}</DialogTitle>
-            </DialogHeader>
-            {selectedRequestId && (
-              <TriageForm
-                assistanceRequestId={selectedRequestId}
-                initialData={assistanceRequests.find(r => r.id === selectedRequestId)}
-                onComplete={() => {
-                  setTriageModalOpen(false);
-                  setSelectedRequestId(null);
-                  loadClientData(); // Reload to show updated status
-                }}
-                onCancel={() => {
-                  setTriageModalOpen(false);
-                  setSelectedRequestId(null);
-                }}
-              />
-            )}
-          </DialogContent>
-        </Dialog>
-
-        {/* New Interaction Modal */}
-        <NewInteractionModal
-          open={showInteractionModal}
-          onOpenChange={setShowInteractionModal}
-        />
       </main>
+
+      {/* Modals */}
+      {showNewInteraction && (
+        <NewInteractionModal
+          isOpen={showNewInteraction}
+          onClose={() => setShowNewInteraction(false)}
+          onSuccess={() => {
+            setShowNewInteraction(false);
+            fetchClientDetails();
+          }}
+          clientId={id}
+        />
+      )}
+
+      {showTriage && selectedAssistanceRequest && (
+        <TriageForm
+          assistanceRequestId={selectedAssistanceRequest.id}
+          initialData={selectedAssistanceRequest}
+          onComplete={() => {
+            setShowTriage(false);
+            setSelectedAssistanceRequest(null);
+            fetchClientDetails();
+          }}
+          onCancel={() => {
+            setShowTriage(false);
+            setSelectedAssistanceRequest(null);
+          }}
+        />
+      )}
     </div>
   );
 };
