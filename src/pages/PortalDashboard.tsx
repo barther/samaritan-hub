@@ -2,17 +2,7 @@ import { useEffect, useState } from "react";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { 
-  Users, 
-  DollarSign, 
-  FileText, 
-  Search, 
-  Plus,
-  TrendingUp,
-  AlertCircle,
-  Clock,
-  Zap
-} from "lucide-react";
+import { Users, DollarSign, FileText, Search, Plus, TrendingUp, AlertCircle, Clock, Zap } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -21,27 +11,30 @@ import { DisbursementModal } from "@/components/modals/DisbursementModal";
 import { NewInteractionModal } from "@/components/modals/NewInteractionModal";
 import { QuickEntryModal } from "@/components/modals/QuickEntryModal";
 import { TransactionLedger } from "@/components/TransactionLedger";
-
 const PortalDashboard = () => {
   const navigate = useNavigate();
-  const { toast } = useToast();
-  
+  const {
+    toast
+  } = useToast();
+
   // User profile state
-  const [userProfile, setUserProfile] = useState<{ displayName: string } | null>(null);
-  
+  const [userProfile, setUserProfile] = useState<{
+    displayName: string;
+  } | null>(null);
+
   // User roles state
   const [userRoles, setUserRoles] = useState<string[]>([]);
   const [isLoadingRoles, setIsLoadingRoles] = useState(true);
-  
+
   // Modal states
   const [showDonationModal, setShowDonationModal] = useState(false);
   const [showDisbursementModal, setShowDisbursementModal] = useState(false);
   const [showInteractionModal, setShowInteractionModal] = useState(false);
   const [showQuickEntryModal, setShowQuickEntryModal] = useState(false);
-  
+
   // Search term for client lookup
   const [searchTerm, setSearchTerm] = useState("");
-  
+
   // Real data states
   const [interactions, setInteractions] = useState<any[]>([]);
   const [isLoadingInteractions, setIsLoadingInteractions] = useState(true);
@@ -52,7 +45,6 @@ const PortalDashboard = () => {
   const [monthlyDisbursements, setMonthlyDisbursements] = useState(0);
   const [unreadCount, setUnreadCount] = useState(0);
   const [isInteractionsHidden, setIsInteractionsHidden] = useState(false);
-  
   const lowFundThreshold = 100;
   const ITEMS_PER_PAGE = 5;
 
@@ -61,22 +53,23 @@ const PortalDashboard = () => {
   const isStaff = userRoles.includes('staff');
   const canViewFinancials = isAdmin; // Only admins can view financial data now
   const canEditData = isAdmin || isStaff;
-
   useEffect(() => {
     loadUserRoles();
   }, []);
-
   useEffect(() => {
     if (!isLoadingRoles) {
       loadInitialData();
     }
   }, [isLoadingRoles]);
-
   const loadUserRoles = async () => {
     try {
-      const { data: session } = await supabase.auth.getSession();
+      const {
+        data: session
+      } = await supabase.auth.getSession();
       if (!session.session?.user) {
-        navigate("/portal", { replace: true });
+        navigate("/portal", {
+          replace: true
+        });
         return;
       }
 
@@ -87,32 +80,45 @@ const PortalDashboard = () => {
         toast({
           title: "Organization access only",
           description: "Please sign in with your @lithiaspringsmethodist.org account.",
-          variant: "destructive",
+          variant: "destructive"
         });
-        navigate("/portal", { replace: true });
+        navigate("/portal", {
+          replace: true
+        });
         return;
       }
 
       // Use secure RPC function to check roles instead of direct table access
       try {
         const userId = session.session.user.id;
-        
-        // Check for admin role
-        const { data: hasAdminRole, error: adminError } = await supabase
-          .rpc('has_role', { _user_id: userId, _role: 'admin' });
-        
-        // Check for staff role  
-        const { data: hasStaffRole, error: staffError } = await supabase
-          .rpc('has_role', { _user_id: userId, _role: 'staff' });
 
+        // Check for admin role
+        const {
+          data: hasAdminRole,
+          error: adminError
+        } = await supabase.rpc('has_role', {
+          _user_id: userId,
+          _role: 'admin'
+        });
+
+        // Check for staff role  
+        const {
+          data: hasStaffRole,
+          error: staffError
+        } = await supabase.rpc('has_role', {
+          _user_id: userId,
+          _role: 'staff'
+        });
         if (adminError && staffError) {
           console.error('Error checking user roles:', adminError, staffError);
           toast({
-            title: "Error loading permissions", 
+            title: "Error loading permissions",
             description: "Please contact an administrator.",
             variant: "destructive"
           });
-          navigate("/portal", { replace: true });
+          navigate("/portal", {
+            replace: true
+          });
           return;
         }
 
@@ -123,7 +129,9 @@ const PortalDashboard = () => {
             description: "Please contact an administrator to assign your role.",
             variant: "destructive"
           });
-          navigate("/portal", { replace: true });
+          navigate("/portal", {
+            replace: true
+          });
           return;
         }
 
@@ -131,9 +139,8 @@ const PortalDashboard = () => {
         const roleNames: string[] = [];
         if (hasAdminRole) roleNames.push('admin');
         if (hasStaffRole) roleNames.push('staff');
-        
         setUserRoles(roleNames);
-        
+
         // Load user profile from Azure
         await loadUserProfile(session.session.user.email!);
       } catch (roleError) {
@@ -143,90 +150,86 @@ const PortalDashboard = () => {
           description: "Please contact an administrator to assign your role.",
           variant: "destructive"
         });
-        navigate("/portal", { replace: true });
+        navigate("/portal", {
+          replace: true
+        });
         return;
       }
     } catch (error) {
       console.error('Error in loadUserRoles:', error);
-      navigate("/portal", { replace: true });
+      navigate("/portal", {
+        replace: true
+      });
     } finally {
       setIsLoadingRoles(false);
     }
   };
-
   const loadUserProfile = async (email: string) => {
     try {
-      const { data, error } = await supabase.functions.invoke('get-user-profile', {
-        body: { userEmail: email }
+      const {
+        data,
+        error
+      } = await supabase.functions.invoke('get-user-profile', {
+        body: {
+          userEmail: email
+        }
       });
-
       if (error) {
         console.error('Error loading user profile:', error);
         // Set fallback profile
-        setUserProfile({ displayName: email.split('@')[0] });
+        setUserProfile({
+          displayName: email.split('@')[0]
+        });
         return;
       }
-
       if (data?.profile) {
-        setUserProfile({ displayName: data.profile.displayName });
+        setUserProfile({
+          displayName: data.profile.displayName
+        });
       } else {
         // Set fallback profile
-        setUserProfile({ displayName: email.split('@')[0] });
+        setUserProfile({
+          displayName: email.split('@')[0]
+        });
       }
     } catch (error) {
       console.error('Error loading user profile:', error);
       // Set fallback profile
-      setUserProfile({ displayName: email.split('@')[0] });
+      setUserProfile({
+        displayName: email.split('@')[0]
+      });
     }
   };
-
   const handleLogout = async () => {
     try {
       await supabase.auth.signOut();
-      navigate("/portal", { replace: true });
+      navigate("/portal", {
+        replace: true
+      });
     } catch (error) {
       console.error('Error signing out:', error);
       toast({
         title: "Error",
         description: "Failed to sign out. Please try again.",
-        variant: "destructive",
+        variant: "destructive"
       });
     }
   };
-
   const loadInitialData = async () => {
-    await Promise.all([
-      loadInteractions(0, true),
-      loadBalance(),
-      loadMonthlyTrends()
-    ]);
+    await Promise.all([loadInteractions(0, true), loadBalance(), loadMonthlyTrends()]);
   };
-
   const loadMonthlyTrends = async () => {
     if (!canViewFinancials) {
       setMonthlyDonations(0);
       setMonthlyDisbursements(0);
       return;
     }
-
     try {
       const thirtyDaysAgo = new Date();
       thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-
-      const [donationsRes, disbursementsRes] = await Promise.all([
-        supabase
-          .from('donations')
-          .select('amount')
-          .gte('donation_date', thirtyDaysAgo.toISOString().split('T')[0]),
-        supabase
-          .from('disbursements')
-          .select('amount')
-          .gte('disbursement_date', thirtyDaysAgo.toISOString().split('T')[0])
-      ]);
-
+      const [donationsRes, disbursementsRes] = await Promise.all([supabase.from('donations').select('amount').gte('donation_date', thirtyDaysAgo.toISOString().split('T')[0]), supabase.from('disbursements').select('amount').gte('disbursement_date', thirtyDaysAgo.toISOString().split('T')[0])]);
       const monthlyDonationsTotal = donationsRes.data?.reduce((sum, d) => sum + d.amount, 0) || 0;
       const monthlyDisbursementsTotal = disbursementsRes.data?.reduce((sum, d) => sum + d.amount, 0) || 0;
-      
       setMonthlyDonations(monthlyDonationsTotal);
       setMonthlyDisbursements(monthlyDisbursementsTotal);
     } catch (error) {
@@ -235,37 +238,30 @@ const PortalDashboard = () => {
       setMonthlyDisbursements(0);
     }
   };
-
   const loadBalance = async () => {
     if (!canViewFinancials) {
       setBalance(0);
       return;
     }
-
     try {
-      const [donationsRes, disbursementsRes] = await Promise.all([
-        supabase.from('donations').select('amount'),
-        supabase.from('disbursements').select('amount')
-      ]);
-
+      const [donationsRes, disbursementsRes] = await Promise.all([supabase.from('donations').select('amount'), supabase.from('disbursements').select('amount')]);
       const totalDonations = donationsRes.data?.reduce((sum, d) => sum + d.amount, 0) || 0;
       const totalDisbursements = disbursementsRes.data?.reduce((sum, d) => sum + d.amount, 0) || 0;
-      
       setBalance(totalDonations - totalDisbursements);
     } catch (error) {
       console.error('Error loading balance:', error);
       setBalance(0);
     }
   };
-
   const loadInteractions = async (page: number, reset: boolean = false) => {
     try {
       setIsLoadingInteractions(true);
-      
+
       // Load regular staff interactions
-      const { data: staffInteractions, error: staffError } = await supabase
-        .from('interactions')
-        .select(`
+      const {
+        data: staffInteractions,
+        error: staffError
+      } = await supabase.from('interactions').select(`
           id,
           contact_name,
           channel,
@@ -276,9 +272,9 @@ const PortalDashboard = () => {
           occurred_at,
           client_id,
           clients(first_name, last_name)
-        `)
-        .order('occurred_at', { ascending: false });
-
+        `).order('occurred_at', {
+        ascending: false
+      });
       if (staffError) {
         console.error('Error loading staff interactions:', staffError);
         if (staffError.code === 'PGRST301') {
@@ -293,9 +289,10 @@ const PortalDashboard = () => {
       }
 
       // Load public intake requests
-      const { data: intakeRequests, error: intakeError } = await supabase
-        .from('public_intake')
-        .select(`
+      const {
+        data: intakeRequests,
+        error: intakeError
+      } = await supabase.from('public_intake').select(`
           id,
           first_name,
           last_name,
@@ -307,9 +304,9 @@ const PortalDashboard = () => {
           viewed_at,
           client_id,
           interaction_id
-        `)
-        .order('created_at', { ascending: false });
-
+        `).order('created_at', {
+        ascending: false
+      });
       if (intakeError) {
         console.error('Error loading intake requests:', intakeError);
         // Don't fail completely if just intake fails
@@ -351,8 +348,7 @@ const PortalDashboard = () => {
       })) || [];
 
       // Merge and sort chronologically
-      const allInteractions = [...processedStaffInteractions, ...processedIntakeRequests]
-        .sort((a, b) => b.timestamp - a.timestamp);
+      const allInteractions = [...processedStaffInteractions, ...processedIntakeRequests].sort((a, b) => b.timestamp - a.timestamp);
 
       // Count unread items
       const unreadItems = processedIntakeRequests.filter(item => item.isUnread).length;
@@ -362,16 +358,13 @@ const PortalDashboard = () => {
       const startIndex = page * ITEMS_PER_PAGE;
       const endIndex = startIndex + ITEMS_PER_PAGE;
       const paginatedItems = allInteractions.slice(startIndex, endIndex);
-
       if (reset) {
         setInteractions(paginatedItems);
       } else {
         setInteractions(prev => [...prev, ...paginatedItems]);
       }
-
       setHasMoreInteractions(endIndex < allInteractions.length);
       setInteractionsPage(page);
-      
     } catch (error) {
       console.error('Error loading interactions:', error);
       toast({
@@ -383,29 +376,25 @@ const PortalDashboard = () => {
       setIsLoadingInteractions(false);
     }
   };
-
   const loadMoreInteractions = () => {
     if (!isLoadingInteractions && hasMoreInteractions) {
       loadInteractions(interactionsPage + 1, false);
     }
   };
-
   const handleViewDetails = async (interaction: any) => {
     // Mark public intake as viewed if it's unread
     if (interaction.type === 'public_intake' && interaction.isUnread) {
       try {
-        await supabase
-          .from('public_intake')
-          .update({ viewed_at: new Date().toISOString() })
-          .eq('id', interaction.id);
-        
+        await supabase.from('public_intake').update({
+          viewed_at: new Date().toISOString()
+        }).eq('id', interaction.id);
+
         // Refresh interactions to show updated status
         loadInteractions(0, true);
       } catch (error) {
         console.error('Error marking intake as viewed:', error);
       }
     }
-    
     if (interaction.type === 'public_intake') {
       // Navigate to intake requests page for public form submissions
       navigate('/portal/intake');
@@ -420,11 +409,10 @@ const PortalDashboard = () => {
       });
     }
   };
-
   const handleAddNewClient = (interaction: any) => {
     // Navigate to new client page with pre-filled data
-    navigate('/portal/clients/new', { 
-      state: { 
+    navigate('/portal/clients/new', {
+      state: {
         interactionId: interaction.id,
         contactName: interaction.contact_name,
         summary: interaction.summary,
@@ -433,26 +421,21 @@ const PortalDashboard = () => {
         phone: interaction.phone || '',
         helpNeeded: interaction.help_needed || interaction.summary,
         type: interaction.type
-      } 
+      }
     });
   };
 
   // Show loading state while checking roles
   if (isLoadingRoles) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
+    return <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
           <p className="text-muted-foreground">Loading your permissions...</p>
         </div>
-      </div>
-    );
+      </div>;
   }
-
   const isLowFunds = balance < lowFundThreshold;
-
-  return (
-    <div className="min-h-screen bg-background">
+  return <div className="min-h-screen bg-background">
       {/* SEO Meta - No Index */}
       <meta name="robots" content="noindex" />
       
@@ -464,20 +447,16 @@ const PortalDashboard = () => {
               <h1 className="text-2xl font-bold text-foreground">Good Samaritan Dashboard</h1>
               <p className="text-sm text-muted-foreground">
                 Staff Portal
-                {userRoles.length > 0 && (
-                  <span className="ml-2 text-xs bg-primary/10 text-primary px-2 py-1 rounded">
+                {userRoles.length > 0 && <span className="ml-2 text-xs bg-primary/10 text-primary px-2 py-1 rounded">
                     {userRoles.join(', ')}
-                  </span>
-                )}
+                  </span>}
               </p>
             </div>
             <div className="flex items-center gap-3">
-              {userProfile && (
-                <div className="text-right">
+              {userProfile && <div className="text-right">
                   <p className="text-sm font-medium text-foreground">{userProfile.displayName}</p>
                   <p className="text-xs text-muted-foreground">Logged in</p>
-                </div>
-              )}
+                </div>}
               <Button variant="outline" size="sm" onClick={() => navigate('/portal/intake')}>
                 Intake Requests
               </Button>
@@ -497,19 +476,17 @@ const PortalDashboard = () => {
 
       <main className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Low Funds Warning */}
-        {canViewFinancials && isLowFunds && (
-          <div className="mb-6 bg-warning/10 border border-warning/20 rounded-lg p-4">
+        {canViewFinancials && isLowFunds && <div className="mb-6 bg-warning/10 border border-warning/20 rounded-lg p-4">
             <div className="flex items-center gap-3">
               <AlertCircle className="h-5 w-5 text-warning" />
               <div>
-                <h3 className="font-medium text-warning-foreground">Low Fund Balance</h3>
+                <h3 className="font-medium text-rose-600">Low Fund Balance</h3>
                 <p className="text-sm text-muted-foreground">
                   Current balance is below the ${lowFundThreshold} threshold. Consider fundraising efforts.
                 </p>
               </div>
             </div>
-          </div>
-        )}
+          </div>}
 
         {/* Balance and Quick Actions Row */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
@@ -528,16 +505,11 @@ const PortalDashboard = () => {
                   <span className={`text-4xl font-bold ${balance >= 0 ? 'text-primary' : 'text-destructive'}`}>
                     ${Math.abs(balance).toFixed(2)}
                   </span>
-                  {balance < 0 && (
-                    <Badge variant="destructive" className="text-xs">OVERDRAWN</Badge>
-                  )}
-                  {balance > 0 && balance < lowFundThreshold && (
-                    <Badge variant="outline" className="text-xs border-warning text-warning">LOW FUNDS</Badge>
-                  )}
+                  {balance < 0 && <Badge variant="destructive" className="text-xs">OVERDRAWN</Badge>}
+                  {balance > 0 && balance < lowFundThreshold && <Badge variant="outline" className="text-xs border-warning text-warning">LOW FUNDS</Badge>}
                 </div>
                 
-                {canViewFinancials && (
-                  <div className="grid grid-cols-2 gap-4 text-sm">
+                {canViewFinancials && <div className="grid grid-cols-2 gap-4 text-sm">
                     <div>
                       <p className="text-muted-foreground">This Month Donations</p>
                       <p className="font-semibold text-green-600">+${monthlyDonations.toFixed(2)}</p>
@@ -546,8 +518,7 @@ const PortalDashboard = () => {
                       <p className="text-muted-foreground">This Month Disbursements</p>
                       <p className="font-semibold text-red-600">-${monthlyDisbursements.toFixed(2)}</p>
                     </div>
-                  </div>
-                )}
+                  </div>}
               </div>
             </CardContent>
           </Card>
@@ -558,44 +529,21 @@ const PortalDashboard = () => {
               <CardTitle className="text-base">Quick Actions</CardTitle>
             </CardHeader>
             <CardContent className="space-y-2">
-              {canEditData && (
-                <>
-                  <Button 
-                    onClick={() => setShowQuickEntryModal(true)}
-                    className="w-full justify-start gap-2 bg-gradient-to-r from-primary to-primary-glow hover:from-primary-glow hover:to-primary text-white font-medium shadow-lg"
-                    size="sm"
-                  >
+              {canEditData && <>
+                  <Button onClick={() => setShowQuickEntryModal(true)} className="w-full justify-start gap-2 bg-gradient-to-r from-primary to-primary-glow hover:from-primary-glow hover:to-primary text-white font-medium shadow-lg" size="sm">
                     <Zap className="h-4 w-4" />
                     Quick Entry
                   </Button>
-                  {canViewFinancials && (
-                    <Button 
-                      variant="outline" 
-                      onClick={() => setShowDonationModal(true)}
-                      className="w-full justify-start gap-2 text-green-700 border-green-200 hover:bg-green-50"
-                      size="sm"
-                    >
+                  {canViewFinancials && <Button variant="outline" onClick={() => setShowDonationModal(true)} className="w-full justify-start gap-2 text-green-700 border-green-200 hover:bg-green-50" size="sm">
                       <Plus className="h-4 w-4" />
                       Add Donation
-                    </Button>
-                  )}
-                  <Button 
-                    variant="outline" 
-                    onClick={() => setShowInteractionModal(true)}
-                    className="w-full justify-start gap-2"
-                    size="sm"
-                  >
+                    </Button>}
+                  <Button variant="outline" onClick={() => setShowInteractionModal(true)} className="w-full justify-start gap-2" size="sm">
                     <FileText className="h-4 w-4" />
                     Full Interaction Form
                   </Button>
-                </>
-              )}
-              <Button 
-                variant="outline" 
-                onClick={() => navigate('/portal/clients/search')}
-                className="w-full justify-start gap-2"
-                size="sm"
-              >
+                </>}
+              <Button variant="outline" onClick={() => navigate('/portal/clients/search')} className="w-full justify-start gap-2" size="sm">
                 <Search className="h-4 w-4" />
                 Search Clients
               </Button>
@@ -610,17 +558,11 @@ const PortalDashboard = () => {
             <div className="flex items-center gap-2">
               <Clock className="h-5 w-5 text-primary" />
               Recent Interactions
-              {unreadCount > 0 && (
-                <Badge variant="destructive" className="ml-2">
+              {unreadCount > 0 && <Badge variant="destructive" className="ml-2">
                   {unreadCount} unread
-                </Badge>
-              )}
+                </Badge>}
             </div>
-            <Button 
-              variant="outline" 
-              size="sm"
-              onClick={() => setIsInteractionsHidden(!isInteractionsHidden)}
-            >
+            <Button variant="outline" size="sm" onClick={() => setIsInteractionsHidden(!isInteractionsHidden)}>
               {isInteractionsHidden ? 'Show' : 'Clear'}
             </Button>
           </CardTitle>
@@ -629,68 +571,46 @@ const PortalDashboard = () => {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            {isInteractionsHidden ? (
-              <div className="flex items-center justify-center py-8">
+            {isInteractionsHidden ? <div className="flex items-center justify-center py-8">
                 <div className="text-center text-muted-foreground">
                   <p>Interactions hidden for privacy</p>
                   <p className="text-xs mt-1">Click "Show" to view interactions</p>
                 </div>
-              </div>
-            ) : isLoadingInteractions && interactions.length === 0 ? (
-              <div className="flex items-center justify-center py-8">
+              </div> : isLoadingInteractions && interactions.length === 0 ? <div className="flex items-center justify-center py-8">
                 <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
                 <span className="ml-2 text-muted-foreground">Loading interactions...</span>
-              </div>
-            ) : (
-              <div className="space-y-4">
-                {interactions.map((interaction) => (
-                <div 
-                  key={interaction.id}
-                  className="border border-border rounded-lg p-4 hover:bg-muted/50 transition-colors"
-                >
+              </div> : <div className="space-y-4">
+                {interactions.map(interaction => <div key={interaction.id} className="border border-border rounded-lg p-4 hover:bg-muted/50 transition-colors">
                     <div className="flex items-start justify-between">
                       <div className="flex-1">
                          <div className="flex items-center gap-2 mb-2">
                            <span className="font-medium text-foreground">
                              {interaction.contact_name}
                            </span>
-                           <Badge 
-                             variant={interaction.channel === 'public_form' ? 'default' : 'outline'}
-                             className="text-xs"
-                           >
+                           <Badge variant={interaction.channel === 'public_form' ? 'default' : 'outline'} className="text-xs">
                              {interaction.channel === 'public_form' ? 'Public Form' : interaction.channel.replace('_', ' ')}
                            </Badge>
                          
-                         {interaction.isUnread && (
-                           <Badge variant="destructive" className="text-xs animate-pulse">
+                         {interaction.isUnread && <Badge variant="destructive" className="text-xs animate-pulse">
                              UNREAD
-                           </Badge>
-                         )}
+                           </Badge>}
                          
-                         {!interaction.hasIndividual && (
-                           <Badge variant="destructive" className="text-xs">
+                         {!interaction.hasIndividual && <Badge variant="destructive" className="text-xs">
                              Unlinked
-                           </Badge>
-                         )}
+                           </Badge>}
                          
-                         {interaction.isNewRequest && (
-                           <Badge variant="secondary" className="text-xs">
+                         {interaction.isNewRequest && <Badge variant="secondary" className="text-xs">
                              {interaction.type === 'public_intake' ? 'Pending Review' : 'New Request'}
-                           </Badge>
-                         )}
+                           </Badge>}
                          
-                         {interaction.ageInDays > 7 && (
-                           <Badge variant="destructive" className="text-xs">
+                         {interaction.ageInDays > 7 && <Badge variant="destructive" className="text-xs">
                              Aging {interaction.ageInDays}d
-                           </Badge>
-                         )}
+                           </Badge>}
                          
                          {/* Triage Status Badge */}
-                         {interaction.type !== 'public_intake' && interaction.assistance_type && (
-                           <Badge variant="outline" className="text-xs">
+                         {interaction.type !== 'public_intake' && interaction.assistance_type && <Badge variant="outline" className="text-xs">
                              Triage: {interaction.triage_completed_at ? 'Complete' : 'Pending'}
-                           </Badge>
-                         )}
+                           </Badge>}
                        </div>
                       
                       <p className="text-sm text-muted-foreground mb-2">
@@ -704,88 +624,51 @@ const PortalDashboard = () => {
                      </div>
                      
                      <div className="flex gap-2">
-                       {interaction.client_id || interaction.hasIndividual ? (
-                         <Button variant="outline" size="sm" onClick={() => handleViewDetails(interaction)}>
+                       {interaction.client_id || interaction.hasIndividual ? <Button variant="outline" size="sm" onClick={() => handleViewDetails(interaction)}>
                            View Client
-                         </Button>
-                       ) : (
-                         <Button variant="default" size="sm" onClick={() => handleAddNewClient(interaction)}>
+                         </Button> : <Button variant="default" size="sm" onClick={() => handleAddNewClient(interaction)}>
                            Add New Client
-                         </Button>
-                       )}
+                         </Button>}
                        <Button variant="ghost" size="sm" onClick={() => handleViewDetails(interaction)}>
                          View Details
                        </Button>
                      </div>
                   </div>
-                  </div>
-                ))}
+                  </div>)}
                 
-                {interactions.length === 0 && !isLoadingInteractions && (
-                  <p className="text-center text-muted-foreground py-8">
+                {interactions.length === 0 && !isLoadingInteractions && <p className="text-center text-muted-foreground py-8">
                     No interactions found. Create your first interaction to get started.
-                  </p>
-                )}
-              </div>
-            )}
+                  </p>}
+              </div>}
             
-            {interactions.length > 0 && (
-              <div className="mt-4 text-center">
-                {hasMoreInteractions ? (
-                  <Button 
-                    variant="ghost" 
-                    onClick={loadMoreInteractions}
-                    disabled={isLoadingInteractions}
-                  >
+            {interactions.length > 0 && <div className="mt-4 text-center">
+                {hasMoreInteractions ? <Button variant="ghost" onClick={loadMoreInteractions} disabled={isLoadingInteractions}>
                     {isLoadingInteractions ? "Loading..." : "Load More Interactions"}
-                  </Button>
-                ) : (
-                  <p className="text-sm text-muted-foreground">End of list</p>
-                )}
-              </div>
-            )}
+                  </Button> : <p className="text-sm text-muted-foreground">End of list</p>}
+              </div>}
           </CardContent>
         </Card>
 
         {/* Transaction Ledger */}
-        {canViewFinancials && (
-          <TransactionLedger 
-            balance={balance} 
-            onRefresh={() => {
-              loadBalance();
-              loadMonthlyTrends();
-            }} 
-          />
-        )}
+        {canViewFinancials && <TransactionLedger balance={balance} onRefresh={() => {
+        loadBalance();
+        loadMonthlyTrends();
+      }} />}
 
         {/* Modals */}
-        {canViewFinancials && (
-          <>
+        {canViewFinancials && <>
             <DonationModal open={showDonationModal} onOpenChange={setShowDonationModal} />
             <DisbursementModal open={showDisbursementModal} onOpenChange={setShowDisbursementModal} />
-          </>
-        )}
-        {canEditData && (
-          <>
-            <NewInteractionModal 
-              open={showInteractionModal} 
-              onOpenChange={setShowInteractionModal} 
-              onSuccess={() => loadInteractions(0, true)}
-            />
-            <QuickEntryModal 
-              open={showQuickEntryModal} 
-              onOpenChange={setShowQuickEntryModal} 
-              onSuccess={() => {
-                loadInteractions(0, true);
-                loadBalance();
-                loadMonthlyTrends();
-              }}
-            />
-          </>
-        )}
+          </>}
+        {canEditData && <>
+            <NewInteractionModal open={showInteractionModal} onOpenChange={setShowInteractionModal} onSuccess={() => loadInteractions(0, true)} />
+            <QuickEntryModal open={showQuickEntryModal} onOpenChange={setShowQuickEntryModal} onSuccess={() => {
+          loadInteractions(0, true);
+          loadBalance();
+          loadMonthlyTrends();
+        }} />
+          </>}
       </main>
-    </div>
-  );
+    </div>;
 };
-
 export default PortalDashboard;
