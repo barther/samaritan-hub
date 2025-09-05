@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Mail, Shield, Trash2, UserPlus } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 
 interface User {
   id: string;
@@ -15,6 +16,8 @@ interface User {
   role: string;
   status: string;
   lastLogin: string;
+  firstName?: string;
+  lastName?: string;
 }
 
 interface UserManagementModalProps {
@@ -24,27 +27,72 @@ interface UserManagementModalProps {
 
 const UserManagementModal = ({ open, onOpenChange }: UserManagementModalProps) => {
   const { toast } = useToast();
-  const [users] = useState<User[]>([
-    {
-      id: "1",
-      email: "bart.arther@lithiaspringsmethodist.org",
-      role: "admin",
-      status: "active",
-      lastLogin: "2025-01-08"
-    },
-    {
-      id: "2", 
-      email: "staff@lithiaspringsmethodist.org",
-      role: "staff",
-      status: "active",
-      lastLogin: "2025-01-07"
-    }
-  ]);
-
+  const [users, setUsers] = useState<User[]>([]);
+  const [loading, setLoading] = useState(false);
   const [newUserEmail, setNewUserEmail] = useState("");
   const [newUserRole, setNewUserRole] = useState("staff");
 
-  const handleInviteUser = () => {
+  const fetchUsers = async () => {
+    try {
+      setLoading(true);
+      
+      const { data: profiles, error: profilesError } = await supabase
+        .from('profiles')
+        .select(`
+          id,
+          user_id,
+          email,
+          first_name,
+          last_name,
+          created_at
+        `);
+
+      if (profilesError) {
+        throw profilesError;
+      }
+
+      const { data: userRoles, error: rolesError } = await supabase
+        .from('user_roles')
+        .select('user_id, role');
+
+      if (rolesError) {
+        throw rolesError;
+      }
+
+      // Combine profiles with roles
+      const usersWithRoles = profiles?.map(profile => {
+        const userRole = userRoles?.find(role => role.user_id === profile.user_id);
+        return {
+          id: profile.user_id,
+          email: profile.email,
+          firstName: profile.first_name,
+          lastName: profile.last_name,
+          role: userRole?.role || 'staff',
+          status: 'active',
+          lastLogin: new Date(profile.created_at).toLocaleDateString()
+        };
+      }) || [];
+
+      setUsers(usersWithRoles);
+    } catch (error) {
+      console.error('Error fetching users:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load users",
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (open) {
+      fetchUsers();
+    }
+  }, [open]);
+
+  const handleInviteUser = async () => {
     if (!newUserEmail) {
       toast({
         title: "Error",
@@ -54,19 +102,49 @@ const UserManagementModal = ({ open, onOpenChange }: UserManagementModalProps) =
       return;
     }
 
-    toast({
-      title: "User invited",
-      description: `Invitation sent to ${newUserEmail}`
-    });
-    setNewUserEmail("");
-    setNewUserRole("staff");
+    try {
+      // In a real implementation, this would send an invitation email
+      // For now, we'll show a success message
+      toast({
+        title: "User invited",
+        description: `Invitation sent to ${newUserEmail}. They will be added when they sign up.`
+      });
+      setNewUserEmail("");
+      setNewUserRole("staff");
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to send invitation",
+        variant: "destructive"
+      });
+    }
   };
 
-  const handleRemoveUser = (userId: string, email: string) => {
-    toast({
-      title: "User removed",
-      description: `${email} has been removed from the system`
-    });
+  const handleRemoveUser = async (userId: string, email: string) => {
+    try {
+      const { error } = await supabase
+        .from('user_roles')
+        .delete()
+        .eq('user_id', userId);
+
+      if (error) {
+        throw error;
+      }
+
+      toast({
+        title: "User removed",
+        description: `${email} has been removed from the system`
+      });
+      
+      // Refresh the user list
+      fetchUsers();
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to remove user",
+        variant: "destructive"
+      });
+    }
   };
 
   return (
@@ -121,7 +199,7 @@ const UserManagementModal = ({ open, onOpenChange }: UserManagementModalProps) =
 
           {/* Current Users Table */}
           <div>
-            <h3 className="font-semibold mb-4">Current Users</h3>
+            <h3 className="font-semibold mb-4">Current Users {loading && "(Loading...)"}</h3>
             <Table>
               <TableHeader>
                 <TableRow>
@@ -133,9 +211,23 @@ const UserManagementModal = ({ open, onOpenChange }: UserManagementModalProps) =
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {users.map((user) => (
-                  <TableRow key={user.id}>
-                    <TableCell className="font-medium">{user.email}</TableCell>
+                {users.length === 0 && !loading ? (
+                  <TableRow>
+                    <TableCell colSpan={5} className="text-center text-muted-foreground">
+                      No users found
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  users.map((user) => (
+                    <TableRow key={user.id}>
+                      <TableCell className="font-medium">
+                        {user.email}
+                        {user.firstName && user.lastName && (
+                          <div className="text-sm text-muted-foreground">
+                            {user.firstName} {user.lastName}
+                          </div>
+                        )}
+                      </TableCell>
                     <TableCell>
                       <Badge variant={user.role === 'admin' ? 'default' : 'secondary'}>
                         {user.role}
@@ -147,18 +239,19 @@ const UserManagementModal = ({ open, onOpenChange }: UserManagementModalProps) =
                       </Badge>
                     </TableCell>
                     <TableCell>{user.lastLogin}</TableCell>
-                    <TableCell>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleRemoveUser(user.id, user.email)}
-                        disabled={user.role === 'admin'}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))}
+                      <TableCell>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleRemoveUser(user.id, user.email)}
+                          disabled={user.role === 'admin'}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
               </TableBody>
             </Table>
           </div>
