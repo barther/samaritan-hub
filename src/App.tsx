@@ -35,7 +35,7 @@ const App = () => (
           <Route path="/portal" element={<Portal />} />
           <Route path="/portal/dashboard" element={<AuthGuard><PortalDashboard /></AuthGuard>} />
           <Route path="/portal/intake" element={<AuthGuard><IntakeRequests /></AuthGuard>} />
-          <Route path="/portal/clients" element={<AuthGuard><ClientSearch /></AuthGuard>} />
+          <Route path="/portal/clients/search" element={<AuthGuard><ClientSearch /></AuthGuard>} />
           <Route path="/portal/clients/new" element={<AuthGuard><NewClient /></AuthGuard>} />
           <Route path="/portal/clients/:clientId" element={<AuthGuard><ClientDetail /></AuthGuard>} />
           <Route path="/portal/reports" element={<AuthGuard><Reports /></AuthGuard>} />
