@@ -340,7 +340,10 @@ Good Samaritan Assistance Team`,
                     <p className="text-sm text-muted-foreground mb-3">
                       Manage staff access and permissions
                     </p>
-                    <Button variant="outline">
+                    <Button variant="outline" onClick={() => toast({
+                      title: "User Management",
+                      description: "User management interface will be available soon."
+                    })}>
                       <Users className="h-4 w-4 mr-2" />
                       Manage Users
                     </Button>
