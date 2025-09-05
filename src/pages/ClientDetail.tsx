@@ -28,7 +28,7 @@ import { DisbursementModal } from "@/components/modals/DisbursementModal";
 import { TriageForm } from "@/components/TriageForm";
 
 const ClientDetail = () => {
-  const { id } = useParams<{ id: string }>();
+  const { clientId } = useParams<{ clientId: string }>();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -43,13 +43,13 @@ const ClientDetail = () => {
   const [selectedAssistanceRequest, setSelectedAssistanceRequest] = useState<any>(null);
 
   const fetchClientDetails = async () => {
-    if (!id) {
+    if (!clientId) {
       console.log('No client ID provided');
       setLoading(false);
       return;
     }
     
-    console.log('Fetching client details for ID:', id);
+    console.log('Fetching client details for ID:', clientId);
     
     try {
       setLoading(true);
@@ -59,7 +59,7 @@ const ClientDetail = () => {
       const { data: clientData, error: clientError } = await supabase
         .from('clients')
         .select('*')
-        .eq('id', id)
+        .eq('id', clientId)
         .maybeSingle();
 
       console.log('Client data result:', { clientData, clientError });
@@ -67,7 +67,7 @@ const ClientDetail = () => {
       if (clientError) throw clientError;
       
       if (!clientData) {
-        console.log('No client found with ID:', id);
+        console.log('No client found with ID:', clientId);
         setClient(null);
         setLoading(false);
         return;
@@ -80,7 +80,7 @@ const ClientDetail = () => {
       const { data: interactionsData, error: interactionsError } = await supabase
         .from('interactions')
         .select('*')
-        .eq('client_id', id)
+        .eq('client_id', clientId)
         .order('occurred_at', { ascending: false });
 
       console.log('Interactions result:', { interactionsData, interactionsError });
@@ -92,7 +92,7 @@ const ClientDetail = () => {
       const { data: disbursementsData, error: disbursementsError } = await supabase
         .from('disbursements')
         .select('*')
-        .eq('client_id', id)
+        .eq('client_id', clientId)
         .order('disbursement_date', { ascending: false });
 
       console.log('Disbursements result:', { disbursementsData, disbursementsError });
@@ -104,7 +104,7 @@ const ClientDetail = () => {
       const { data: requestsData, error: requestsError } = await supabase
         .from('assistance_requests')
         .select('*')
-        .eq('client_id', id)
+        .eq('client_id', clientId)
         .order('created_at', { ascending: false });
 
       console.log('Assistance requests result:', { requestsData, requestsError });
@@ -127,10 +127,10 @@ const ClientDetail = () => {
   };
 
   useEffect(() => {
-    if (id) {
+    if (clientId) {
       fetchClientDetails();
     }
-  }, [id]);
+  }, [clientId]);
 
   useEffect(() => {
     // Check if we should auto-start triage from query param
@@ -365,7 +365,7 @@ const ClientDetail = () => {
             setShowNewInteraction(false);
             fetchClientDetails();
           }}
-          clientId={id}
+          clientId={clientId}
         />
       )}
 
