@@ -135,7 +135,7 @@ const RequestAssistance = () => {
     try {
       // Submit to secure public intake table
       // This bypasses the need for complex client/interaction creation
-      const { error: intakeError } = await supabase
+      const { data: insertedRecord, error: intakeError } = await supabase
         .from('public_intake')
         .insert({
           first_name: formData.firstName,
@@ -150,9 +150,31 @@ const RequestAssistance = () => {
           help_needed: formData.helpNeeded,
           source: 'web_form',
           user_agent: navigator.userAgent,
-        });
+        })
+        .select('id')
+        .single();
 
       if (intakeError) throw intakeError;
+
+      // Send email notification to office (don't fail submission if this fails)
+      try {
+        await supabase.functions.invoke('notify-intake-submission', {
+          body: {
+            intakeId: insertedRecord.id,
+            firstName: formData.firstName,
+            lastName: formData.lastName,
+            email: formData.email,
+            phone: formData.phone,
+            helpNeeded: formData.helpNeeded,
+            address: formData.address,
+            city: formData.city,
+            state: formData.state
+          }
+        });
+        console.log('Email notification sent for intake:', insertedRecord.id);
+      } catch (emailError) {
+        console.warn('Email notification failed (but intake was recorded):', emailError);
+      }
 
       toast({
         title: "Request Submitted Successfully",

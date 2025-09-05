@@ -439,6 +439,7 @@ export type Database = {
           state: string
           status: string
           user_agent: string | null
+          viewed_at: string | null
           zip_code: string
         }
         Insert: {
@@ -463,6 +464,7 @@ export type Database = {
           state?: string
           status?: string
           user_agent?: string | null
+          viewed_at?: string | null
           zip_code: string
         }
         Update: {
@@ -487,6 +489,7 @@ export type Database = {
           state?: string
           status?: string
           user_agent?: string | null
+          viewed_at?: string | null
           zip_code?: string
         }
         Relationships: []

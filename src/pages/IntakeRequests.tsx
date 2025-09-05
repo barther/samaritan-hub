@@ -50,6 +50,9 @@ const IntakeRequests = () => {
   const [selectedRequest, setSelectedRequest] = useState<IntakeRequest | null>(null);
   const [processingNotes, setProcessingNotes] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
+  const [potentialClients, setPotentialClients] = useState<any[]>([]);
+  const [showClientMatching, setShowClientMatching] = useState(false);
+  const [selectedClient, setSelectedClient] = useState<any | null>(null);
 
   const fetchRequests = async () => {
     try {
@@ -83,6 +86,61 @@ const IntakeRequests = () => {
       case 'completed': return 'bg-green-500';
       case 'rejected': return 'bg-red-500';
       default: return 'bg-gray-500';
+    }
+  };
+
+  const searchPotentialClients = async (request: IntakeRequest) => {
+    try {
+      const { data, error } = await supabase
+        .from('clients')
+        .select('id, first_name, last_name, email, phone, address, city, state')
+        .or(`first_name.ilike.%${request.first_name}%,last_name.ilike.%${request.last_name}%,email.ilike.%${request.email}%,phone.ilike.%${request.phone}%`);
+
+      if (error) throw error;
+
+      // Calculate similarity scores for better matching
+      const scoredClients = data?.map(client => {
+        let score = 0;
+        
+        // Name matching (case insensitive)
+        if (client.first_name.toLowerCase() === request.first_name.toLowerCase()) score += 30;
+        if (client.last_name.toLowerCase() === request.last_name.toLowerCase()) score += 30;
+        
+        // Email matching
+        if (client.email.toLowerCase() === request.email.toLowerCase()) score += 25;
+        
+        // Phone matching (normalize phone numbers)
+        const normalizePhone = (phone: string) => phone.replace(/\D/g, '');
+        if (normalizePhone(client.phone) === normalizePhone(request.phone)) score += 20;
+        
+        // Address similarity
+        if (client.address?.toLowerCase().includes(request.address.toLowerCase()) || 
+            request.address.toLowerCase().includes(client.address?.toLowerCase() || '')) score += 10;
+        if (client.city?.toLowerCase() === request.city.toLowerCase()) score += 5;
+        
+        return { ...client, matchScore: score };
+      }).filter(client => client.matchScore > 20) // Only show matches with significant similarity
+       .sort((a, b) => b.matchScore - a.matchScore) || [];
+
+      setPotentialClients(scoredClients);
+      return scoredClients;
+    } catch (error) {
+      console.error('Error searching clients:', error);
+      return [];
+    }
+  };
+
+  const handleApproveClick = async () => {
+    if (!selectedRequest) return;
+    
+    // Search for potential client matches first
+    const matches = await searchPotentialClients(selectedRequest);
+    
+    if (matches.length > 0) {
+      setShowClientMatching(true);
+    } else {
+      // No matches found, proceed with creating new client
+      processRequest('approve');
     }
   };
 
@@ -180,12 +238,87 @@ const IntakeRequests = () => {
       await fetchRequests();
       setSelectedRequest(null);
       setProcessingNotes("");
+      setShowClientMatching(false);
+      setPotentialClients([]);
+      setSelectedClient(null);
       
     } catch (error) {
       console.error('Error processing request:', error);
       toast({
         title: "Processing Error",
         description: "Failed to process the request. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const processRequestWithExistingClient = async () => {
+    if (!selectedRequest || !selectedClient) return;
+
+    setIsProcessing(true);
+    
+    try {
+      // Create interaction linked to existing client
+      const { data: interaction, error: interactionError } = await supabase
+        .from('interactions')
+        .insert({
+          client_id: selectedClient.id,
+          contact_name: `${selectedRequest.first_name} ${selectedRequest.last_name}`,
+          summary: `Public intake (linked): ${selectedRequest.help_needed.substring(0, 100)}...`,
+          details: selectedRequest.help_needed,
+          channel: 'public_form',
+          status: 'new',
+        })
+        .select('id')
+        .single();
+
+      if (interactionError) throw interactionError;
+
+      // Create assistance request
+      const { error: requestError } = await supabase
+        .from('assistance_requests')
+        .insert({
+          client_id: selectedClient.id,
+          interaction_id: interaction.id,
+          help_requested: selectedRequest.help_needed,
+        });
+
+      if (requestError) throw requestError;
+
+      // Update intake request as processed
+      const { error: updateError } = await supabase
+        .from('public_intake')
+        .update({
+          status: 'completed',
+          processed_at: new Date().toISOString(),
+          notes: processingNotes + `\n\nLinked to existing client: ${selectedClient.first_name} ${selectedClient.last_name}`,
+          client_id: selectedClient.id,
+          interaction_id: interaction.id,
+        })
+        .eq('id', selectedRequest.id);
+
+      if (updateError) throw updateError;
+
+      toast({
+        title: "Request Approved & Linked",
+        description: `Successfully linked to existing client: ${selectedClient.first_name} ${selectedClient.last_name}`,
+      });
+
+      // Refresh requests and close modal
+      await fetchRequests();
+      setSelectedRequest(null);
+      setProcessingNotes("");
+      setShowClientMatching(false);
+      setPotentialClients([]);
+      setSelectedClient(null);
+      
+    } catch (error) {
+      console.error('Error processing request with existing client:', error);
+      toast({
+        title: "Processing Error",
+        description: "Failed to link the request to existing client. Please try again.",
         variant: "destructive"
       });
     } finally {
@@ -399,14 +532,14 @@ const IntakeRequests = () => {
               )}
 
               {/* Actions */}
-              {selectedRequest.status === 'pending' && (
+              {selectedRequest.status === 'pending' && !showClientMatching && (
                 <div className="flex gap-2 pt-4">
                   <Button
-                    onClick={() => processRequest('approve')}
+                    onClick={handleApproveClick}
                     disabled={isProcessing}
                     className="flex-1"
                   >
-                    {isProcessing ? "Processing..." : "Approve & Create Client"}
+                    {isProcessing ? "Processing..." : "Approve & Process"}
                   </Button>
                   <Button
                     variant="destructive"
@@ -416,6 +549,77 @@ const IntakeRequests = () => {
                   >
                     {isProcessing ? "Processing..." : "Reject Request"}
                   </Button>
+                </div>
+              )}
+
+              {/* Client Matching Section */}
+              {showClientMatching && (
+                <div className="border-t pt-4 space-y-4">
+                  <div>
+                    <h3 className="font-medium text-lg mb-2">Potential Client Matches Found</h3>
+                    <p className="text-sm text-muted-foreground mb-4">
+                      We found {potentialClients.length} potential matches. Please select an existing client or create a new one.
+                    </p>
+                  </div>
+
+                  <div className="space-y-3 max-h-60 overflow-y-auto">
+                    {potentialClients.map((client) => (
+                      <div
+                        key={client.id}
+                        className={`border rounded-lg p-3 cursor-pointer transition-colors ${
+                          selectedClient?.id === client.id 
+                            ? 'border-primary bg-primary/5' 
+                            : 'border-border hover:bg-accent/30'
+                        }`}
+                        onClick={() => setSelectedClient(client)}
+                      >
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="font-medium">
+                              {client.first_name} {client.last_name}
+                            </p>
+                            <div className="text-sm text-muted-foreground space-y-1">
+                              <p>{client.email}</p>
+                              <p>{client.phone}</p>
+                              <p>{client.address}, {client.city}, {client.state}</p>
+                            </div>
+                          </div>
+                          <Badge variant="outline">
+                            {client.matchScore}% match
+                          </Badge>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="flex gap-2 pt-4">
+                    <Button
+                      onClick={() => processRequestWithExistingClient()}
+                      disabled={!selectedClient || isProcessing}
+                      className="flex-1"
+                    >
+                      {isProcessing ? "Processing..." : "Link to Selected Client"}
+                    </Button>
+                    <Button
+                      variant="outline"
+                      onClick={() => processRequest('approve')}
+                      disabled={isProcessing}
+                      className="flex-1"
+                    >
+                      {isProcessing ? "Processing..." : "Create New Client"}
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      onClick={() => {
+                        setShowClientMatching(false);
+                        setPotentialClients([]);
+                        setSelectedClient(null);
+                      }}
+                      disabled={isProcessing}
+                    >
+                      Cancel
+                    </Button>
+                  </div>
                 </div>
               )}
             </CardContent>

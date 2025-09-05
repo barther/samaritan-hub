@@ -46,6 +46,7 @@ const PortalDashboard = () => {
   const [balance, setBalance] = useState(0);
   const [monthlyDonations, setMonthlyDonations] = useState(0);
   const [monthlyDisbursements, setMonthlyDisbursements] = useState(0);
+  const [unreadCount, setUnreadCount] = useState(0);
   
   const lowFundThreshold = 100;
   const ITEMS_PER_PAGE = 5;
@@ -256,7 +257,8 @@ const PortalDashboard = () => {
     try {
       setIsLoadingInteractions(true);
       
-      const { data, error } = await supabase
+      // Load regular staff interactions
+      const { data: staffInteractions, error: staffError } = await supabase
         .from('interactions')
         .select(`
           id,
@@ -270,12 +272,11 @@ const PortalDashboard = () => {
           client_id,
           clients(first_name, last_name)
         `)
-        .order('occurred_at', { ascending: false })
-        .range(page * ITEMS_PER_PAGE, (page + 1) * ITEMS_PER_PAGE - 1);
+        .order('occurred_at', { ascending: false });
 
-      if (error) {
-        console.error('Error loading interactions:', error);
-        if (error.code === 'PGRST301') {
+      if (staffError) {
+        console.error('Error loading staff interactions:', staffError);
+        if (staffError.code === 'PGRST301') {
           toast({
             title: "Access denied",
             description: "You don't have permission to view interactions. Contact an administrator.",
@@ -283,24 +284,89 @@ const PortalDashboard = () => {
           });
           return;
         }
-        throw error;
+        throw staffError;
       }
 
-      const processedData = data?.map(interaction => ({
+      // Load public intake requests
+      const { data: intakeRequests, error: intakeError } = await supabase
+        .from('public_intake')
+        .select(`
+          id,
+          first_name,
+          last_name,
+          email,
+          phone,
+          help_needed,
+          status,
+          created_at,
+          viewed_at,
+          client_id,
+          interaction_id
+        `)
+        .order('created_at', { ascending: false });
+
+      if (intakeError) {
+        console.error('Error loading intake requests:', intakeError);
+        // Don't fail completely if just intake fails
+      }
+
+      // Process staff interactions
+      const processedStaffInteractions = staffInteractions?.map(interaction => ({
         ...interaction,
+        type: 'staff_interaction',
         hasIndividual: !!interaction.client_id,
         isNewRequest: interaction.status === 'new',
-        ageInDays: Math.floor((new Date().getTime() - new Date(interaction.occurred_at).getTime()) / (1000 * 60 * 60 * 24))
+        isUnread: false,
+        ageInDays: Math.floor((new Date().getTime() - new Date(interaction.occurred_at).getTime()) / (1000 * 60 * 60 * 24)),
+        timestamp: new Date(interaction.occurred_at).getTime()
       })) || [];
 
+      // Process public intake requests
+      const processedIntakeRequests = intakeRequests?.map(intake => ({
+        id: intake.id,
+        contact_name: `${intake.first_name} ${intake.last_name}`,
+        channel: 'public_form',
+        summary: `Public intake: ${intake.help_needed.substring(0, 100)}${intake.help_needed.length > 100 ? '...' : ''}`,
+        status: intake.status,
+        assistance_type: null,
+        requested_amount: null,
+        occurred_at: intake.created_at,
+        client_id: intake.client_id,
+        clients: null,
+        interaction_id: intake.interaction_id,
+        type: 'public_intake',
+        hasIndividual: !!intake.client_id,
+        isNewRequest: intake.status === 'pending',
+        isUnread: !intake.viewed_at,
+        ageInDays: Math.floor((new Date().getTime() - new Date(intake.created_at).getTime()) / (1000 * 60 * 60 * 24)),
+        timestamp: new Date(intake.created_at).getTime(),
+        email: intake.email,
+        phone: intake.phone,
+        help_needed: intake.help_needed
+      })) || [];
+
+      // Merge and sort chronologically
+      const allInteractions = [...processedStaffInteractions, ...processedIntakeRequests]
+        .sort((a, b) => b.timestamp - a.timestamp);
+
+      // Count unread items
+      const unreadItems = processedIntakeRequests.filter(item => item.isUnread).length;
+      setUnreadCount(unreadItems);
+
+      // Apply pagination
+      const startIndex = page * ITEMS_PER_PAGE;
+      const endIndex = startIndex + ITEMS_PER_PAGE;
+      const paginatedItems = allInteractions.slice(startIndex, endIndex);
+
       if (reset) {
-        setInteractions(processedData);
+        setInteractions(paginatedItems);
       } else {
-        setInteractions(prev => [...prev, ...processedData]);
+        setInteractions(prev => [...prev, ...paginatedItems]);
       }
 
-      setHasMoreInteractions(data?.length === ITEMS_PER_PAGE);
+      setHasMoreInteractions(endIndex < allInteractions.length);
       setInteractionsPage(page);
+      
     } catch (error) {
       console.error('Error loading interactions:', error);
       toast({
@@ -319,8 +385,27 @@ const PortalDashboard = () => {
     }
   };
 
-  const handleViewDetails = (interaction: any) => {
-    if (interaction.client_id) {
+  const handleViewDetails = async (interaction: any) => {
+    // Mark public intake as viewed if it's unread
+    if (interaction.type === 'public_intake' && interaction.isUnread) {
+      try {
+        await supabase
+          .from('public_intake')
+          .update({ viewed_at: new Date().toISOString() })
+          .eq('id', interaction.id);
+        
+        // Refresh interactions to show updated status
+        loadInteractions(0, true);
+      } catch (error) {
+        console.error('Error marking intake as viewed:', error);
+      }
+    }
+    
+    if (interaction.type === 'public_intake') {
+      // Navigate to intake requests page for public form submissions
+      navigate('/portal/intake');
+    } else if (interaction.client_id) {
+      // Navigate to client detail for staff interactions
       navigate(`/portal/clients/${interaction.client_id}`);
     } else {
       toast({
@@ -522,10 +607,15 @@ const PortalDashboard = () => {
         {/* Logbook */}
         <Card className="shadow-card mt-6">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Clock className="h-5 w-5 text-primary" />
-              Recent Interactions
-            </CardTitle>
+          <CardTitle className="flex items-center gap-2">
+            <Clock className="h-5 w-5 text-primary" />
+            Recent Interactions
+            {unreadCount > 0 && (
+              <Badge variant="destructive" className="ml-2">
+                {unreadCount} unread
+              </Badge>
+            )}
+          </CardTitle>
             <CardDescription>
               Latest client interactions and requests
             </CardDescription>
@@ -545,35 +635,48 @@ const PortalDashboard = () => {
                 >
                     <div className="flex items-start justify-between">
                       <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-2">
-                          <span className="font-medium text-foreground">
-                            {interaction.contact_name}
-                          </span>
-                          <Badge 
-                            variant={interaction.channel === 'public_form' ? 'default' : 'outline'}
-                            className="text-xs"
-                          >
-                            {interaction.channel.replace('_', ' ')}
-                          </Badge>
-                        
-                        {!interaction.hasIndividual && (
-                          <Badge variant="destructive" className="text-xs">
-                            Unlinked
-                          </Badge>
-                        )}
-                        
-                        {interaction.isNewRequest && (
-                          <Badge variant="secondary" className="text-xs">
-                            New Request
-                          </Badge>
-                        )}
-                        
-                        {interaction.ageInDays > 7 && (
-                          <Badge variant="destructive" className="text-xs">
-                            Aging {interaction.ageInDays}d
-                          </Badge>
-                        )}
-                      </div>
+                         <div className="flex items-center gap-2 mb-2">
+                           <span className="font-medium text-foreground">
+                             {interaction.contact_name}
+                           </span>
+                           <Badge 
+                             variant={interaction.channel === 'public_form' ? 'default' : 'outline'}
+                             className="text-xs"
+                           >
+                             {interaction.channel === 'public_form' ? 'Public Form' : interaction.channel.replace('_', ' ')}
+                           </Badge>
+                         
+                         {interaction.isUnread && (
+                           <Badge variant="destructive" className="text-xs animate-pulse">
+                             UNREAD
+                           </Badge>
+                         )}
+                         
+                         {!interaction.hasIndividual && (
+                           <Badge variant="destructive" className="text-xs">
+                             Unlinked
+                           </Badge>
+                         )}
+                         
+                         {interaction.isNewRequest && (
+                           <Badge variant="secondary" className="text-xs">
+                             {interaction.type === 'public_intake' ? 'Pending Review' : 'New Request'}
+                           </Badge>
+                         )}
+                         
+                         {interaction.ageInDays > 7 && (
+                           <Badge variant="destructive" className="text-xs">
+                             Aging {interaction.ageInDays}d
+                           </Badge>
+                         )}
+                         
+                         {/* Triage Status Badge */}
+                         {interaction.type !== 'public_intake' && interaction.assistance_type && (
+                           <Badge variant="outline" className="text-xs">
+                             Triage: {interaction.triage_completed_at ? 'Complete' : 'Pending'}
+                           </Badge>
+                         )}
+                       </div>
                       
                       <p className="text-sm text-muted-foreground mb-2">
                         {interaction.summary}
