@@ -133,63 +133,26 @@ const RequestAssistance = () => {
     setIsSubmitting(true);
     
     try {
-      // Create or find existing client
-      const { data: existingClient } = await supabase
-        .from('clients')
-        .select('id')
-        .eq('email', formData.email.toLowerCase())
-        .maybeSingle();
-
-      let clientId = existingClient?.id;
-
-      if (!clientId) {
-        // Create new client
-        const { data: newClient, error: clientError } = await supabase
-          .from('clients')
-          .insert({
-            first_name: formData.firstName,
-            last_name: formData.lastName,
-            email: formData.email.toLowerCase(),
-            phone: formData.phone,
-            address: formData.address,
-            city: formData.city,
-            state: formData.state,
-            zip_code: formData.zipCode,
-            county: formData.county,
-          })
-          .select('id')
-          .single();
-
-        if (clientError) throw clientError;
-        clientId = newClient.id;
-      }
-
-      // Create interaction
-      const { data: interaction, error: interactionError } = await supabase
-        .from('interactions')
+      // Submit to secure public intake table
+      // This bypasses the need for complex client/interaction creation
+      const { error: intakeError } = await supabase
+        .from('public_intake')
         .insert({
-          client_id: clientId,
-          contact_name: `${formData.firstName} ${formData.lastName}`,
-          summary: `Assistance request: ${formData.helpNeeded.substring(0, 100)}...`,
-          details: formData.helpNeeded,
-          channel: 'public_form',
-          status: 'new',
-        })
-        .select('id')
-        .single();
-
-      if (interactionError) throw interactionError;
-
-      // Create assistance request
-      const { error: requestError } = await supabase
-        .from('assistance_requests')
-        .insert({
-          client_id: clientId,
-          interaction_id: interaction.id,
-          help_requested: formData.helpNeeded,
+          first_name: formData.firstName,
+          last_name: formData.lastName,
+          email: formData.email.toLowerCase(),
+          phone: formData.phone,
+          address: formData.address,
+          city: formData.city,
+          state: formData.state,
+          zip_code: formData.zipCode,
+          county: formData.county,
+          help_needed: formData.helpNeeded,
+          source: 'web_form',
+          user_agent: navigator.userAgent,
         });
 
-      if (requestError) throw requestError;
+      if (intakeError) throw intakeError;
 
       toast({
         title: "Request Submitted Successfully",

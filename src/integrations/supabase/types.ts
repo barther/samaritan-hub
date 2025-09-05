@@ -416,6 +416,81 @@ export type Database = {
         }
         Relationships: []
       }
+      public_intake: {
+        Row: {
+          address: string
+          assistance_request_id: string | null
+          city: string
+          client_id: string | null
+          county: string | null
+          created_at: string
+          email: string
+          first_name: string
+          help_needed: string
+          id: string
+          interaction_id: string | null
+          ip_address: string | null
+          last_name: string
+          notes: string | null
+          phone: string
+          processed_at: string | null
+          processed_by: string | null
+          source: string
+          state: string
+          status: string
+          user_agent: string | null
+          zip_code: string
+        }
+        Insert: {
+          address: string
+          assistance_request_id?: string | null
+          city: string
+          client_id?: string | null
+          county?: string | null
+          created_at?: string
+          email: string
+          first_name: string
+          help_needed: string
+          id?: string
+          interaction_id?: string | null
+          ip_address?: string | null
+          last_name: string
+          notes?: string | null
+          phone: string
+          processed_at?: string | null
+          processed_by?: string | null
+          source?: string
+          state?: string
+          status?: string
+          user_agent?: string | null
+          zip_code: string
+        }
+        Update: {
+          address?: string
+          assistance_request_id?: string | null
+          city?: string
+          client_id?: string | null
+          county?: string | null
+          created_at?: string
+          email?: string
+          first_name?: string
+          help_needed?: string
+          id?: string
+          interaction_id?: string | null
+          ip_address?: string | null
+          last_name?: string
+          notes?: string | null
+          phone?: string
+          processed_at?: string | null
+          processed_by?: string | null
+          source?: string
+          state?: string
+          status?: string
+          user_agent?: string | null
+          zip_code?: string
+        }
+        Relationships: []
+      }
       settings: {
         Row: {
           created_at: string

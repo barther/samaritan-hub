@@ -12,6 +12,7 @@ import Portal from "./pages/Portal";
 import PortalDashboard from "./pages/PortalDashboard";
 import ClientSearch from "./pages/ClientSearch";
 import ClientDetail from "./pages/ClientDetail";
+import IntakeRequests from "./pages/IntakeRequests";
 import Reports from "./pages/Reports";
 import Analytics from "./pages/Analytics";
 import Settings from "./pages/Settings";
@@ -32,6 +33,7 @@ const App = () => (
           <Route path="/request" element={<RequestAssistance />} />
           <Route path="/portal" element={<Portal />} />
           <Route path="/portal/dashboard" element={<AuthGuard><PortalDashboard /></AuthGuard>} />
+          <Route path="/portal/intake" element={<AuthGuard><IntakeRequests /></AuthGuard>} />
           <Route path="/portal/clients" element={<AuthGuard><ClientSearch /></AuthGuard>} />
           <Route path="/portal/clients/:clientId" element={<AuthGuard><ClientDetail /></AuthGuard>} />
           <Route path="/portal/reports" element={<AuthGuard><Reports /></AuthGuard>} />

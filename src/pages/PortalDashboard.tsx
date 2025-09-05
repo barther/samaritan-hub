@@ -372,6 +372,9 @@ const PortalDashboard = () => {
                   <p className="text-xs text-muted-foreground">Logged in</p>
                 </div>
               )}
+              <Button variant="outline" size="sm" onClick={() => navigate('/portal/intake')}>
+                Intake Requests
+              </Button>
               <Button variant="outline" size="sm" onClick={() => navigate('/portal/reports')}>
                 Reports
               </Button>
@@ -497,6 +500,11 @@ const PortalDashboard = () => {
                   Internal Intake
                 </Button>
               )}
+              
+              <Button variant="outline" className="w-full justify-start" onClick={() => navigate('/portal/intake')}>
+                <FileText className="h-4 w-4 mr-2" />
+                Public Intake Requests
+              </Button>
               
               <Button variant="outline" className="w-full justify-start" onClick={() => navigate('/portal/reports')}>
                 <FileText className="h-4 w-4 mr-2" />
