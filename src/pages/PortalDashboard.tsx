@@ -198,7 +198,7 @@ const PortalDashboard = () => {
               <Button variant="outline" size="sm" onClick={() => navigate('/portal/reports')}>
                 Reports
               </Button>
-              <Button variant="outline" size="sm">
+              <Button variant="outline" size="sm" onClick={() => navigate('/portal/settings')}>
                 Settings
               </Button>
             </div>
