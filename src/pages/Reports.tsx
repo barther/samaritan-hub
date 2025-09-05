@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -7,12 +7,19 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { FileText, Download, ArrowLeft, Calendar, DollarSign, Users } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 
 const Reports = () => {
   const [reportType, setReportType] = useState("");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
+  const [stats, setStats] = useState({
+    totalDonations: 0,
+    totalDisbursements: 0,
+    totalClients: 0,
+    loading: true
+  });
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -23,6 +30,48 @@ const Reports = () => {
     { value: "financial", label: "Financial Summary", description: "Combined donations and disbursements" },
     { value: "clients", label: "Client Report", description: "List of all clients and their interactions" }
   ];
+
+  useEffect(() => {
+    loadStats();
+  }, []);
+
+  const loadStats = async () => {
+    try {
+      // Get total donations
+      const { data: donations, error: donationsError } = await supabase
+        .from('donations')
+        .select('amount');
+      
+      if (donationsError) throw donationsError;
+      
+      // Get total disbursements
+      const { data: disbursements, error: disbursementsError } = await supabase
+        .from('disbursements')
+        .select('amount');
+      
+      if (disbursementsError) throw disbursementsError;
+      
+      // Get total clients count
+      const { count: clientsCount, error: clientsError } = await supabase
+        .from('clients')
+        .select('*', { count: 'exact', head: true });
+      
+      if (clientsError) throw clientsError;
+      
+      const totalDonations = donations?.reduce((sum, d) => sum + Number(d.amount), 0) || 0;
+      const totalDisbursements = disbursements?.reduce((sum, d) => sum + Number(d.amount), 0) || 0;
+      
+      setStats({
+        totalDonations,
+        totalDisbursements,
+        totalClients: clientsCount || 0,
+        loading: false
+      });
+    } catch (error) {
+      console.error('Error loading stats:', error);
+      setStats(prev => ({ ...prev, loading: false }));
+    }
+  };
 
   const generateReport = async () => {
     if (!reportType || !startDate || !endDate) {
@@ -36,14 +85,128 @@ const Reports = () => {
 
     setIsGenerating(true);
     
-    // Simulate report generation
-    setTimeout(() => {
+    try {
+      let data = [];
+      let csvContent = "";
+      
+      switch (reportType) {
+        case "donations":
+          const { data: donationsData, error: donationsError } = await supabase
+            .from('donations')
+            .select('*')
+            .gte('donation_date', startDate)
+            .lte('donation_date', endDate)
+            .order('donation_date', { ascending: false });
+          
+          if (donationsError) throw donationsError;
+          
+          csvContent = "Date,Donor Name,Amount,Source,Notes\n" + 
+            donationsData?.map(d => 
+              `${d.donation_date},"${d.donor_name || 'Anonymous'}","$${d.amount}","${d.source}","${d.notes || ''}"`
+            ).join('\n');
+          break;
+          
+        case "disbursements":
+          const { data: disbursementsData, error: disbursementsError } = await supabase
+            .from('disbursements')
+            .select('*, clients(first_name, last_name)')
+            .gte('disbursement_date', startDate)
+            .lte('disbursement_date', endDate)
+            .order('disbursement_date', { ascending: false });
+          
+          if (disbursementsError) throw disbursementsError;
+          
+          csvContent = "Date,Recipient,Amount,Type,Payment Method,Check Number,Notes\n" + 
+            disbursementsData?.map(d => 
+              `${d.disbursement_date},"${d.recipient_name}","$${d.amount}","${d.assistance_type}","${d.payment_method}","${d.check_number || ''}","${d.notes || ''}"`
+            ).join('\n');
+          break;
+          
+        case "interactions":
+          const { data: interactionsData, error: interactionsError } = await supabase
+            .from('interactions')
+            .select('*, clients(first_name, last_name)')
+            .gte('occurred_at', startDate)
+            .lte('occurred_at', endDate)
+            .order('occurred_at', { ascending: false });
+          
+          if (interactionsError) throw interactionsError;
+          
+          csvContent = "Date,Client,Channel,Status,Summary,Requested Amount,Approved Amount\n" + 
+            interactionsData?.map(i => 
+              `${new Date(i.occurred_at).toLocaleDateString()},"${i.clients?.first_name} ${i.clients?.last_name}","${i.channel}","${i.status}","${i.summary}","$${i.requested_amount || 0}","$${i.approved_amount || 0}"`
+            ).join('\n');
+          break;
+          
+        case "clients":
+          const { data: clientsData, error: clientsError } = await supabase
+            .from('clients')
+            .select('*')
+            .gte('created_at', startDate)
+            .lte('created_at', endDate)
+            .order('created_at', { ascending: false });
+          
+          if (clientsError) throw clientsError;
+          
+          csvContent = "Date Created,First Name,Last Name,Email,Phone,City,State,County\n" + 
+            clientsData?.map(c => 
+              `${new Date(c.created_at).toLocaleDateString()},"${c.first_name}","${c.last_name}","${c.email || ''}","${c.phone || ''}","${c.city || ''}","${c.state || ''}","${c.county || ''}"`
+            ).join('\n');
+          break;
+          
+        case "financial":
+          // Combined financial report
+          const [donationsRes, disbursementsRes] = await Promise.all([
+            supabase.from('donations').select('*').gte('donation_date', startDate).lte('donation_date', endDate),
+            supabase.from('disbursements').select('*').gte('disbursement_date', startDate).lte('disbursement_date', endDate)
+          ]);
+          
+          if (donationsRes.error || disbursementsRes.error) {
+            throw donationsRes.error || disbursementsRes.error;
+          }
+          
+          const totalDonations = donationsRes.data?.reduce((sum, d) => sum + Number(d.amount), 0) || 0;
+          const totalDisbursements = disbursementsRes.data?.reduce((sum, d) => sum + Number(d.amount), 0) || 0;
+          
+          csvContent = `Financial Summary (${startDate} to ${endDate})\n\n` +
+            `Total Donations,$${totalDonations}\n` +
+            `Total Disbursements,$${totalDisbursements}\n` +
+            `Net Balance,$${totalDonations - totalDisbursements}\n\n` +
+            `Donations Detail:\nDate,Donor,Amount,Source\n` +
+            donationsRes.data?.map(d => `${d.donation_date},"${d.donor_name || 'Anonymous'}","$${d.amount}","${d.source}"`).join('\n') +
+            `\n\nDisbursements Detail:\nDate,Recipient,Amount,Type\n` +
+            disbursementsRes.data?.map(d => `${d.disbursement_date},"${d.recipient_name}","$${d.amount}","${d.assistance_type}"`).join('\n');
+          break;
+          
+        default:
+          throw new Error("Invalid report type");
+      }
+      
+      // Download CSV
+      const blob = new Blob([csvContent], { type: 'text/csv' });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.style.display = 'none';
+      a.href = url;
+      a.download = `${reportType}-report-${startDate}-to-${endDate}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      
       toast({
         title: "Report generated successfully",
-        description: "Your report is ready for download."
+        description: "Your report has been downloaded."
       });
+    } catch (error: any) {
+      console.error('Error generating report:', error);
+      toast({
+        title: "Error generating report",
+        description: error.message || "Please try again.",
+        variant: "destructive"
+      });
+    } finally {
       setIsGenerating(false);
-    }, 2000);
+    }
   };
 
   return (
@@ -150,7 +313,9 @@ const Reports = () => {
                 <DollarSign className="h-8 w-8 text-success" />
                 <div>
                   <p className="text-sm text-muted-foreground">Total Donations</p>
-                  <p className="text-2xl font-bold text-success">$12,450.75</p>
+                  <p className="text-2xl font-bold text-success">
+                    {stats.loading ? "Loading..." : `$${stats.totalDonations.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+                  </p>
                 </div>
               </div>
             </CardContent>
@@ -162,7 +327,9 @@ const Reports = () => {
                 <DollarSign className="h-8 w-8 text-destructive" />
                 <div>
                   <p className="text-sm text-muted-foreground">Total Disbursements</p>
-                  <p className="text-2xl font-bold text-destructive">$8,920.50</p>
+                  <p className="text-2xl font-bold text-destructive">
+                    {stats.loading ? "Loading..." : `$${stats.totalDisbursements.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+                  </p>
                 </div>
               </div>
             </CardContent>
@@ -174,7 +341,9 @@ const Reports = () => {
                 <Users className="h-8 w-8 text-primary" />
                 <div>
                   <p className="text-sm text-muted-foreground">Total Clients</p>
-                  <p className="text-2xl font-bold text-primary">147</p>
+                  <p className="text-2xl font-bold text-primary">
+                    {stats.loading ? "Loading..." : stats.totalClients.toLocaleString()}
+                  </p>
                 </div>
               </div>
             </CardContent>
