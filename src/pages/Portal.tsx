@@ -11,12 +11,19 @@ const Portal = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      console.log('Auth state change:', event, session?.user?.email);
       const email = session?.user?.email?.toLowerCase() || "";
-      if (!session?.user) return;
+      if (!session?.user) {
+        console.log('No user session');
+        return;
+      }
+      console.log('Checking email domain:', email);
       if (email.endsWith("@lithiaspringsmethodist.org")) {
+        console.log('Valid domain, redirecting to dashboard');
         navigate("/portal/dashboard", { replace: true });
       } else {
+        console.log('Invalid domain, signing out');
         supabase.auth.signOut();
         toast({
           title: "Organization access only",
@@ -27,11 +34,18 @@ const Portal = () => {
     });
 
     supabase.auth.getSession().then(({ data: { session } }) => {
+      console.log('Initial session check:', session?.user?.email);
       const email = session?.user?.email?.toLowerCase() || "";
-      if (!session?.user) return;
+      if (!session?.user) {
+        console.log('No initial session');
+        return;
+      }
+      console.log('Initial email domain check:', email);
       if (email.endsWith("@lithiaspringsmethodist.org")) {
+        console.log('Valid initial domain, redirecting to dashboard');
         navigate("/portal/dashboard", { replace: true });
       } else {
+        console.log('Invalid initial domain, signing out');
         supabase.auth.signOut();
       }
     });
