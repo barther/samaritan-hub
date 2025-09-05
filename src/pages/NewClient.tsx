@@ -154,16 +154,14 @@ const NewClient = () => {
           if (updateError) throw updateError;
         }
 
-      // Create assistance request
-        const { data: assistanceRequest, error: requestError } = await supabase
-          .from('assistance_requests')
-          .insert({
-            client_id: selectedMatch.id,
-            interaction_id: interactionId,
-            help_requested: helpNeeded || summary,
-          })
-          .select('id')
-          .single();
+      // Create assistance request (no select to avoid RLS SELECT issues)
+      const { error: requestError } = await supabase
+        .from('assistance_requests')
+        .insert({
+          client_id: selectedMatch.id,
+          interaction_id: interactionId,
+          help_requested: helpNeeded || summary,
+        });
 
       if (requestError) throw requestError;
 
@@ -174,11 +172,11 @@ const NewClient = () => {
 
       // Navigate to client detail page
       navigate(`/portal/clients/${selectedMatch.id}`);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error linking to existing client:', error);
       toast({
         title: "Error",
-        description: "Failed to link to existing client. Please try again.",
+        description: `Failed to link to existing client: ${error?.message || 'Unknown error'}`,
         variant: "destructive"
       });
     } finally {
