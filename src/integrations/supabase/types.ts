@@ -712,6 +712,246 @@ export type Database = {
         }
         Relationships: []
       }
+      staging_clients: {
+        Row: {
+          address: string | null
+          city: string | null
+          county: string | null
+          created_at: string
+          created_by: string | null
+          email: string | null
+          error: string | null
+          first_name: string | null
+          id: string
+          last_name: string | null
+          matched_client_id: string | null
+          notes: string | null
+          phone: string | null
+          row_no: number | null
+          source: string
+          state: string | null
+          status: string | null
+          zip_code: string | null
+        }
+        Insert: {
+          address?: string | null
+          city?: string | null
+          county?: string | null
+          created_at?: string
+          created_by?: string | null
+          email?: string | null
+          error?: string | null
+          first_name?: string | null
+          id?: string
+          last_name?: string | null
+          matched_client_id?: string | null
+          notes?: string | null
+          phone?: string | null
+          row_no?: number | null
+          source: string
+          state?: string | null
+          status?: string | null
+          zip_code?: string | null
+        }
+        Update: {
+          address?: string | null
+          city?: string | null
+          county?: string | null
+          created_at?: string
+          created_by?: string | null
+          email?: string | null
+          error?: string | null
+          first_name?: string | null
+          id?: string
+          last_name?: string | null
+          matched_client_id?: string | null
+          notes?: string | null
+          phone?: string | null
+          row_no?: number | null
+          source?: string
+          state?: string | null
+          status?: string | null
+          zip_code?: string | null
+        }
+        Relationships: []
+      }
+      staging_disbursements: {
+        Row: {
+          amount: number | null
+          assistance_type: string | null
+          check_number: string | null
+          client_email: string | null
+          client_first_name: string | null
+          client_last_name: string | null
+          client_phone: string | null
+          created_at: string
+          created_by: string | null
+          disbursement_date: string | null
+          error: string | null
+          id: string
+          matched_client_id: string | null
+          notes: string | null
+          payment_method: string | null
+          recipient_name: string | null
+          row_no: number | null
+          source: string
+          status: string | null
+        }
+        Insert: {
+          amount?: number | null
+          assistance_type?: string | null
+          check_number?: string | null
+          client_email?: string | null
+          client_first_name?: string | null
+          client_last_name?: string | null
+          client_phone?: string | null
+          created_at?: string
+          created_by?: string | null
+          disbursement_date?: string | null
+          error?: string | null
+          id?: string
+          matched_client_id?: string | null
+          notes?: string | null
+          payment_method?: string | null
+          recipient_name?: string | null
+          row_no?: number | null
+          source: string
+          status?: string | null
+        }
+        Update: {
+          amount?: number | null
+          assistance_type?: string | null
+          check_number?: string | null
+          client_email?: string | null
+          client_first_name?: string | null
+          client_last_name?: string | null
+          client_phone?: string | null
+          created_at?: string
+          created_by?: string | null
+          disbursement_date?: string | null
+          error?: string | null
+          id?: string
+          matched_client_id?: string | null
+          notes?: string | null
+          payment_method?: string | null
+          recipient_name?: string | null
+          row_no?: number | null
+          source?: string
+          status?: string | null
+        }
+        Relationships: []
+      }
+      staging_donations: {
+        Row: {
+          amount: number | null
+          created_at: string
+          created_by: string | null
+          donation_date: string | null
+          donor_email: string | null
+          donor_name: string | null
+          error: string | null
+          id: string
+          notes: string | null
+          row_no: number | null
+          source: string
+          status: string | null
+        }
+        Insert: {
+          amount?: number | null
+          created_at?: string
+          created_by?: string | null
+          donation_date?: string | null
+          donor_email?: string | null
+          donor_name?: string | null
+          error?: string | null
+          id?: string
+          notes?: string | null
+          row_no?: number | null
+          source: string
+          status?: string | null
+        }
+        Update: {
+          amount?: number | null
+          created_at?: string
+          created_by?: string | null
+          donation_date?: string | null
+          donor_email?: string | null
+          donor_name?: string | null
+          error?: string | null
+          id?: string
+          notes?: string | null
+          row_no?: number | null
+          source?: string
+          status?: string | null
+        }
+        Relationships: []
+      }
+      staging_interactions: {
+        Row: {
+          approved_amount: number | null
+          assistance_type: string | null
+          channel: string | null
+          client_email: string | null
+          client_first_name: string | null
+          client_last_name: string | null
+          client_phone: string | null
+          created_at: string
+          created_by: string | null
+          details: string | null
+          error: string | null
+          id: string
+          matched_client_id: string | null
+          occurred_at: string | null
+          requested_amount: number | null
+          row_no: number | null
+          source: string
+          status: string | null
+          summary: string | null
+        }
+        Insert: {
+          approved_amount?: number | null
+          assistance_type?: string | null
+          channel?: string | null
+          client_email?: string | null
+          client_first_name?: string | null
+          client_last_name?: string | null
+          client_phone?: string | null
+          created_at?: string
+          created_by?: string | null
+          details?: string | null
+          error?: string | null
+          id?: string
+          matched_client_id?: string | null
+          occurred_at?: string | null
+          requested_amount?: number | null
+          row_no?: number | null
+          source: string
+          status?: string | null
+          summary?: string | null
+        }
+        Update: {
+          approved_amount?: number | null
+          assistance_type?: string | null
+          channel?: string | null
+          client_email?: string | null
+          client_first_name?: string | null
+          client_last_name?: string | null
+          client_phone?: string | null
+          created_at?: string
+          created_by?: string | null
+          details?: string | null
+          error?: string | null
+          id?: string
+          matched_client_id?: string | null
+          occurred_at?: string | null
+          requested_amount?: number | null
+          row_no?: number | null
+          source?: string
+          status?: string | null
+          summary?: string | null
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           created_at: string
