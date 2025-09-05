@@ -4,16 +4,18 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { FileText, Download, ArrowLeft, Calendar, DollarSign, Users } from "lucide-react";
+import { FileText, Download, ArrowLeft, Calendar, DollarSign, Users, FileDown } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { generatePDFReport, downloadPDF } from "@/utils/pdfGenerator";
 
 const Reports = () => {
   const [reportType, setReportType] = useState("");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
+  const [exportFormat, setExportFormat] = useState<"csv" | "pdf">("csv");
   const [stats, setStats] = useState({
     totalDonations: 0,
     totalDisbursements: 0,
@@ -130,8 +132,7 @@ const Reports = () => {
     setIsGenerating(true);
     
     try {
-      let data = [];
-      let csvContent = "";
+      let reportData: any = {};
       
       switch (reportType) {
         case "donations":
@@ -146,10 +147,23 @@ const Reports = () => {
           
           console.log('Donations data:', donationsData?.length, 'records found');
           
-          csvContent = "Date,Donor Name,Amount,Source,Notes\n" + 
-            (donationsData?.map(d => 
-              `${d.donation_date},"${d.donor_name || 'Anonymous'}","$${d.amount}","${d.source}","${d.notes || ''}"`
-            ).join('\n') || '');
+          reportData = {
+            reportType,
+            startDate: finalStartDate,
+            endDate: finalEndDate,
+            data: donationsData || []
+          };
+
+          if (exportFormat === "csv") {
+            const csvContent = "Date,Donor Name,Amount,Source,Notes\n" + 
+              (donationsData?.map(d => 
+                `${d.donation_date},"${d.donor_name || 'Anonymous'}","$${d.amount}","${d.source}","${d.notes || ''}"`
+              ).join('\n') || '');
+            downloadCSV(csvContent, `donations-report-${finalStartDate}-to-${finalEndDate}.csv`);
+          } else {
+            const doc = generatePDFReport(reportData);
+            downloadPDF(doc, `donations-report-${finalStartDate}-to-${finalEndDate}.pdf`);
+          }
           break;
           
         case "disbursements":
@@ -164,10 +178,23 @@ const Reports = () => {
           
           console.log('Disbursements data:', disbursementsData?.length, 'records found');
           
-          csvContent = "Date,Recipient,Amount,Type,Payment Method,Check Number,Notes\n" + 
-            (disbursementsData?.map(d => 
-              `${d.disbursement_date},"${d.recipient_name}","$${d.amount}","${d.assistance_type}","${d.payment_method}","${d.check_number || ''}","${d.notes || ''}"`
-            ).join('\n') || '');
+          reportData = {
+            reportType,
+            startDate: finalStartDate,
+            endDate: finalEndDate,
+            data: disbursementsData || []
+          };
+
+          if (exportFormat === "csv") {
+            const csvContent = "Date,Recipient,Amount,Type,Payment Method,Check Number,Notes\n" + 
+              (disbursementsData?.map(d => 
+                `${d.disbursement_date},"${d.recipient_name}","$${d.amount}","${d.assistance_type}","${d.payment_method}","${d.check_number || ''}","${d.notes || ''}"`
+              ).join('\n') || '');
+            downloadCSV(csvContent, `disbursements-report-${finalStartDate}-to-${finalEndDate}.csv`);
+          } else {
+            const doc = generatePDFReport(reportData);
+            downloadPDF(doc, `disbursements-report-${finalStartDate}-to-${finalEndDate}.pdf`);
+          }
           break;
           
         case "interactions":
@@ -182,10 +209,23 @@ const Reports = () => {
           
           console.log('Interactions data:', interactionsData?.length, 'records found');
           
-          csvContent = "Date,Client,Channel,Status,Summary,Requested Amount,Approved Amount\n" + 
-            (interactionsData?.map(i => 
-              `${new Date(i.occurred_at).toLocaleDateString()},"${i.clients?.first_name || ''} ${i.clients?.last_name || ''}","${i.channel}","${i.status}","${i.summary}","$${i.requested_amount || 0}","$${i.approved_amount || 0}"`
-            ).join('\n') || '');
+          reportData = {
+            reportType,
+            startDate: finalStartDate,
+            endDate: finalEndDate,
+            data: interactionsData || []
+          };
+
+          if (exportFormat === "csv") {
+            const csvContent = "Date,Client,Channel,Status,Summary,Requested Amount,Approved Amount\n" + 
+              (interactionsData?.map(i => 
+                `${new Date(i.occurred_at).toLocaleDateString()},"${i.clients?.first_name || ''} ${i.clients?.last_name || ''}","${i.channel}","${i.status}","${i.summary}","$${i.requested_amount || 0}","$${i.approved_amount || 0}"`
+              ).join('\n') || '');
+            downloadCSV(csvContent, `interactions-report-${finalStartDate}-to-${finalEndDate}.csv`);
+          } else {
+            const doc = generatePDFReport(reportData);
+            downloadPDF(doc, `interactions-report-${finalStartDate}-to-${finalEndDate}.pdf`);
+          }
           break;
           
         case "clients":
@@ -200,10 +240,23 @@ const Reports = () => {
           
           console.log('Clients data:', clientsData?.length, 'records found');
           
-          csvContent = "Date Created,First Name,Last Name,Email,Phone,City,State,County\n" + 
-            (clientsData?.map(c => 
-              `${new Date(c.created_at).toLocaleDateString()},"${c.first_name}","${c.last_name}","${c.email || ''}","${c.phone || ''}","${c.city || ''}","${c.state || ''}","${c.county || ''}"`
-            ).join('\n') || '');
+          reportData = {
+            reportType,
+            startDate: finalStartDate,
+            endDate: finalEndDate,
+            data: clientsData || []
+          };
+
+          if (exportFormat === "csv") {
+            const csvContent = "Date Created,First Name,Last Name,Email,Phone,City,State,County\n" + 
+              (clientsData?.map(c => 
+                `${new Date(c.created_at).toLocaleDateString()},"${c.first_name}","${c.last_name}","${c.email || ''}","${c.phone || ''}","${c.city || ''}","${c.state || ''}","${c.county || ''}"`
+              ).join('\n') || '');
+            downloadCSV(csvContent, `clients-report-${finalStartDate}-to-${finalEndDate}.csv`);
+          } else {
+            const doc = generatePDFReport(reportData);
+            downloadPDF(doc, `clients-report-${finalStartDate}-to-${finalEndDate}.pdf`);
+          }
           break;
           
         case "financial":
@@ -220,34 +273,38 @@ const Reports = () => {
           const totalDonations = donationsRes.data?.reduce((sum, d) => sum + Number(d.amount), 0) || 0;
           const totalDisbursements = disbursementsRes.data?.reduce((sum, d) => sum + Number(d.amount), 0) || 0;
           
-          csvContent = `Financial Summary (${finalStartDate} to ${finalEndDate})\n\n` +
-            `Total Donations,$${totalDonations}\n` +
-            `Total Disbursements,$${totalDisbursements}\n` +
-            `Net Balance,$${totalDonations - totalDisbursements}\n\n` +
-            `Donations Detail:\nDate,Donor,Amount,Source\n` +
-            donationsRes.data?.map(d => `${d.donation_date},"${d.donor_name || 'Anonymous'}","$${d.amount}","${d.source}"`).join('\n') +
-            `\n\nDisbursements Detail:\nDate,Recipient,Amount,Type\n` +
-            disbursementsRes.data?.map(d => `${d.disbursement_date},"${d.recipient_name}","$${d.amount}","${d.assistance_type}"`).join('\n');
+          reportData = {
+            reportType,
+            startDate: finalStartDate,
+            endDate: finalEndDate,
+            data: [...(donationsRes.data || []), ...(disbursementsRes.data || [])],
+            totalDonations,
+            totalDisbursements
+          };
+
+          if (exportFormat === "csv") {
+            const csvContent = `Financial Summary (${finalStartDate} to ${finalEndDate})\n\n` +
+              `Total Donations,$${totalDonations}\n` +
+              `Total Disbursements,$${totalDisbursements}\n` +
+              `Net Balance,$${totalDonations - totalDisbursements}\n\n` +
+              `Donations Detail:\nDate,Donor,Amount,Source\n` +
+              donationsRes.data?.map(d => `${d.donation_date},"${d.donor_name || 'Anonymous'}","$${d.amount}","${d.source}"`).join('\n') +
+              `\n\nDisbursements Detail:\nDate,Recipient,Amount,Type\n` +
+              disbursementsRes.data?.map(d => `${d.disbursement_date},"${d.recipient_name}","$${d.amount}","${d.assistance_type}"`).join('\n');
+            downloadCSV(csvContent, `financial-report-${finalStartDate}-to-${finalEndDate}.csv`);
+          } else {
+            const doc = generatePDFReport(reportData);
+            downloadPDF(doc, `financial-report-${finalStartDate}-to-${finalEndDate}.pdf`);
+          }
           break;
           
         default:
           throw new Error("Invalid report type");
       }
       
-      // Download CSV
-      const blob = new Blob([csvContent], { type: 'text/csv' });
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.style.display = 'none';
-      a.href = url;
-      a.download = `${reportType}-report-${finalStartDate}-to-${finalEndDate}.csv`;
-      document.body.appendChild(a);
-      a.click();
-      window.URL.revokeObjectURL(url);
-      
       toast({
         title: "Report generated successfully",
-        description: "Your report has been downloaded."
+        description: `Your ${exportFormat.toUpperCase()} report has been downloaded.`
       });
     } catch (error: any) {
       console.error('Error generating report:', error);
@@ -259,6 +316,18 @@ const Reports = () => {
     } finally {
       setIsGenerating(false);
     }
+  };
+
+  const downloadCSV = (csvContent: string, filename: string) => {
+    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.style.display = 'none';
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    window.URL.revokeObjectURL(url);
   };
 
   return (
@@ -332,6 +401,19 @@ const Reports = () => {
                 />
               </div>
 
+              <div>
+                <Label htmlFor="exportFormat">Export Format</Label>
+                <Select value={exportFormat} onValueChange={(value: "csv" | "pdf") => setExportFormat(value)}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select format" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="csv">CSV (Spreadsheet)</SelectItem>
+                    <SelectItem value="pdf">PDF (Professional Report)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
               <div className="space-y-2">
                 <Label>Quick Date Ranges</Label>
                 <div className="flex flex-wrap gap-2">
@@ -358,8 +440,12 @@ const Reports = () => {
                 disabled={isGenerating}
                 className="w-full"
               >
-                <Download className="h-4 w-4 mr-2" />
-                {isGenerating ? "Generating..." : "Generate Report"}
+                {exportFormat === "pdf" ? (
+                  <FileDown className="h-4 w-4 mr-2" />
+                ) : (
+                  <Download className="h-4 w-4 mr-2" />
+                )}
+                {isGenerating ? "Generating..." : `Generate ${exportFormat.toUpperCase()} Report`}
               </Button>
             </CardContent>
           </Card>
