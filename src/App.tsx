@@ -4,6 +4,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import AuthGuard from "@/components/AuthGuard";
 import Index from "./pages/Index";
 import Give from "./pages/Give";
 import RequestAssistance from "./pages/RequestAssistance";
@@ -30,12 +31,12 @@ const App = () => (
           <Route path="/give" element={<Give />} />
           <Route path="/request" element={<RequestAssistance />} />
           <Route path="/portal" element={<Portal />} />
-          <Route path="/portal/dashboard" element={<PortalDashboard />} />
-          <Route path="/portal/clients" element={<ClientSearch />} />
-          <Route path="/portal/clients/:clientId" element={<ClientDetail />} />
-          <Route path="/portal/reports" element={<Reports />} />
-          <Route path="/portal/analytics" element={<Analytics />} />
-          <Route path="/portal/settings" element={<Settings />} />
+          <Route path="/portal/dashboard" element={<AuthGuard><PortalDashboard /></AuthGuard>} />
+          <Route path="/portal/clients" element={<AuthGuard><ClientSearch /></AuthGuard>} />
+          <Route path="/portal/clients/:clientId" element={<AuthGuard><ClientDetail /></AuthGuard>} />
+          <Route path="/portal/reports" element={<AuthGuard><Reports /></AuthGuard>} />
+          <Route path="/portal/analytics" element={<AuthGuard><Analytics /></AuthGuard>} />
+          <Route path="/portal/settings" element={<AuthGuard><Settings /></AuthGuard>} />
           <Route path="/payment-success" element={<PaymentSuccess />} />
           <Route path="/admin" element={<Navigate to="/portal" replace />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
