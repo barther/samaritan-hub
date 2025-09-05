@@ -231,11 +231,69 @@ Good Samaritan Assistance Team`,
     };
     checkRoleAndLoad();
   }, []);
-  const handleExportData = () => {
-    toast({
-      title: "Export initiated",
-      description: "Your data export will be ready for download shortly."
-    });
+  const handleExportData = async () => {
+    if (!isAdmin) {
+      toast({
+        title: "Permission Denied",
+        description: "Only administrators can export data.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setLoading(true);
+    try {
+      toast({
+        title: "Export started",
+        description: "Preparing your data export..."
+      });
+
+      const { data: sessionRes } = await supabase.auth.getSession();
+      const authToken = sessionRes.session?.access_token;
+
+      if (!authToken) {
+        throw new Error("Authentication required");
+      }
+
+      const response = await supabase.functions.invoke('export-data', {
+        headers: {
+          'Authorization': `Bearer ${authToken}`
+        }
+      });
+
+      if (response.error) {
+        throw response.error;
+      }
+
+      // The response should be CSV data
+      const csvData = response.data;
+      
+      // Create blob and download
+      const blob = new Blob([csvData], { type: 'text/csv' });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `good-samaritan-export-${new Date().toISOString().split('T')[0]}.csv`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+
+      toast({
+        title: "Export completed",
+        description: "Your data has been downloaded successfully."
+      });
+
+    } catch (error: any) {
+      console.error('Error exporting data:', error);
+      toast({
+        title: "Export failed",
+        description: error.message || "Failed to export data. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+    }
   };
   const handleSendTestEmail = async () => {
     if (!testEmailAddress) {
