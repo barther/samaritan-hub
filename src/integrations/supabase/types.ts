@@ -182,6 +182,33 @@ export type Database = {
         }
         Relationships: []
       }
+      client_merges: {
+        Row: {
+          created_at: string
+          details: Json | null
+          id: string
+          merged_by: string | null
+          merged_from_client_ids: string[]
+          merged_into_client_id: string
+        }
+        Insert: {
+          created_at?: string
+          details?: Json | null
+          id?: string
+          merged_by?: string | null
+          merged_from_client_ids?: string[]
+          merged_into_client_id: string
+        }
+        Update: {
+          created_at?: string
+          details?: Json | null
+          id?: string
+          merged_by?: string | null
+          merged_from_client_ids?: string[]
+          merged_into_client_id?: string
+        }
+        Relationships: []
+      }
       clients: {
         Row: {
           address: string | null
@@ -563,6 +590,14 @@ export type Database = {
       log_edge_function_usage: {
         Args: { p_action: string; p_details?: Json; p_resource?: string }
         Returns: undefined
+      }
+      merge_clients: {
+        Args: {
+          p_duplicate_ids: string[]
+          p_merged_data: Json
+          p_primary: string
+        }
+        Returns: string
       }
       verify_user_role: {
         Args: { required_role: Database["public"]["Enums"]["app_role"] }

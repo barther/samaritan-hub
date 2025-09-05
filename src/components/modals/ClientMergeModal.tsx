@@ -79,68 +79,49 @@ export const ClientMergeModal = ({ isOpen, onClose, clients, onMergeComplete }: 
 
     setIsLoading(true);
     try {
-      // Update the primary client with merged data
-      const { error: updateError } = await supabase
-        .from('clients')
-        .update({
-          first_name: mergedData.first_name,
-          last_name: mergedData.last_name,
-          email: mergedData.email || null,
-          phone: mergedData.phone || null,
-          address: mergedData.address || null,
-          city: mergedData.city || null,
-          state: mergedData.state || null,
-          zip_code: mergedData.zip_code || null,
-          county: mergedData.county || null,
-        })
-        .eq('id', primaryClientId);
+      // Build duplicates list (all selected except primary)
+      const duplicateIds = clients.filter(c => c.id !== primaryClientId).map(c => c.id);
 
-      if (updateError) throw updateError;
+      // Prepare merged payload (server preserves oldest created_at/created_by)
+      const mergedPayload = {
+        first_name: mergedData.first_name,
+        last_name: mergedData.last_name,
+        email: mergedData.email ?? "",
+        phone: mergedData.phone ?? "",
+        address: mergedData.address ?? "",
+        city: mergedData.city ?? "",
+        state: mergedData.state ?? "",
+        zip_code: mergedData.zip_code ?? "",
+        county: mergedData.county ?? "",
+      };
 
-      // Update all interactions and assistance requests to point to the primary client
-      const clientsToMerge = clients.filter(c => c.id !== primaryClientId);
-      
-      for (const client of clientsToMerge) {
-        // Update interactions
-        await supabase
-          .from('interactions')
-          .update({ client_id: primaryClientId })
-          .eq('client_id', client.id);
+      // Use transactional merge function (also repoints interactions, assistance requests, disbursements, public_intake)
+      const { data, error } = await supabase.rpc('merge_clients', {
+        p_primary: primaryClientId,
+        p_duplicate_ids: duplicateIds,
+        p_merged_data: mergedPayload as any,
+      });
 
-        // Update assistance requests
-        await supabase
-          .from('assistance_requests')
-          .update({ client_id: primaryClientId })
-          .eq('client_id', client.id);
-      }
-
-      // Delete the duplicate clients
-      const { error: deleteError } = await supabase
-        .from('clients')
-        .delete()
-        .in('id', clientsToMerge.map(c => c.id));
-
-      if (deleteError) throw deleteError;
+      if (error) throw error;
 
       toast({
         title: "Clients merged successfully",
-        description: `${clients.length} clients have been merged into one record.`,
+        description: `${clients.length} clients merged. History and disbursements were preserved.`,
       });
 
       onMergeComplete();
       onClose();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error merging clients:', error);
       toast({
         title: "Error merging clients",
-        description: "Please try again.",
+        description: error?.message ?? "Please try again.",
         variant: "destructive"
       });
     } finally {
       setIsLoading(false);
     }
   };
-
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
