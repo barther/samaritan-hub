@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Users, DollarSign, FileText, Search, Plus, TrendingUp, AlertCircle, Clock, Zap, Menu, X, FileDown, Download } from "lucide-react";
+import { Users, DollarSign, FileText, Search, Plus, TrendingUp, AlertCircle, Clock, Zap, Menu, X, FileDown, Download, Upload } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -13,6 +13,7 @@ import { QuickEntryModal } from "@/components/modals/QuickEntryModal";
 import { UnlinkedInteractions } from "@/components/UnlinkedInteractions";
 import { TransactionLedger } from "@/components/TransactionLedger";
 import { generatePDFReport, downloadPDF } from "@/utils/pdfGenerator";
+import { ImportWizard } from "@/components/ImportWizard";
 const PortalDashboard = () => {
   const navigate = useNavigate();
   const {
@@ -679,6 +680,16 @@ const PortalDashboard = () => {
                 <Search className="h-4 w-4" />
                 Search Clients
               </Button>
+              
+              {/* Import Wizard */}
+              <ImportWizard 
+                trigger={
+                  <Button variant="outline" className="w-full justify-start gap-2" size="sm">
+                    <Upload className="h-4 w-4" />
+                    Import Wizard
+                  </Button>
+                }
+              />
               
               {/* Quick PDF Export Section */}
               <div className="border-t pt-2 mt-3">
