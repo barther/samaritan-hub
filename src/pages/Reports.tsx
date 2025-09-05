@@ -435,18 +435,33 @@ const Reports = () => {
                 </div>
               </div>
 
-              <Button 
-                onClick={generateReport} 
-                disabled={isGenerating}
-                className="w-full"
-              >
-                {exportFormat === "pdf" ? (
+              <div className="space-y-3">
+                <Button 
+                  onClick={generateReport} 
+                  disabled={isGenerating}
+                  className="w-full"
+                >
+                  {exportFormat === "pdf" ? (
+                    <FileDown className="h-4 w-4 mr-2" />
+                  ) : (
+                    <Download className="h-4 w-4 mr-2" />
+                  )}
+                  {isGenerating ? "Generating..." : `Generate ${exportFormat.toUpperCase()} Report`}
+                </Button>
+                
+                <Button 
+                  onClick={() => {
+                    setExportFormat("pdf");
+                    generateReport();
+                  }} 
+                  disabled={isGenerating}
+                  variant="outline"
+                  className="w-full"
+                >
                   <FileDown className="h-4 w-4 mr-2" />
-                ) : (
-                  <Download className="h-4 w-4 mr-2" />
-                )}
-                {isGenerating ? "Generating..." : `Generate ${exportFormat.toUpperCase()} Report`}
-              </Button>
+                  {isGenerating ? "Generating..." : "Quick PDF Export"}
+                </Button>
+              </div>
             </CardContent>
           </Card>
 
