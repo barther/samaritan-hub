@@ -3,10 +3,13 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Search, Users, Phone, Mail, MapPin, ArrowLeft } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
+import { Search, Users, Phone, Mail, MapPin, ArrowLeft, GitMerge } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { ClientMergeModal } from "@/components/modals/ClientMergeModal";
 
 interface Client {
   id: string;
@@ -18,6 +21,7 @@ interface Client {
   city?: string;
   state?: string;
   zip_code?: string;
+  county?: string;
   created_at: string;
 }
 
@@ -25,6 +29,8 @@ const ClientSearch = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [clients, setClients] = useState<Client[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [selectedClients, setSelectedClients] = useState<string[]>([]);
+  const [showMergeModal, setShowMergeModal] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -64,6 +70,41 @@ const ClientSearch = () => {
       searchClients();
     }
   };
+
+  const handleClientSelect = (clientId: string, checked: boolean) => {
+    if (checked) {
+      setSelectedClients(prev => [...prev, clientId]);
+    } else {
+      setSelectedClients(prev => prev.filter(id => id !== clientId));
+    }
+  };
+
+  const handleSelectAll = (checked: boolean) => {
+    if (checked) {
+      setSelectedClients(clients.map(c => c.id));
+    } else {
+      setSelectedClients([]);
+    }
+  };
+
+  const handleMergeClients = () => {
+    if (selectedClients.length < 2) {
+      toast({
+        title: "Select at least 2 clients",
+        description: "You need to select at least 2 clients to merge them.",
+        variant: "destructive"
+      });
+      return;
+    }
+    setShowMergeModal(true);
+  };
+
+  const handleMergeComplete = () => {
+    setSelectedClients([]);
+    searchClients(); // Refresh the search results
+  };
+
+  const selectedClientObjects = clients.filter(c => selectedClients.includes(c.id));
 
   return (
     <div className="min-h-screen bg-background">
@@ -118,62 +159,105 @@ const ClientSearch = () => {
         {clients.length > 0 && (
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Users className="h-5 w-5" />
-                Search Results ({clients.length})
-              </CardTitle>
+              <div className="flex items-center justify-between">
+                <CardTitle className="flex items-center gap-2">
+                  <Users className="h-5 w-5" />
+                  Search Results ({clients.length})
+                </CardTitle>
+                <div className="flex items-center gap-2">
+                  {selectedClients.length > 0 && (
+                    <Badge variant="secondary">
+                      {selectedClients.length} selected
+                    </Badge>
+                  )}
+                  {selectedClients.length > 1 && (
+                    <Button
+                      onClick={handleMergeClients}
+                      size="sm"
+                      className="gap-2"
+                    >
+                      <GitMerge className="h-4 w-4" />
+                      Merge Selected ({selectedClients.length})
+                    </Button>
+                  )}
+                </div>
+              </div>
+              {clients.length > 1 && (
+                <div className="flex items-center gap-2 text-sm">
+                  <Checkbox
+                    id="select-all"
+                    checked={selectedClients.length === clients.length}
+                    onCheckedChange={handleSelectAll}
+                  />
+                  <Label htmlFor="select-all" className="text-sm font-normal">
+                    Select all clients
+                  </Label>
+                </div>
+              )}
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
                 {clients.map((client) => (
                   <div
                     key={client.id}
-                    className="border border-border rounded-lg p-4 hover:bg-muted/50 transition-colors"
+                    className={`border border-border rounded-lg p-4 hover:bg-muted/50 transition-colors ${
+                      selectedClients.includes(client.id) ? 'bg-muted/30 border-primary' : ''
+                    }`}
                   >
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-2">
-                          <h3 className="font-medium text-foreground">
-                            {client.first_name} {client.last_name}
-                          </h3>
-                          <Badge variant="outline" className="text-xs">
-                            Client
-                          </Badge>
-                        </div>
-                        
-                        <div className="space-y-1 text-sm text-muted-foreground">
-                          {client.email && (
-                            <div className="flex items-center gap-2">
-                              <Mail className="h-3 w-3" />
-                              {client.email}
-                            </div>
-                          )}
-                          {client.phone && (
-                            <div className="flex items-center gap-2">
-                              <Phone className="h-3 w-3" />
-                              {client.phone}
-                            </div>
-                          )}
-                          {client.address && (
-                            <div className="flex items-center gap-2">
-                              <MapPin className="h-3 w-3" />
-                              {client.address}
-                              {client.city && `, ${client.city}`}
-                              {client.state && `, ${client.state}`}
-                              {client.zip_code && ` ${client.zip_code}`}
-                            </div>
-                          )}
-                        </div>
-                        
-                        <p className="text-xs text-muted-foreground mt-2">
-                          Added: {new Date(client.created_at).toLocaleDateString()}
-                        </p>
-                      </div>
-                      
-                      <Button variant="outline" size="sm" onClick={() => navigate(`/portal/clients/${client.id}`)}>
-                        View Details
-                      </Button>
-                    </div>
+                     <div className="flex items-start gap-3">
+                       <Checkbox
+                         id={`client-${client.id}`}
+                         checked={selectedClients.includes(client.id)}
+                         onCheckedChange={(checked) => handleClientSelect(client.id, checked as boolean)}
+                         className="mt-1"
+                       />
+                       <div className="flex-1">
+                         <div className="flex items-start justify-between">
+                           <div className="flex-1">
+                             <div className="flex items-center gap-2 mb-2">
+                               <h3 className="font-medium text-foreground">
+                                 {client.first_name} {client.last_name}
+                               </h3>
+                               <Badge variant="outline" className="text-xs">
+                                 Client
+                               </Badge>
+                             </div>
+                             
+                             <div className="space-y-1 text-sm text-muted-foreground">
+                               {client.email && (
+                                 <div className="flex items-center gap-2">
+                                   <Mail className="h-3 w-3" />
+                                   {client.email}
+                                 </div>
+                               )}
+                               {client.phone && (
+                                 <div className="flex items-center gap-2">
+                                   <Phone className="h-3 w-3" />
+                                   {client.phone}
+                                 </div>
+                               )}
+                               {client.address && (
+                                 <div className="flex items-center gap-2">
+                                   <MapPin className="h-3 w-3" />
+                                   {client.address}
+                                   {client.city && `, ${client.city}`}
+                                   {client.state && `, ${client.state}`}
+                                   {client.zip_code && ` ${client.zip_code}`}
+                                 </div>
+                               )}
+                             </div>
+                             
+                             <p className="text-xs text-muted-foreground mt-2">
+                               Added: {new Date(client.created_at).toLocaleDateString()}
+                             </p>
+                           </div>
+                           
+                           <Button variant="outline" size="sm" onClick={() => navigate(`/portal/clients/${client.id}`)}>
+                             View Details
+                           </Button>
+                         </div>
+                       </div>
+                     </div>
                   </div>
                 ))}
               </div>
@@ -188,6 +272,13 @@ const ClientSearch = () => {
             </CardContent>
           </Card>
         )}
+
+        <ClientMergeModal
+          isOpen={showMergeModal}
+          onClose={() => setShowMergeModal(false)}
+          clients={selectedClientObjects}
+          onMergeComplete={handleMergeComplete}
+        />
       </main>
     </div>
   );
