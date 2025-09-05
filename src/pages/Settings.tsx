@@ -18,6 +18,8 @@ const SettingsPage = () => {
   const { toast } = useToast();
   const [showUserManagement, setShowUserManagement] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [checkingRole, setCheckingRole] = useState(true);
 
   // Settings state
   const [settings, setSettings] = useState({
@@ -112,82 +114,59 @@ Good Samaritan Assistance Team`,
   };
 
   const handleSave = async () => {
+    if (!isAdmin) {
+      toast({ title: 'Not authorized', description: 'Only administrators can modify settings.', variant: 'destructive' });
+      return;
+    }
     try {
       setLoading(true);
       
       const updates = [
-        {
-          key: 'financial',
-          value: {
-            lowFundThreshold: settings.lowFundThreshold,
-            defaultAssistanceAmount: settings.defaultAssistanceAmount
-          }
-        },
-        {
-          key: 'system',
-          value: {
-            autoArchiveInteractions: settings.autoArchiveInteractions,
-            requireClientLink: settings.requireClientLink,
-            dataRetentionMonths: settings.dataRetentionMonths,
-            enableAuditLog: settings.enableAuditLog
-          }
-        },
-        {
-          key: 'notifications',
-          value: {
-            emailNotifications: settings.emailNotifications,
-            lowFundAlerts: settings.lowFundAlerts,
-            newRequestAlerts: settings.newRequestAlerts
-          }
-        },
-        {
-          key: 'email_templates',
-          value: {
-            approvalEmailTemplate: settings.approvalEmailTemplate,
-            denialEmailTemplate: settings.denialEmailTemplate
-          }
-        },
-        {
-          key: 'email',
-          value: {
-            emailProvider: settings.emailProvider,
-            defaultSenderMailbox: settings.defaultSenderMailbox
-          }
-        }
+        { key: 'financial', value: { lowFundThreshold: settings.lowFundThreshold, defaultAssistanceAmount: settings.defaultAssistanceAmount } },
+        { key: 'system', value: { autoArchiveInteractions: settings.autoArchiveInteractions, requireClientLink: settings.requireClientLink, dataRetentionMonths: settings.dataRetentionMonths, enableAuditLog: settings.enableAuditLog } },
+        { key: 'notifications', value: { emailNotifications: settings.emailNotifications, lowFundAlerts: settings.lowFundAlerts, newRequestAlerts: settings.newRequestAlerts } },
+        { key: 'email_templates', value: { approvalEmailTemplate: settings.approvalEmailTemplate, denialEmailTemplate: settings.denialEmailTemplate } },
+        { key: 'email', value: { emailProvider: settings.emailProvider, defaultSenderMailbox: settings.defaultSenderMailbox } },
       ];
+
+      const { data: userRes } = await supabase.auth.getUser();
+      const userId = userRes.user?.id ?? null;
 
       for (const update of updates) {
         const { error } = await supabase
           .from('settings')
-          .upsert({
-            key: update.key,
-            value: update.value,
-            updated_by: (await supabase.auth.getUser()).data.user?.id
-          });
+          .upsert(
+            { key: update.key, value: update.value, updated_by: userId },
+            { onConflict: 'key' }
+          );
 
-        if (error) {
-          throw error;
-        }
+        if (error) throw error;
       }
 
-      toast({
-        title: "Settings saved",
-        description: "Your changes have been saved successfully."
-      });
-    } catch (error) {
+      toast({ title: 'Settings saved', description: 'Your changes have been saved successfully.' });
+    } catch (error: any) {
       console.error('Error saving settings:', error);
-      toast({
-        title: "Error",
-        description: "Failed to save settings",
-        variant: "destructive"
-      });
+      toast({ title: 'Error', description: error.message || 'Failed to save settings', variant: 'destructive' });
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    loadSettings();
+    const checkRoleAndLoad = async () => {
+      try {
+        const { data: hasAdminRole } = await supabase.rpc('verify_user_role', { required_role: 'admin' });
+        setIsAdmin(!!hasAdminRole);
+        if (hasAdminRole) {
+          await loadSettings();
+        }
+      } catch (e) {
+        console.error('Role check failed', e);
+      } finally {
+        setCheckingRole(false);
+      }
+    };
+    checkRoleAndLoad();
   }, []);
 
   const handleExportData = () => {
@@ -587,8 +566,8 @@ Good Samaritan Assistance Team`,
         </Tabs>
 
         <div className="mt-8 flex justify-end">
-          <Button onClick={handleSave} disabled={loading}>
-            {loading ? "Saving..." : "Save All Settings"}
+          <Button onClick={handleSave} disabled={loading || !isAdmin}>
+            {loading ? "Saving..." : isAdmin ? "Save All Settings" : "Admin Only"}
           </Button>
         </div>
       </main>
