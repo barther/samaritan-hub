@@ -10,7 +10,8 @@ import {
   Plus,
   TrendingUp,
   AlertCircle,
-  Clock
+  Clock,
+  Zap
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -18,6 +19,7 @@ import { useToast } from "@/hooks/use-toast";
 import { DonationModal } from "@/components/modals/DonationModal";
 import { DisbursementModal } from "@/components/modals/DisbursementModal";
 import { NewInteractionModal } from "@/components/modals/NewInteractionModal";
+import { QuickEntryModal } from "@/components/modals/QuickEntryModal";
 
 const PortalDashboard = () => {
   const navigate = useNavigate();
@@ -34,6 +36,7 @@ const PortalDashboard = () => {
   const [showDonationModal, setShowDonationModal] = useState(false);
   const [showDisbursementModal, setShowDisbursementModal] = useState(false);
   const [showInteractionModal, setShowInteractionModal] = useState(false);
+  const [showQuickEntryModal, setShowQuickEntryModal] = useState(false);
   
   // Search term for client lookup
   const [searchTerm, setSearchTerm] = useState("");
@@ -597,10 +600,17 @@ const PortalDashboard = () => {
             </CardHeader>
             <CardContent className="space-y-3">
               {canEditData && (
-                <Button variant="assistance" className="w-full justify-start" onClick={() => setShowInteractionModal(true)}>
-                  <Plus className="h-4 w-4 mr-2" />
-                  New Interaction
-                </Button>
+                <>
+                  <Button variant="hero" size="lg" className="w-full justify-start shadow-glow" onClick={() => setShowQuickEntryModal(true)}>
+                    <Zap className="h-5 w-5 mr-2" />
+                    Quick Entry
+                  </Button>
+                  
+                  <Button variant="assistance" className="w-full justify-start" onClick={() => setShowInteractionModal(true)}>
+                    <Plus className="h-4 w-4 mr-2" />
+                    Full Interaction Form
+                  </Button>
+                </>
               )}
               
               <Button variant="outline" className="w-full justify-start" onClick={() => navigate('/portal/intake')}>
@@ -773,7 +783,18 @@ const PortalDashboard = () => {
           </>
         )}
         {canEditData && (
-          <NewInteractionModal open={showInteractionModal} onOpenChange={setShowInteractionModal} />
+          <>
+            <NewInteractionModal 
+              open={showInteractionModal} 
+              onOpenChange={setShowInteractionModal} 
+              onSuccess={() => loadInteractions(0, true)}
+            />
+            <QuickEntryModal 
+              open={showQuickEntryModal} 
+              onOpenChange={setShowQuickEntryModal} 
+              onSuccess={() => loadInteractions(0, true)}
+            />
+          </>
         )}
       </main>
     </div>
