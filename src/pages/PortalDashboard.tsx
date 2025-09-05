@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Users, DollarSign, FileText, Search, Plus, TrendingUp, AlertCircle, Clock, Zap, Menu, X } from "lucide-react";
+import { Users, DollarSign, FileText, Search, Plus, TrendingUp, AlertCircle, Clock, Zap, Menu, X, FileDown, Download } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -12,6 +12,7 @@ import { NewInteractionModal } from "@/components/modals/NewInteractionModal";
 import { QuickEntryModal } from "@/components/modals/QuickEntryModal";
 import { UnlinkedInteractions } from "@/components/UnlinkedInteractions";
 import { TransactionLedger } from "@/components/TransactionLedger";
+import { generatePDFReport, downloadPDF } from "@/utils/pdfGenerator";
 const PortalDashboard = () => {
   const navigate = useNavigate();
   const {
@@ -429,6 +430,86 @@ const PortalDashboard = () => {
     });
   };
 
+  const generateQuickPDFReport = async (reportType: string) => {
+    try {
+      const thirtyDaysAgo = new Date();
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+      const startDate = thirtyDaysAgo.toISOString().split('T')[0];
+      const endDate = new Date().toISOString().split('T')[0];
+
+      let data: any[] = [];
+      let reportData: any = {};
+
+      switch (reportType) {
+        case 'financial':
+          const [donationsRes, disbursementsRes] = await Promise.all([
+            supabase.from('donations').select('*').gte('donation_date', startDate).lte('donation_date', endDate),
+            supabase.from('disbursements').select('*').gte('disbursement_date', startDate).lte('disbursement_date', endDate)
+          ]);
+          
+          const totalDonations = donationsRes.data?.reduce((sum, d) => sum + Number(d.amount), 0) || 0;
+          const totalDisbursements = disbursementsRes.data?.reduce((sum, d) => sum + Number(d.amount), 0) || 0;
+          
+          reportData = {
+            reportType,
+            startDate,
+            endDate,
+            data: [...(donationsRes.data || []), ...(disbursementsRes.data || [])],
+            totalDonations,
+            totalDisbursements
+          };
+          break;
+
+        case 'disbursements':
+          const { data: disbursements } = await supabase
+            .from('disbursements')
+            .select('*, clients(first_name, last_name)')
+            .gte('disbursement_date', startDate)
+            .lte('disbursement_date', endDate)
+            .order('disbursement_date', { ascending: false });
+          
+          reportData = {
+            reportType,
+            startDate,
+            endDate,
+            data: disbursements || []
+          };
+          break;
+
+        case 'interactions':
+          const { data: interactionsData } = await supabase
+            .from('interactions')
+            .select('*, clients(first_name, last_name)')
+            .gte('occurred_at', `${startDate}T00:00:00`)
+            .lte('occurred_at', `${endDate}T23:59:59`)
+            .order('occurred_at', { ascending: false });
+          
+          reportData = {
+            reportType,
+            startDate,
+            endDate,
+            data: interactionsData || []
+          };
+          break;
+      }
+
+      const doc = generatePDFReport(reportData);
+      downloadPDF(doc, `${reportType}-report-${startDate}-to-${endDate}.pdf`);
+      
+      toast({
+        title: "PDF Generated",
+        description: `Your ${reportType} report has been downloaded.`
+      });
+    } catch (error) {
+      console.error('Error generating PDF:', error);
+      toast({
+        title: "Error",
+        description: "Failed to generate PDF report.",
+        variant: "destructive"
+      });
+    }
+  };
+
   // Show loading state while checking roles
   if (isLoadingRoles) {
     return <div className="min-h-screen bg-background flex items-center justify-center">
@@ -598,6 +679,27 @@ const PortalDashboard = () => {
                 <Search className="h-4 w-4" />
                 Search Clients
               </Button>
+              
+              {/* Quick PDF Export Section */}
+              <div className="border-t pt-2 mt-3">
+                <p className="text-xs font-medium text-muted-foreground mb-2 uppercase tracking-wide">Quick PDF Exports</p>
+                {canViewFinancials && <Button variant="outline" onClick={() => generateQuickPDFReport('financial')} className="w-full justify-start gap-2 mb-1" size="sm">
+                    <FileDown className="h-4 w-4" />
+                    Financial Report (30d)
+                  </Button>}
+                <Button variant="outline" onClick={() => generateQuickPDFReport('disbursements')} className="w-full justify-start gap-2 mb-1" size="sm">
+                  <Download className="h-4 w-4" />
+                  Disbursements (30d)
+                </Button>
+                <Button variant="outline" onClick={() => generateQuickPDFReport('interactions')} className="w-full justify-start gap-2 mb-1" size="sm">
+                  <FileText className="h-4 w-4" />
+                  Interactions (30d)
+                </Button>
+                <Button variant="ghost" onClick={() => navigate('/portal/reports')} className="w-full justify-start gap-2 text-xs" size="sm">
+                  <FileDown className="h-3 w-3" />
+                  All Reports & Custom Dates
+                </Button>
+              </div>
             </CardContent>
           </Card>
         </div>
