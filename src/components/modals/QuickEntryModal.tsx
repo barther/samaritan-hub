@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -7,14 +7,33 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Zap, Plus, AlertCircle } from "lucide-react";
+import { Zap, Plus, AlertCircle, Search, History, User } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 interface QuickEntryModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSuccess?: () => void;
+}
+
+interface Client {
+  id: string;
+  first_name: string;
+  last_name: string;
+  phone?: string;
+  email?: string;
+  created_at: string;
+}
+
+interface AssistanceHistory {
+  id: string;
+  disbursement_date: string;
+  amount: number;
+  assistance_type: string;
+  notes?: string;
+  recipient_name: string;
 }
 
 interface QuickScenario {
@@ -83,6 +102,12 @@ const quickScenarios: QuickScenario[] = [
 
 export const QuickEntryModal = ({ open, onOpenChange, onSuccess }: QuickEntryModalProps) => {
   const [selectedScenario, setSelectedScenario] = useState<QuickScenario | null>(null);
+  const [selectedClient, setSelectedClient] = useState<Client | null>(null);
+  const [clientSearch, setClientSearch] = useState("");
+  const [searchResults, setSearchResults] = useState<Client[]>([]);
+  const [assistanceHistory, setAssistanceHistory] = useState<AssistanceHistory[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
+  const [showHistory, setShowHistory] = useState(false);
   const [formData, setFormData] = useState({
     firstName: "",
     lastName: "",
@@ -95,17 +120,75 @@ export const QuickEntryModal = ({ open, onOpenChange, onSuccess }: QuickEntryMod
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
 
-  const handleScenarioSelect = (scenario: QuickScenario) => {
-    setSelectedScenario(scenario);
-    setFormData(prev => ({
-      ...prev,
-      amount: scenario.defaultAmount ? scenario.defaultAmount.toString() : "",
-      recipientName: scenario.requiresClient ? `${prev.firstName} ${prev.lastName}`.trim() : ""
-    }));
+  // Search for clients
+  useEffect(() => {
+    const searchClients = async () => {
+      if (clientSearch.length < 2) {
+        setSearchResults([]);
+        return;
+      }
+
+      setIsSearching(true);
+      try {
+        const { data, error } = await supabase
+          .from('clients')
+          .select('id, first_name, last_name, phone, email, created_at')
+          .or(`first_name.ilike.%${clientSearch}%,last_name.ilike.%${clientSearch}%`)
+          .order('last_name', { ascending: true })
+          .limit(10);
+
+        if (error) throw error;
+        setSearchResults(data || []);
+      } catch (error) {
+        console.error('Error searching clients:', error);
+      } finally {
+        setIsSearching(false);
+      }
+    };
+
+    const debounceTimer = setTimeout(searchClients, 300);
+    return () => clearTimeout(debounceTimer);
+  }, [clientSearch]);
+
+  // Load assistance history for selected client
+  const loadAssistanceHistory = async (clientId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('disbursements')
+        .select('id, disbursement_date, amount, assistance_type, notes, recipient_name')
+        .eq('client_id', clientId)
+        .order('disbursement_date', { ascending: false });
+
+      if (error) throw error;
+      setAssistanceHistory(data || []);
+    } catch (error) {
+      console.error('Error loading assistance history:', error);
+      setAssistanceHistory([]);
+    }
   };
 
-  const handleBackToScenarios = () => {
-    setSelectedScenario(null);
+  const handleClientSelect = async (client: Client) => {
+    setSelectedClient(client);
+    setClientSearch(`${client.first_name} ${client.last_name}`);
+    setSearchResults([]);
+    setFormData(prev => ({
+      ...prev,
+      firstName: client.first_name,
+      lastName: client.last_name,
+      phone: client.phone || "",
+      recipientName: `${client.first_name} ${client.last_name}`
+    }));
+    
+    await loadAssistanceHistory(client.id);
+    setShowHistory(true);
+  };
+
+  const handleNewClient = () => {
+    setSelectedClient(null);
+    setClientSearch("");
+    setSearchResults([]);
+    setAssistanceHistory([]);
+    setShowHistory(false);
     setFormData({
       firstName: "",
       lastName: "",
@@ -117,6 +200,31 @@ export const QuickEntryModal = ({ open, onOpenChange, onSuccess }: QuickEntryMod
     });
   };
 
+  const handleScenarioSelect = (scenario: QuickScenario) => {
+    setSelectedScenario(scenario);
+    setFormData(prev => ({
+      ...prev,
+      amount: scenario.defaultAmount ? scenario.defaultAmount.toString() : "",
+      recipientName: scenario.requiresClient ? `${prev.firstName} ${prev.lastName}`.trim() : ""
+    }));
+  };
+
+  // Check if client has been helped within the last year
+  const hasRecentAssistance = () => {
+    if (!assistanceHistory.length) return false;
+    const oneYearAgo = new Date();
+    oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
+    
+    return assistanceHistory.some(assistance => 
+      new Date(assistance.disbursement_date) > oneYearAgo && assistance.amount > 0
+    );
+  };
+
+  const handleBackToScenarios = () => {
+    setSelectedScenario(null);
+    // Don't clear client data when going back to scenarios
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
@@ -126,7 +234,7 @@ export const QuickEntryModal = ({ open, onOpenChange, onSuccess }: QuickEntryMod
 
       let clientId = null;
       
-      // Create or find client if required
+      // Use existing client or create new one if required
       if (selectedScenario.requiresClient) {
         if (!formData.firstName || !formData.lastName) {
           toast({
@@ -138,29 +246,34 @@ export const QuickEntryModal = ({ open, onOpenChange, onSuccess }: QuickEntryMod
           return;
         }
 
-        // Create basic client record
-        const { data: clientData, error: clientError } = await supabase
-          .from('clients')
-          .insert([{
-            first_name: formData.firstName,
-            last_name: formData.lastName,
-            phone: formData.phone || null
-          }])
-          .select('id')
-          .single();
+        if (selectedClient) {
+          // Use existing client
+          clientId = selectedClient.id;
+        } else {
+          // Create new client record
+          const { data: clientData, error: clientError } = await supabase
+            .from('clients')
+            .insert([{
+              first_name: formData.firstName,
+              last_name: formData.lastName,
+              phone: formData.phone || null
+            }])
+            .select('id')
+            .single();
 
-        if (clientError) {
-          console.error('Error creating client:', clientError);
-          toast({
-            title: "Error creating client",
-            description: "Please try again.",
-            variant: "destructive"
-          });
-          setIsSubmitting(false);
-          return;
+          if (clientError) {
+            console.error('Error creating client:', clientError);
+            toast({
+              title: "Error creating client",
+              description: "Please try again.",
+              variant: "destructive"
+            });
+            setIsSubmitting(false);
+            return;
+          }
+
+          clientId = clientData.id;
         }
-
-        clientId = clientData.id;
       }
 
       // Create interaction record
@@ -228,7 +341,8 @@ export const QuickEntryModal = ({ open, onOpenChange, onSuccess }: QuickEntryMod
         });
       }
 
-      handleBackToScenarios();
+      // Reset only scenario, keep client info
+      setSelectedScenario(null);
       onOpenChange(false);
       onSuccess?.();
     } catch (error) {
@@ -260,11 +374,121 @@ export const QuickEntryModal = ({ open, onOpenChange, onSuccess }: QuickEntryMod
         </DialogHeader>
         
         {!selectedScenario ? (
-          <div className="space-y-4">
-            <p className="text-sm text-muted-foreground">
-              Choose a common assistance scenario for faster entry:
-            </p>
+          <div className="space-y-6">
+            {/* Client Search Section */}
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <Label className="text-sm font-medium flex items-center gap-2">
+                  <User className="h-4 w-4" />
+                  Find Existing Client
+                </Label>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleNewClient}
+                  className="text-xs"
+                >
+                  + New Client
+                </Button>
+              </div>
+              
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search by first or last name..."
+                  value={clientSearch}
+                  onChange={(e) => setClientSearch(e.target.value)}
+                  className="pl-10"
+                />
+                {isSearching && (
+                  <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></div>
+                  </div>
+                )}
+              </div>
+
+              {/* Search Results */}
+              {searchResults.length > 0 && (
+                <div className="border rounded-lg max-h-32 overflow-y-auto">
+                  {searchResults.map((client) => (
+                    <button
+                      key={client.id}
+                      onClick={() => handleClientSelect(client)}
+                      className="w-full text-left px-3 py-2 hover:bg-muted border-b last:border-b-0 text-sm"
+                    >
+                      <div className="font-medium">{client.first_name} {client.last_name}</div>
+                      {client.phone && (
+                        <div className="text-xs text-muted-foreground">{client.phone}</div>
+                      )}
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              {/* Selected Client Info */}
+              {selectedClient && (
+                <div className="bg-muted/30 rounded-lg p-3 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="font-medium">{selectedClient.first_name} {selectedClient.last_name}</p>
+                      {selectedClient.phone && (
+                        <p className="text-sm text-muted-foreground">{selectedClient.phone}</p>
+                      )}
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setShowHistory(!showHistory)}
+                      className="text-xs"
+                    >
+                      <History className="h-3 w-3 mr-1" />
+                      {showHistory ? 'Hide' : 'Show'} History
+                    </Button>
+                  </div>
+
+                  {/* One Year Policy Warning */}
+                  {hasRecentAssistance() && (
+                    <Alert className="border-warning bg-warning/10">
+                      <AlertCircle className="h-4 w-4" />
+                      <AlertDescription className="text-sm">
+                        <strong>Policy Notice:</strong> This client received assistance within the last 12 months. 
+                        Please verify approval for additional assistance.
+                      </AlertDescription>
+                    </Alert>
+                  )}
+
+                  {/* Assistance History */}
+                  {showHistory && assistanceHistory.length > 0 && (
+                    <div className="space-y-2">
+                      <p className="text-xs font-medium text-muted-foreground">Recent Assistance:</p>
+                      <div className="space-y-1 max-h-24 overflow-y-auto">
+                        {assistanceHistory.slice(0, 5).map((assistance) => (
+                          <div key={assistance.id} className="text-xs bg-background rounded p-2">
+                            <div className="flex justify-between">
+                              <span>${assistance.amount.toFixed(2)}</span>
+                              <span className="text-muted-foreground">
+                                {new Date(assistance.disbursement_date).toLocaleDateString()}
+                              </span>
+                            </div>
+                            <div className="text-muted-foreground capitalize">
+                              {assistance.assistance_type.replace('_', ' ')}
+                              {assistance.notes && ` - ${assistance.notes.substring(0, 30)}...`}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
             
+            <div className="border-t pt-4">
+              <p className="text-sm text-muted-foreground mb-4">
+                Choose a common assistance scenario for faster entry:
+              </p>
+            </div>
+
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               {quickScenarios.map((scenario) => (
                 <Card 
