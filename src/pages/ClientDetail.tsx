@@ -333,8 +333,8 @@ const ClientDetail = () => {
       {/* Modals */}
       {showNewInteraction && (
         <NewInteractionModal
-          isOpen={showNewInteraction}
-          onClose={() => setShowNewInteraction(false)}
+          open={showNewInteraction}
+          onOpenChange={setShowNewInteraction}
           onSuccess={() => {
             setShowNewInteraction(false);
             fetchClientDetails();

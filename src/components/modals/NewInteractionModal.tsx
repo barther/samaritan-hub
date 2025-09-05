@@ -12,9 +12,11 @@ import { Plus } from "lucide-react";
 interface NewInteractionModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  onSuccess?: () => void;
+  clientId?: string;
 }
 
-export const NewInteractionModal = ({ open, onOpenChange }: NewInteractionModalProps) => {
+export const NewInteractionModal = ({ open, onOpenChange, onSuccess, clientId }: NewInteractionModalProps) => {
   const [formData, setFormData] = useState({
     contactName: "",
     channel: "",
@@ -52,6 +54,7 @@ export const NewInteractionModal = ({ open, onOpenChange }: NewInteractionModalP
       const { error } = await supabase
         .from('interactions')
         .insert([{
+          client_id: clientId || null,
           contact_name: formData.contactName,
           channel: formData.channel as 'public_form' | 'phone' | 'email' | 'in_person' | 'text',
           summary: formData.summary,
@@ -78,6 +81,7 @@ export const NewInteractionModal = ({ open, onOpenChange }: NewInteractionModalP
         occurredAt: new Date().toISOString().slice(0, 16)
       });
       onOpenChange(false);
+      onSuccess?.();
     } catch (error) {
       console.error('Error recording interaction:', error);
       toast({
