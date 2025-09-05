@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -11,12 +12,16 @@ import {
   AlertCircle,
   Clock
 } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
 
 const PortalDashboard = () => {
+  const navigate = useNavigate();
+  const { toast } = useToast();
   // Mock data - will be replaced with real data when Supabase is connected
   const mockBalance = 1250.75;
   const lowFundThreshold = 100;
-  const isLowFunds = mockBalance < lowFundThreshold;
 
   const mockInteractions = [
     {
@@ -51,8 +56,38 @@ const PortalDashboard = () => {
     }
   ];
 
+  // Enforce Azure auth and allowed domain
+  const enforceSession = (session: any) => {
+    if (!session?.user) {
+      navigate("/portal", { replace: true });
+      return;
+    }
+    const email = session.user.email?.toLowerCase() || "";
+    if (!email.endsWith("@lithiaspringsmethodist.org")) {
+      supabase.auth.signOut();
+      toast({
+        title: "Organization access only",
+        description: "Please sign in with your @lithiaspringsmethodist.org account.",
+        variant: "destructive",
+      });
+      navigate("/portal", { replace: true });
+    }
+  };
+
+  useEffect(() => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      enforceSession(session);
+    });
+    supabase.auth.getSession().then(({ data: { session } }) => enforceSession(session));
+    return () => subscription.unsubscribe();
+  }, []);
+
+  const isLowFunds = mockBalance < lowFundThreshold;
+
   return (
     <div className="min-h-screen bg-background">
+      {/* SEO Meta - No Index */}
+      <meta name="robots" content="noindex" />
       {/* Header */}
       <header className="border-b border-border bg-background/95 backdrop-blur">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">

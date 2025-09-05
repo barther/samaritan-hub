@@ -2,18 +2,57 @@ import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Shield, Users, AlertTriangle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
+import { useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 
 const Portal = () => {
   const { toast } = useToast();
+  const navigate = useNavigate();
 
-  const handleMicrosoftLogin = () => {
-    toast({
-      title: "Authentication Setup Required",
-      description: "Microsoft Azure AD integration needs to be configured.",
-      variant: "destructive",
+  useEffect(() => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      const email = session?.user?.email?.toLowerCase() || "";
+      if (!session?.user) return;
+      if (email.endsWith("@lithiaspringsmethodist.org")) {
+        navigate("/portal/dashboard", { replace: true });
+      } else {
+        supabase.auth.signOut();
+        toast({
+          title: "Organization access only",
+          description: "Please sign in with your @lithiaspringsmethodist.org account.",
+          variant: "destructive",
+        });
+      }
     });
-  };
 
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      const email = session?.user?.email?.toLowerCase() || "";
+      if (!session?.user) return;
+      if (email.endsWith("@lithiaspringsmethodist.org")) {
+        navigate("/portal/dashboard", { replace: true });
+      } else {
+        supabase.auth.signOut();
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, [navigate, toast]);
+
+  const handleMicrosoftLogin = async () => {
+    const redirectTo = `${window.location.origin}/portal/dashboard`;
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: "azure",
+      options: { redirectTo }
+    });
+    if (error) {
+      toast({
+        title: "Sign-in failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  };
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
       {/* SEO Meta - No Index */}

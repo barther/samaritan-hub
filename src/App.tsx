@@ -2,7 +2,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import Index from "./pages/Index";
 import Give from "./pages/Give";
 import RequestAssistance from "./pages/RequestAssistance";
@@ -26,6 +26,7 @@ const App = () => (
           <Route path="/portal" element={<Portal />} />
           <Route path="/portal/dashboard" element={<PortalDashboard />} />
           <Route path="/payment-success" element={<PaymentSuccess />} />
+          <Route path="/admin" element={<Navigate to="/portal" replace />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
