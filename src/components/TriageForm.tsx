@@ -15,7 +15,8 @@ import {
   Baby, 
   Shield, 
   CheckCircle,
-  Home
+  Home,
+  DollarSign
 } from "lucide-react";
 
 interface TriageFormData {
@@ -23,6 +24,9 @@ interface TriageFormData {
   rent_paid_3mo: boolean | null;
   lease_in_name: boolean | null;
   utility_in_name: boolean | null;
+  
+  // Financial Request
+  requested_amount: number | null;
   
   // Marital/Family
   marital_status: string;
@@ -85,6 +89,7 @@ const TriageForm: React.FC<TriageFormProps> = ({
     rent_paid_3mo: null,
     lease_in_name: null,
     utility_in_name: null,
+    requested_amount: null,
     marital_status: "",
     spouse_name: "",
     spouse_phone: "",
@@ -193,6 +198,35 @@ const TriageForm: React.FC<TriageFormProps> = ({
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-6">
+        {/* Financial Request */}
+        <Card className="shadow-card">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <DollarSign className="h-5 w-5 text-primary" />
+              Financial Assistance Request
+            </CardTitle>
+            <CardDescription>Amount of assistance needed</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div>
+              <Label htmlFor="requestedAmount">Requested Amount ($)</Label>
+              <Input
+                id="requestedAmount"
+                type="number"
+                min="0"
+                step="0.01"
+                placeholder="0.00"
+                value={formData.requested_amount || ""}
+                onChange={(e) => handleInputChange('requested_amount', e.target.value ? parseFloat(e.target.value) : null)}
+                className="mt-2"
+              />
+              <p className="text-sm text-muted-foreground mt-1">
+                Enter the amount of financial assistance requested by the client
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+
         {/* Housing Information */}
         <Card className="shadow-card">
           <CardHeader>

@@ -16,6 +16,7 @@ export type Database = {
     Tables: {
       assistance_requests: {
         Row: {
+          approved_amount: number | null
           children_names_ages: string | null
           circumstances: string | null
           client_id: string | null
@@ -40,6 +41,7 @@ export type Database = {
           marital_status: string | null
           other_assistance_sources: string | null
           rent_paid_3mo: boolean | null
+          requested_amount: number | null
           spouse_email: string | null
           spouse_name: string | null
           spouse_phone: string | null
@@ -53,6 +55,7 @@ export type Database = {
           veteran_spouse: boolean | null
         }
         Insert: {
+          approved_amount?: number | null
           children_names_ages?: string | null
           circumstances?: string | null
           client_id?: string | null
@@ -77,6 +80,7 @@ export type Database = {
           marital_status?: string | null
           other_assistance_sources?: string | null
           rent_paid_3mo?: boolean | null
+          requested_amount?: number | null
           spouse_email?: string | null
           spouse_name?: string | null
           spouse_phone?: string | null
@@ -90,6 +94,7 @@ export type Database = {
           veteran_spouse?: boolean | null
         }
         Update: {
+          approved_amount?: number | null
           children_names_ages?: string | null
           circumstances?: string | null
           client_id?: string | null
@@ -114,6 +119,7 @@ export type Database = {
           marital_status?: string | null
           other_assistance_sources?: string | null
           rent_paid_3mo?: boolean | null
+          requested_amount?: number | null
           spouse_email?: string | null
           spouse_name?: string | null
           spouse_phone?: string | null

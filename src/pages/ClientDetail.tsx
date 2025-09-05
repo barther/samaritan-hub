@@ -173,6 +173,7 @@ const ClientDetail = () => {
 
   const totalDisbursed = disbursements.reduce((sum, d) => sum + d.amount, 0);
   const totalRequested = interactions.reduce((sum, i) => sum + (i.requested_amount || 0), 0);
+  const totalApproved = interactions.reduce((sum, i) => sum + (i.approved_amount || 0), 0);
 
   return (
     <div className="min-h-screen bg-background">
@@ -257,12 +258,46 @@ const ClientDetail = () => {
                 </div>
                 <div className="flex items-center gap-2 text-sm">
                   <DollarSign className="h-4 w-4 text-muted-foreground" />
+                  <span>Total Requested: ${totalRequested.toFixed(2)}</span>
+                </div>
+                <div className="flex items-center gap-2 text-sm">
+                  <DollarSign className="h-4 w-4 text-muted-foreground" />
+                  <span>Total Approved: ${totalApproved.toFixed(2)}</span>
+                </div>
+                <div className="flex items-center gap-2 text-sm">
+                  <DollarSign className="h-4 w-4 text-muted-foreground" />
                   <span>Total Disbursed: ${totalDisbursed.toFixed(2)}</span>
                 </div>
                 <div className="flex items-center gap-2 text-sm">
                   <MessageSquare className="h-4 w-4 text-muted-foreground" />
                   <span>Interactions: {interactions.length}</span>
                 </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Financial Summary Card */}
+        <Card className="mb-6">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <DollarSign className="h-5 w-5" />
+              Financial Summary
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="text-center p-4 bg-blue-50 rounded-lg">
+                <div className="text-2xl font-bold text-blue-600">${totalRequested.toFixed(2)}</div>
+                <div className="text-sm text-muted-foreground">Total Requested</div>
+              </div>
+              <div className="text-center p-4 bg-green-50 rounded-lg">
+                <div className="text-2xl font-bold text-green-600">${totalApproved.toFixed(2)}</div>
+                <div className="text-sm text-muted-foreground">Total Approved</div>
+              </div>
+              <div className="text-center p-4 bg-purple-50 rounded-lg">
+                <div className="text-2xl font-bold text-purple-600">${totalDisbursed.toFixed(2)}</div>
+                <div className="text-sm text-muted-foreground">Total Disbursed</div>
               </div>
             </div>
           </CardContent>

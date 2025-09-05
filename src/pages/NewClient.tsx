@@ -154,14 +154,14 @@ const NewClient = () => {
           if (updateError) throw updateError;
         }
 
-      // Create assistance request (no select to avoid RLS SELECT issues)
-      const { error: requestError } = await supabase
-        .from('assistance_requests')
-        .insert({
-          client_id: selectedMatch.id,
-          interaction_id: interactionId,
-          help_requested: helpNeeded || summary,
-        });
+        // Create assistance request
+        const { error: requestError } = await supabase
+          .from('assistance_requests')
+          .insert({
+            client_id: selectedMatch.id,
+            interaction_id: interactionId,
+            help_requested: helpNeeded || summary,
+          });
 
       if (requestError) throw requestError;
 
