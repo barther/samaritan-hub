@@ -5,6 +5,9 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { 
@@ -20,7 +23,9 @@ import {
   Users,
   MessageSquare,
   Activity,
-  ArrowLeft
+  ArrowLeft,
+  Save,
+  X
 } from "lucide-react";
 import { ClientRiskBadge } from "@/components/ClientRiskBadge";
 import { formatDistanceToNow } from "date-fns";
@@ -42,6 +47,20 @@ const ClientDetail = () => {
   const [showDisbursement, setShowDisbursement] = useState(false);
   const [showTriage, setShowTriage] = useState(false);
   const [selectedAssistanceRequest, setSelectedAssistanceRequest] = useState<any>(null);
+  const [isEditing, setIsEditing] = useState(false);
+  const [isUpdating, setIsUpdating] = useState(false);
+  const [editForm, setEditForm] = useState({
+    first_name: '',
+    last_name: '',
+    email: '',
+    phone: '',
+    address: '',
+    city: '',
+    state: '',
+    zip_code: '',
+    county: '',
+    notes: ''
+  });
 
   const fetchClientDetails = async () => {
     if (!clientId) {
@@ -75,6 +94,20 @@ const ClientDetail = () => {
       }
       
       setClient(clientData);
+      
+      // Initialize edit form with client data
+      setEditForm({
+        first_name: clientData.first_name || '',
+        last_name: clientData.last_name || '',
+        email: clientData.email || '',
+        phone: clientData.phone || '',
+        address: clientData.address || '',
+        city: clientData.city || '',
+        state: clientData.state || 'GA',
+        zip_code: clientData.zip_code || '',
+        county: clientData.county || '',
+        notes: clientData.notes || ''
+      });
 
       // Fetch interactions
       console.log('Fetching interactions...');
@@ -145,6 +178,68 @@ const ClientDetail = () => {
     }
   }, [searchParams, assistanceRequests]);
 
+  const handleEditToggle = () => {
+    if (isEditing) {
+      // Reset form to original values when canceling
+      setEditForm({
+        first_name: client.first_name || '',
+        last_name: client.last_name || '',
+        email: client.email || '',
+        phone: client.phone || '',
+        address: client.address || '',
+        city: client.city || '',
+        state: client.state || 'GA',
+        zip_code: client.zip_code || '',
+        county: client.county || '',
+        notes: client.notes || ''
+      });
+    }
+    setIsEditing(!isEditing);
+  };
+
+  const handleSaveChanges = async () => {
+    if (!client?.id) return;
+    
+    setIsUpdating(true);
+    try {
+      const { error } = await supabase
+        .from('clients')
+        .update({
+          first_name: editForm.first_name,
+          last_name: editForm.last_name,
+          email: editForm.email || null,
+          phone: editForm.phone || null,
+          address: editForm.address || null,
+          city: editForm.city || null,
+          state: editForm.state,
+          zip_code: editForm.zip_code || null,
+          county: editForm.county || null,
+          notes: editForm.notes || null,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', client.id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Client Updated",
+        description: "Client information has been successfully updated.",
+      });
+
+      setIsEditing(false);
+      fetchClientDetails(); // Refresh the client data
+    } catch (error) {
+      console.error('Error updating client:', error);
+      toast({
+        title: "Error",
+        description: "Failed to update client information. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-8">
@@ -199,13 +294,44 @@ const ClientDetail = () => {
               </div>
             </div>
             <div className="flex items-center space-x-2">
-              <Button 
-                onClick={() => setShowNewInteraction(true)}
-                size="sm"
-              >
-                <Plus className="h-4 w-4 mr-2" />
-                New Interaction
-              </Button>
+              {isEditing ? (
+                <>
+                  <Button 
+                    onClick={handleSaveChanges}
+                    disabled={isUpdating}
+                    size="sm"
+                  >
+                    <Save className="h-4 w-4 mr-2" />
+                    {isUpdating ? "Saving..." : "Save Changes"}
+                  </Button>
+                  <Button 
+                    onClick={handleEditToggle}
+                    variant="outline"
+                    size="sm"
+                  >
+                    <X className="h-4 w-4 mr-2" />
+                    Cancel
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <Button 
+                    onClick={handleEditToggle}
+                    variant="outline"
+                    size="sm"
+                  >
+                    <Edit className="h-4 w-4 mr-2" />
+                    Edit Details
+                  </Button>
+                  <Button 
+                    onClick={() => setShowNewInteraction(true)}
+                    size="sm"
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    New Interaction
+                  </Button>
+                </>
+              )}
             </div>
           </div>
         </div>
@@ -215,24 +341,156 @@ const ClientDetail = () => {
         {/* Client Info Card */}
         <Card className="mb-6">
           <CardContent className="p-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-              <div className="flex items-center space-x-2">
-                <Mail className="h-4 w-4 text-muted-foreground" />
-                <span className="text-sm">{client.email || 'No email'}</span>
+            {isEditing ? (
+              <div className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="first_name">First Name *</Label>
+                    <Input
+                      id="first_name"
+                      value={editForm.first_name}
+                      onChange={(e) => setEditForm(prev => ({ ...prev, first_name: e.target.value }))}
+                      required
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="last_name">Last Name *</Label>
+                    <Input
+                      id="last_name"
+                      value={editForm.last_name}
+                      onChange={(e) => setEditForm(prev => ({ ...prev, last_name: e.target.value }))}
+                      required
+                    />
+                  </div>
+                </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="email">Email</Label>
+                    <Input
+                      id="email"
+                      type="email"
+                      value={editForm.email}
+                      onChange={(e) => setEditForm(prev => ({ ...prev, email: e.target.value }))}
+                      placeholder="Enter email address"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="phone">Phone</Label>
+                    <Input
+                      id="phone"
+                      value={editForm.phone}
+                      onChange={(e) => setEditForm(prev => ({ ...prev, phone: e.target.value }))}
+                      placeholder="Enter phone number"
+                    />
+                  </div>
+                </div>
+                
+                <div>
+                  <Label htmlFor="address">Address</Label>
+                  <Input
+                    id="address"
+                    value={editForm.address}
+                    onChange={(e) => setEditForm(prev => ({ ...prev, address: e.target.value }))}
+                    placeholder="Enter street address"
+                  />
+                </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div>
+                    <Label htmlFor="city">City</Label>
+                    <Input
+                      id="city"
+                      value={editForm.city}
+                      onChange={(e) => setEditForm(prev => ({ ...prev, city: e.target.value }))}
+                      placeholder="Enter city"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="state">State</Label>
+                    <Input
+                      id="state"
+                      value={editForm.state}
+                      onChange={(e) => setEditForm(prev => ({ ...prev, state: e.target.value }))}
+                      placeholder="GA"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="zip_code">Zip Code</Label>
+                    <Input
+                      id="zip_code"
+                      value={editForm.zip_code}
+                      onChange={(e) => setEditForm(prev => ({ ...prev, zip_code: e.target.value }))}
+                      placeholder="Enter zip code"
+                    />
+                  </div>
+                </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="county">County</Label>
+                    <Input
+                      id="county"
+                      value={editForm.county}
+                      onChange={(e) => setEditForm(prev => ({ ...prev, county: e.target.value }))}
+                      placeholder="Enter county"
+                    />
+                  </div>
+                </div>
+                
+                <div>
+                  <Label htmlFor="notes">Notes</Label>
+                  <Textarea
+                    id="notes"
+                    value={editForm.notes}
+                    onChange={(e) => setEditForm(prev => ({ ...prev, notes: e.target.value }))}
+                    placeholder="Enter any additional notes about this client"
+                    rows={3}
+                  />
+                </div>
               </div>
-              <div className="flex items-center space-x-2">
-                <Phone className="h-4 w-4 text-muted-foreground" />
-                <span className="text-sm">{client.phone || 'No phone'}</span>
+            ) : (
+              <div className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                  <div className="flex items-center space-x-2">
+                    <Mail className="h-4 w-4 text-muted-foreground" />
+                    <span className="text-sm">{client.email || 'No email'}</span>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <Phone className="h-4 w-4 text-muted-foreground" />
+                    <span className="text-sm">{client.phone || 'No phone'}</span>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <MapPin className="h-4 w-4 text-muted-foreground" />
+                    <span className="text-sm">{client.address || 'No address'}</span>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <Calendar className="h-4 w-4 text-muted-foreground" />
+                    <span className="text-sm">Client since {formatDistanceToNow(new Date(client.created_at))} ago</span>
+                  </div>
+                </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  <div className="flex items-center space-x-2">
+                    <MapPin className="h-4 w-4 text-muted-foreground" />
+                    <span className="text-sm">{client.city}, {client.state} {client.zip_code}</span>
+                  </div>
+                  {client.county && (
+                    <div className="flex items-center space-x-2">
+                      <MapPin className="h-4 w-4 text-muted-foreground" />
+                      <span className="text-sm">{client.county} County</span>
+                    </div>
+                  )}
+                </div>
+                
+                {client.notes && (
+                  <div className="mt-4 p-3 bg-muted/50 rounded-lg">
+                    <Label className="text-sm font-medium">Notes:</Label>
+                    <p className="text-sm text-muted-foreground mt-1">{client.notes}</p>
+                  </div>
+                )}
               </div>
-              <div className="flex items-center space-x-2">
-                <MapPin className="h-4 w-4 text-muted-foreground" />
-                <span className="text-sm">{client.city}, {client.state} {client.zip_code}</span>
-              </div>
-              <div className="flex items-center space-x-2">
-                <Calendar className="h-4 w-4 text-muted-foreground" />
-                <span className="text-sm">Client since {formatDistanceToNow(new Date(client.created_at))} ago</span>
-              </div>
-            </div>
+            )}
           </CardContent>
         </Card>
 
