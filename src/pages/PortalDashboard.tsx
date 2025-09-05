@@ -423,7 +423,12 @@ const PortalDashboard = () => {
       state: { 
         interactionId: interaction.id,
         contactName: interaction.contact_name,
-        summary: interaction.summary 
+        summary: interaction.summary,
+        // Include intake-specific data if available
+        email: interaction.email || '',
+        phone: interaction.phone || '',
+        helpNeeded: interaction.help_needed || interaction.summary,
+        type: interaction.type
       } 
     });
   };

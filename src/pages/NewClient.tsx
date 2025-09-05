@@ -43,7 +43,11 @@ const NewClient = () => {
   const { 
     interactionId, 
     contactName = "", 
-    summary = "" 
+    summary = "",
+    email: passedEmail = "",
+    phone: passedPhone = "",
+    helpNeeded = "",
+    type = ""
   } = location.state || {};
 
   // Form state
@@ -67,14 +71,16 @@ const NewClient = () => {
   const [newClientId, setNewClientId] = useState<string | null>(null);
   const [assistanceRequestId, setAssistanceRequestId] = useState<string | null>(null);
 
-  // Parse contact name on component mount
+  // Parse contact name and populate fields on component mount
   useEffect(() => {
     if (contactName) {
       const nameParts = contactName.split(' ');
       setFirstName(nameParts[0] || '');
       setLastName(nameParts.slice(1).join(' ') || '');
     }
-  }, [contactName]);
+    if (passedEmail) setEmail(passedEmail);
+    if (passedPhone) setPhone(passedPhone);
+  }, [contactName, passedEmail, passedPhone]);
 
   // Auto-search for matches when form data changes
   useEffect(() => {
@@ -130,24 +136,34 @@ const NewClient = () => {
 
     setIsCreating(true);
     try {
-      // Update the interaction to link it to the existing client
-      const { error: updateError } = await supabase
-        .from('interactions')
-        .update({ client_id: selectedMatch.id })
-        .eq('id', interactionId);
+        if (type === 'public_intake') {
+          // For public intake, update the public_intake table
+          const { error: updateError } = await supabase
+            .from('public_intake')
+            .update({ client_id: selectedMatch.id })
+            .eq('id', interactionId);
 
-      if (updateError) throw updateError;
+          if (updateError) throw updateError;
+        } else {
+          // For staff interactions, update the interactions table
+          const { error: updateError } = await supabase
+            .from('interactions')
+            .update({ client_id: selectedMatch.id })
+            .eq('id', interactionId);
+
+          if (updateError) throw updateError;
+        }
 
       // Create assistance request
-      const { data: assistanceRequest, error: requestError } = await supabase
-        .from('assistance_requests')
-        .insert({
-          client_id: selectedMatch.id,
-          interaction_id: interactionId,
-          help_requested: summary,
-        })
-        .select('id')
-        .single();
+        const { data: assistanceRequest, error: requestError } = await supabase
+          .from('assistance_requests')
+          .insert({
+            client_id: selectedMatch.id,
+            interaction_id: interactionId,
+            help_requested: helpNeeded || summary,
+          })
+          .select('id')
+          .single();
 
       if (requestError) throw requestError;
 
@@ -181,6 +197,9 @@ const NewClient = () => {
     }
 
     setIsCreating(true);
+    console.log('Creating client with data:', { firstName, lastName, email, phone, address, city, state, zipCode, county });
+    console.log('Interaction info:', { interactionId, type, helpNeeded, summary });
+    
     try {
       // Create new client
       const { data: newClient, error: clientError } = await supabase
@@ -201,14 +220,25 @@ const NewClient = () => {
 
       if (clientError) throw clientError;
 
-      // Update interaction to link to new client
+      // Update interaction to link to new client (handle both interaction types)
       if (interactionId) {
-        const { error: updateError } = await supabase
-          .from('interactions')
-          .update({ client_id: newClient.id })
-          .eq('id', interactionId);
+        if (type === 'public_intake') {
+          // For public intake, update the public_intake table
+          const { error: updateError } = await supabase
+            .from('public_intake')
+            .update({ client_id: newClient.id })
+            .eq('id', interactionId);
 
-        if (updateError) throw updateError;
+          if (updateError) throw updateError;
+        } else {
+          // For staff interactions, update the interactions table
+          const { error: updateError } = await supabase
+            .from('interactions')
+            .update({ client_id: newClient.id })
+            .eq('id', interactionId);
+
+          if (updateError) throw updateError;
+        }
 
         // Create assistance request
         const { data: assistanceRequest, error: requestError } = await supabase
@@ -216,7 +246,7 @@ const NewClient = () => {
           .insert({
             client_id: newClient.id,
             interaction_id: interactionId,
-            help_requested: summary,
+            help_requested: helpNeeded || summary,
           })
           .select('id')
           .single();
@@ -234,11 +264,12 @@ const NewClient = () => {
         description: "Now complete the triage assessment.",
       });
 
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error creating client:', error);
+      console.error('Error details:', error.message, error.details, error.hint);
       toast({
         title: "Error",
-        description: "Failed to create client. Please try again.",
+        description: `Failed to create client: ${error.message}`,
         variant: "destructive"
       });
     } finally {
@@ -422,7 +453,7 @@ const NewClient = () => {
                   <div>
                     <Label>Interaction Summary</Label>
                     <Textarea
-                      value={summary}
+                      value={helpNeeded || summary}
                       readOnly
                       className="bg-muted"
                       rows={3}
