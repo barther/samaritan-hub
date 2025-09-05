@@ -31,6 +31,10 @@ const SettingsPage = () => {
     lowFundAlerts: true,
     newRequestAlerts: true,
     
+    // Email settings
+    emailProvider: 'msgraph',
+    defaultSenderMailbox: '',
+    
     // Email templates
     approvalEmailTemplate: `Dear {client_name},
 
@@ -55,6 +59,8 @@ Good Samaritan Assistance Team`,
     enableAuditLog: true,
     dataRetentionMonths: 36
   });
+
+  const [sendingTestEmail, setSendingTestEmail] = useState(false);
 
   const loadSettings = async () => {
     try {
@@ -86,6 +92,9 @@ Good Samaritan Assistance Team`,
           } else if (setting.key === 'email_templates') {
             settingsObj.approvalEmailTemplate = value.approvalEmailTemplate;
             settingsObj.denialEmailTemplate = value.denialEmailTemplate;
+          } else if (setting.key === 'email') {
+            settingsObj.emailProvider = value.emailProvider;
+            settingsObj.defaultSenderMailbox = value.defaultSenderMailbox;
           }
         });
         setSettings(prev => ({ ...prev, ...settingsObj }));
@@ -137,6 +146,13 @@ Good Samaritan Assistance Team`,
             approvalEmailTemplate: settings.approvalEmailTemplate,
             denialEmailTemplate: settings.denialEmailTemplate
           }
+        },
+        {
+          key: 'email',
+          value: {
+            emailProvider: settings.emailProvider,
+            defaultSenderMailbox: settings.defaultSenderMailbox
+          }
         }
       ];
 
@@ -179,6 +195,52 @@ Good Samaritan Assistance Team`,
       title: "Export initiated",
       description: "Your data export will be ready for download shortly."
     });
+  };
+
+  const handleSendTestEmail = async () => {
+    if (!settings.defaultSenderMailbox) {
+      toast({
+        title: "Error",
+        description: "Please set a default sender mailbox first.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setSendingTestEmail(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('send-email-msgraph', {
+        body: {
+          to: settings.defaultSenderMailbox, // Send test email to the sender mailbox
+          subject: 'Test Email from Good Samaritan System',
+          html: `
+            <h2>Test Email</h2>
+            <p>This is a test email to verify Microsoft Graph integration is working correctly.</p>
+            <p>Sent at: ${new Date().toLocaleString()}</p>
+            <p>From: Good Samaritan Assistance System</p>
+          `,
+          sender: settings.defaultSenderMailbox
+        }
+      });
+
+      if (error) {
+        throw error;
+      }
+
+      toast({
+        title: "Test email sent",
+        description: `Test email sent successfully to ${settings.defaultSenderMailbox}`,
+      });
+    } catch (error: any) {
+      console.error('Error sending test email:', error);
+      toast({
+        title: "Error",
+        description: `Failed to send test email: ${error.message}`,
+        variant: "destructive",
+      });
+    } finally {
+      setSendingTestEmail(false);
+    }
   };
 
   return (
@@ -351,6 +413,64 @@ Good Samaritan Assistance Team`,
 
           <TabsContent value="templates">
             <div className="space-y-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Email Provider Settings</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <Label>Email Provider</Label>
+                      <p className="text-xs text-muted-foreground">Choose email sending method</p>
+                    </div>
+                    <Select 
+                      value={settings.emailProvider} 
+                      onValueChange={(value) => setSettings(prev => ({ ...prev, emailProvider: value }))}
+                    >
+                      <SelectTrigger className="w-48">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="msgraph">Microsoft Graph (Exchange)</SelectItem>
+                        <SelectItem value="smtp">SMTP (Legacy)</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {settings.emailProvider === 'msgraph' && (
+                    <div className="space-y-4 pt-4 border-t">
+                      <div>
+                        <Label htmlFor="defaultSenderMailbox">Default Sender Mailbox</Label>
+                        <Input
+                          id="defaultSenderMailbox"
+                          type="email"
+                          value={settings.defaultSenderMailbox}
+                          onChange={(e) => setSettings(prev => ({ ...prev, defaultSenderMailbox: e.target.value }))}
+                          placeholder="noreply@yourdomain.com"
+                          className="mt-1"
+                        />
+                        <p className="text-xs text-muted-foreground mt-1">
+                          The Exchange mailbox to send emails from
+                        </p>
+                      </div>
+
+                      <div className="pt-2">
+                        <Button 
+                          variant="outline" 
+                          onClick={handleSendTestEmail}
+                          disabled={sendingTestEmail || !settings.defaultSenderMailbox}
+                        >
+                          {sendingTestEmail ? "Sending..." : "Send Test Email"}
+                        </Button>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          Send a test email to verify Microsoft Graph configuration
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
               <Card>
                 <CardHeader>
                   <CardTitle>Approval Email Template</CardTitle>
