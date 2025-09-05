@@ -479,7 +479,7 @@ Good Samaritan Assistance Team`,
                           className="mt-1"
                         />
                         <p className="text-xs text-muted-foreground mt-1">
-                          The Exchange mailbox to send emails from
+                          All emails will be sent from donotreply@lithiaspringsmethodist.org
                         </p>
                       </div>
 
@@ -492,7 +492,7 @@ Good Samaritan Assistance Team`,
                           {sendingTestEmail ? "Sending..." : "Send Test Email"}
                         </Button>
                         <p className="text-xs text-muted-foreground mt-1">
-                          Send a test email to verify Microsoft Graph configuration
+                          Enter a custom email address to test the system. Test emails will be sent to your specified address from donotreply@lithiaspringsmethodist.org
                         </p>
                       </div>
                     </div>
