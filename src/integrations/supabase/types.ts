@@ -14,10 +14,140 @@ export type Database = {
   }
   public: {
     Tables: {
+      assistance_requests: {
+        Row: {
+          children_names_ages: string | null
+          circumstances: string | null
+          client_id: string | null
+          consent_given: boolean | null
+          created_at: string
+          created_by: string | null
+          employer_self: string | null
+          employer_self_contact: string | null
+          employer_self_phone: string | null
+          employer_spouse: string | null
+          employer_spouse_contact: string | null
+          employer_spouse_phone: string | null
+          govt_aid_disability: boolean | null
+          govt_aid_other: string | null
+          govt_aid_ss: boolean | null
+          govt_aid_unemployment: boolean | null
+          govt_aid_workers_comp: boolean | null
+          help_requested: string | null
+          id: string
+          interaction_id: string | null
+          lease_in_name: boolean | null
+          marital_status: string | null
+          other_assistance_sources: string | null
+          rent_paid_3mo: boolean | null
+          spouse_email: string | null
+          spouse_name: string | null
+          spouse_phone: string | null
+          triage_completed_at: string | null
+          triaged_by_user_id: string | null
+          unemployed_self: boolean | null
+          unemployed_spouse: boolean | null
+          updated_at: string
+          utility_in_name: boolean | null
+          veteran_self: boolean | null
+          veteran_spouse: boolean | null
+        }
+        Insert: {
+          children_names_ages?: string | null
+          circumstances?: string | null
+          client_id?: string | null
+          consent_given?: boolean | null
+          created_at?: string
+          created_by?: string | null
+          employer_self?: string | null
+          employer_self_contact?: string | null
+          employer_self_phone?: string | null
+          employer_spouse?: string | null
+          employer_spouse_contact?: string | null
+          employer_spouse_phone?: string | null
+          govt_aid_disability?: boolean | null
+          govt_aid_other?: string | null
+          govt_aid_ss?: boolean | null
+          govt_aid_unemployment?: boolean | null
+          govt_aid_workers_comp?: boolean | null
+          help_requested?: string | null
+          id?: string
+          interaction_id?: string | null
+          lease_in_name?: boolean | null
+          marital_status?: string | null
+          other_assistance_sources?: string | null
+          rent_paid_3mo?: boolean | null
+          spouse_email?: string | null
+          spouse_name?: string | null
+          spouse_phone?: string | null
+          triage_completed_at?: string | null
+          triaged_by_user_id?: string | null
+          unemployed_self?: boolean | null
+          unemployed_spouse?: boolean | null
+          updated_at?: string
+          utility_in_name?: boolean | null
+          veteran_self?: boolean | null
+          veteran_spouse?: boolean | null
+        }
+        Update: {
+          children_names_ages?: string | null
+          circumstances?: string | null
+          client_id?: string | null
+          consent_given?: boolean | null
+          created_at?: string
+          created_by?: string | null
+          employer_self?: string | null
+          employer_self_contact?: string | null
+          employer_self_phone?: string | null
+          employer_spouse?: string | null
+          employer_spouse_contact?: string | null
+          employer_spouse_phone?: string | null
+          govt_aid_disability?: boolean | null
+          govt_aid_other?: string | null
+          govt_aid_ss?: boolean | null
+          govt_aid_unemployment?: boolean | null
+          govt_aid_workers_comp?: boolean | null
+          help_requested?: string | null
+          id?: string
+          interaction_id?: string | null
+          lease_in_name?: boolean | null
+          marital_status?: string | null
+          other_assistance_sources?: string | null
+          rent_paid_3mo?: boolean | null
+          spouse_email?: string | null
+          spouse_name?: string | null
+          spouse_phone?: string | null
+          triage_completed_at?: string | null
+          triaged_by_user_id?: string | null
+          unemployed_self?: boolean | null
+          unemployed_spouse?: boolean | null
+          updated_at?: string
+          utility_in_name?: boolean | null
+          veteran_self?: boolean | null
+          veteran_spouse?: boolean | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "assistance_requests_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "assistance_requests_interaction_id_fkey"
+            columns: ["interaction_id"]
+            isOneToOne: false
+            referencedRelation: "interactions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       clients: {
         Row: {
           address: string | null
           city: string | null
+          county: string | null
           created_at: string
           created_by: string | null
           email: string | null
@@ -32,6 +162,7 @@ export type Database = {
         Insert: {
           address?: string | null
           city?: string | null
+          county?: string | null
           created_at?: string
           created_by?: string | null
           email?: string | null
@@ -46,6 +177,7 @@ export type Database = {
         Update: {
           address?: string | null
           city?: string | null
+          county?: string | null
           created_at?: string
           created_by?: string | null
           email?: string | null

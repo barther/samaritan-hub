@@ -1,72 +1,28 @@
-import { useState } from "react";
-import { Button } from "@/components/ui/button";
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { HandHeart, AlertTriangle, User, Home, Briefcase, Baby, FileText } from "lucide-react";
+import React, { useState } from "react";
 import Header from "@/components/Header";
 import ResourcesSidebar from "@/components/ResourcesSidebar";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
+import { HandHeart, AlertTriangle, User, Home, FileText } from "lucide-react";
+import { Label } from "@/components/ui/label";
 
 interface FormData {
-  // Contact Information
   firstName: string;
   lastName: string;
-  primaryPhone: string;
   email: string;
-  dateOfBirth: string;
-  
-  // Address
-  addressLine1: string;
-  addressLine2: string;
+  phone: string;
+  address: string;
   city: string;
   state: string;
-  zip: string;
-  
-  // Residence & Living Situation
+  zipCode: string;
   county: string;
-  residenceDuration: string;
-  paidLast3Months: boolean | null;
-  leaseInName: boolean | null;
-  utilityInName: boolean | null;
-  
-  // Household Information
-  maritalStatus: string;
-  agesText: string;
-  veteranSelf: boolean;
-  veteranSpouse: boolean;
-  homeChurch: string;
-  
-  // Employment
-  employerSelf: string;
-  employerSelfPhone: string;
-  employerSelfContact: string;
-  employerSpouse: string;
-  employerSpousePhone: string;
-  employerSpouseContact: string;
-  unemployedSelf: boolean;
-  unemployedSpouse: boolean;
-  
-  // Children
-  childrenNamesAges: string;
-  
-  // Assistance Request
-  helpRequested: string;
-  circumstances: string;
-  otherAssistanceSources: string;
-  
-  // Government Aid
-  govtAidUnemployment: boolean;
-  govtAidSS: boolean;
-  govtAidWorkersComp: boolean;
-  govtAidDisability: boolean;
-  govtAidOther: string;
-  
-  // Required Disclaimer
-  disclaimerAck: boolean;
+  helpNeeded: string;
+  disclaimerAccepted: boolean;
 }
 
 const RequestAssistance = () => {
@@ -75,45 +31,17 @@ const RequestAssistance = () => {
   const [formData, setFormData] = useState<FormData>({
     firstName: "",
     lastName: "",
-    primaryPhone: "",
     email: "",
-    dateOfBirth: "",
-    addressLine1: "",
-    addressLine2: "",
+    phone: "",
+    address: "",
     city: "",
-    state: "",
-    zip: "",
+    state: "GA",
+    zipCode: "",
     county: "",
-    residenceDuration: "",
-    paidLast3Months: null,
-    leaseInName: null,
-    utilityInName: null,
-    maritalStatus: "",
-    agesText: "",
-    veteranSelf: false,
-    veteranSpouse: false,
-    homeChurch: "",
-    employerSelf: "",
-    employerSelfPhone: "",
-    employerSelfContact: "",
-    employerSpouse: "",
-    employerSpousePhone: "",
-    employerSpouseContact: "",
-    unemployedSelf: false,
-    unemployedSpouse: false,
-    childrenNamesAges: "",
-    helpRequested: "",
-    circumstances: "",
-    otherAssistanceSources: "",
-    govtAidUnemployment: false,
-    govtAidSS: false,
-    govtAidWorkersComp: false,
-    govtAidDisability: false,
-    govtAidOther: "",
-    disclaimerAck: false,
+    helpNeeded: "",
+    disclaimerAccepted: false,
   });
 
-  // Phone number formatting
   const formatPhoneNumber = (value: string) => {
     const digits = value.replace(/\D/g, '');
     if (digits.length >= 10) {
@@ -126,7 +54,6 @@ const RequestAssistance = () => {
     return digits;
   };
 
-  // ZIP code formatting
   const formatZipCode = (value: string) => {
     const digits = value.replace(/\D/g, '');
     if (digits.length > 5) {
@@ -139,20 +66,20 @@ const RequestAssistance = () => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
-  const handlePhoneChange = (field: keyof FormData, value: string) => {
+  const handlePhoneChange = (value: string) => {
     const formatted = formatPhoneNumber(value);
-    setFormData(prev => ({ ...prev, [field]: formatted }));
+    setFormData(prev => ({ ...prev, phone: formatted }));
   };
 
   const handleZipChange = (value: string) => {
     const formatted = formatZipCode(value);
-    setFormData(prev => ({ ...prev, zip: formatted }));
+    setFormData(prev => ({ ...prev, zipCode: formatted }));
   };
 
   const validateForm = () => {
     const required = [
-      'firstName', 'lastName', 'primaryPhone', 'email', 'addressLine1', 
-      'city', 'state', 'zip', 'helpRequested', 'circumstances'
+      'firstName', 'lastName', 'phone', 'email', 'address', 
+      'city', 'state', 'zipCode', 'helpNeeded'
     ];
     
     for (const field of required) {
@@ -166,7 +93,7 @@ const RequestAssistance = () => {
       }
     }
 
-    if (!formData.disclaimerAck) {
+    if (!formData.disclaimerAccepted) {
       toast({
         title: "Disclaimer Required",
         description: "You must acknowledge the disclaimer to submit your request.",
@@ -175,8 +102,7 @@ const RequestAssistance = () => {
       return false;
     }
 
-    // Validate phone number (at least 10 digits)
-    const phoneDigits = formData.primaryPhone.replace(/\D/g, '');
+    const phoneDigits = formData.phone.replace(/\D/g, '');
     if (phoneDigits.length < 10) {
       toast({
         title: "Invalid Phone Number",
@@ -186,7 +112,6 @@ const RequestAssistance = () => {
       return false;
     }
 
-    // Validate email
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(formData.email)) {
       toast({
@@ -208,16 +133,90 @@ const RequestAssistance = () => {
     setIsSubmitting(true);
     
     try {
-      // TODO: Process form submission when Supabase is connected
+      // Create or find existing client
+      const { data: existingClient } = await supabase
+        .from('clients')
+        .select('id')
+        .eq('email', formData.email.toLowerCase())
+        .maybeSingle();
+
+      let clientId = existingClient?.id;
+
+      if (!clientId) {
+        // Create new client
+        const { data: newClient, error: clientError } = await supabase
+          .from('clients')
+          .insert({
+            first_name: formData.firstName,
+            last_name: formData.lastName,
+            email: formData.email.toLowerCase(),
+            phone: formData.phone,
+            address: formData.address,
+            city: formData.city,
+            state: formData.state,
+            zip_code: formData.zipCode,
+            county: formData.county,
+          })
+          .select('id')
+          .single();
+
+        if (clientError) throw clientError;
+        clientId = newClient.id;
+      }
+
+      // Create interaction
+      const { data: interaction, error: interactionError } = await supabase
+        .from('interactions')
+        .insert({
+          client_id: clientId,
+          contact_name: `${formData.firstName} ${formData.lastName}`,
+          summary: `Assistance request: ${formData.helpNeeded.substring(0, 100)}...`,
+          details: formData.helpNeeded,
+          channel: 'public_form',
+          status: 'new',
+        })
+        .select('id')
+        .single();
+
+      if (interactionError) throw interactionError;
+
+      // Create assistance request
+      const { error: requestError } = await supabase
+        .from('assistance_requests')
+        .insert({
+          client_id: clientId,
+          interaction_id: interaction.id,
+          help_requested: formData.helpNeeded,
+        });
+
+      if (requestError) throw requestError;
+
       toast({
-        title: "Supabase Integration Required",
-        description: "Please connect to Supabase to enable form submission.",
-        variant: "destructive",
+        title: "Request Submitted Successfully",
+        description: "We have received your assistance request. A staff member will review it and contact you soon.",
+        variant: "default",
       });
+
+      // Reset form
+      setFormData({
+        firstName: "",
+        lastName: "",
+        email: "",
+        phone: "",
+        address: "",
+        city: "",
+        state: "GA",
+        zipCode: "",
+        county: "",
+        helpNeeded: "",
+        disclaimerAccepted: false,
+      });
+
     } catch (error) {
+      console.error('Error submitting request:', error);
       toast({
         title: "Submission Error",
-        description: "Unable to submit your request. Please try again.",
+        description: "Unable to submit your request. Please try again or call us directly.",
         variant: "destructive",
       });
     } finally {
@@ -232,7 +231,7 @@ const RequestAssistance = () => {
       <main className="container mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <div className="flex flex-col lg:flex-row gap-8">
           {/* Main Form */}
-          <div className="flex-1">
+          <div className="flex-1 max-w-2xl mx-auto">
             <div className="text-center mb-8">
               <div className="inline-flex items-center justify-center p-3 bg-accent/10 rounded-full mb-4">
                 <HandHeart className="h-8 w-8 text-accent" />
@@ -241,11 +240,11 @@ const RequestAssistance = () => {
                 Request Assistance
               </h1>
               <p className="text-lg text-muted-foreground">
-                We're here to help. Please provide detailed information so we can better understand your needs.
+                We're here to help. Please provide your basic information and we'll get back to you soon.
               </p>
             </div>
 
-            <form onSubmit={handleSubmit} className="space-y-8">
+            <form onSubmit={handleSubmit} className="space-y-6">
               {/* Contact Information */}
               <Card className="shadow-card">
                 <CardHeader>
@@ -279,13 +278,13 @@ const RequestAssistance = () => {
                   
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                      <Label htmlFor="primaryPhone">Primary Phone *</Label>
+                      <Label htmlFor="phone">Phone Number *</Label>
                       <Input
-                        id="primaryPhone"
+                        id="phone"
                         type="tel"
                         placeholder="(555) 123-4567"
-                        value={formData.primaryPhone}
-                        onChange={(e) => handlePhoneChange('primaryPhone', e.target.value)}
+                        value={formData.phone}
+                        onChange={(e) => handlePhoneChange(e.target.value)}
                         required
                       />
                     </div>
@@ -299,16 +298,6 @@ const RequestAssistance = () => {
                         required
                       />
                     </div>
-                  </div>
-
-                  <div>
-                    <Label htmlFor="dateOfBirth">Date of Birth</Label>
-                    <Input
-                      id="dateOfBirth"
-                      type="date"
-                      value={formData.dateOfBirth}
-                      onChange={(e) => handleInputChange('dateOfBirth', e.target.value)}
-                    />
                   </div>
                 </CardContent>
               </Card>
@@ -324,26 +313,17 @@ const RequestAssistance = () => {
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div>
-                    <Label htmlFor="addressLine1">Address Line 1 *</Label>
+                    <Label htmlFor="address">Street Address *</Label>
                     <Input
-                      id="addressLine1"
-                      value={formData.addressLine1}
-                      onChange={(e) => handleInputChange('addressLine1', e.target.value)}
+                      id="address"
+                      value={formData.address}
+                      onChange={(e) => handleInputChange('address', e.target.value)}
                       required
                     />
                   </div>
                   
-                  <div>
-                    <Label htmlFor="addressLine2">Address Line 2</Label>
-                    <Input
-                      id="addressLine2"
-                      value={formData.addressLine2}
-                      onChange={(e) => handleInputChange('addressLine2', e.target.value)}
-                    />
-                  </div>
-                  
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div>
+                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                    <div className="md:col-span-2">
                       <Label htmlFor="city">City *</Label>
                       <Input
                         id="city"
@@ -364,87 +344,55 @@ const RequestAssistance = () => {
                       />
                     </div>
                     <div>
-                      <Label htmlFor="zip">ZIP Code *</Label>
+                      <Label htmlFor="zipCode">ZIP Code *</Label>
                       <Input
-                        id="zip"
-                        placeholder="12345 or 12345-6789"
-                        value={formData.zip}
+                        id="zipCode"
+                        placeholder="12345"
+                        value={formData.zipCode}
                         onChange={(e) => handleZipChange(e.target.value)}
                         required
                       />
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <Label htmlFor="county">County</Label>
-                      <Input
-                        id="county"
-                        value={formData.county}
-                        onChange={(e) => handleInputChange('county', e.target.value)}
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="residenceDuration">How long at current address?</Label>
-                      <Input
-                        id="residenceDuration"
-                        placeholder="e.g., 2 years, 6 months"
-                        value={formData.residenceDuration}
-                        onChange={(e) => handleInputChange('residenceDuration', e.target.value)}
-                      />
-                    </div>
+                  <div>
+                    <Label htmlFor="county">County</Label>
+                    <Input
+                      id="county"
+                      value={formData.county}
+                      onChange={(e) => handleInputChange('county', e.target.value)}
+                      placeholder="e.g., Fulton County"
+                    />
                   </div>
                 </CardContent>
               </Card>
 
-              {/* Assistance Request */}
+              {/* Help Needed */}
               <Card className="shadow-card">
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
                     <FileText className="h-5 w-5 text-primary" />
-                    Assistance Request
+                    What help do you need?
                   </CardTitle>
-                  <CardDescription>Tell us about your specific needs</CardDescription>
+                  <CardDescription>Brief description of your assistance request</CardDescription>
                 </CardHeader>
-                <CardContent className="space-y-4">
+                <CardContent>
                   <div>
-                    <Label htmlFor="helpRequested">What type of help are you requesting? *</Label>
+                    <Label htmlFor="helpNeeded">Please describe what type of assistance you need *</Label>
                     <Textarea
-                      id="helpRequested"
-                      placeholder="e.g., rent assistance, utility bills, food, transportation, etc."
-                      value={formData.helpRequested}
-                      onChange={(e) => handleInputChange('helpRequested', e.target.value)}
-                      required
-                      rows={3}
-                    />
-                  </div>
-                  
-                  <div>
-                    <Label htmlFor="circumstances">Describe your current circumstances *</Label>
-                    <Textarea
-                      id="circumstances"
-                      placeholder="Please explain the situation that has led to your need for assistance..."
-                      value={formData.circumstances}
-                      onChange={(e) => handleInputChange('circumstances', e.target.value)}
+                      id="helpNeeded"
+                      placeholder="e.g., help with rent, utility bills, food assistance, transportation..."
+                      value={formData.helpNeeded}
+                      onChange={(e) => handleInputChange('helpNeeded', e.target.value)}
                       required
                       rows={4}
-                    />
-                  </div>
-                  
-                  <div>
-                    <Label htmlFor="otherAssistanceSources">Other sources of assistance you've contacted</Label>
-                    <Textarea
-                      id="otherAssistanceSources"
-                      placeholder="Please list any other organizations, agencies, or programs you've applied to for help..."
-                      value={formData.otherAssistanceSources}
-                      onChange={(e) => handleInputChange('otherAssistanceSources', e.target.value)}
-                      rows={3}
+                      className="mt-2"
                     />
                   </div>
                 </CardContent>
               </Card>
 
-              {/* Required Disclaimer */}
+              {/* Disclaimer */}
               <Card className="shadow-card border-destructive/20">
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2 text-destructive">
@@ -455,30 +403,28 @@ const RequestAssistance = () => {
                 <CardContent>
                   <div className="flex items-start space-x-3">
                     <Checkbox
-                      id="disclaimerAck"
-                      checked={formData.disclaimerAck}
-                      onCheckedChange={(checked) => handleInputChange('disclaimerAck', checked)}
+                      id="disclaimerAccepted"
+                      checked={formData.disclaimerAccepted}
+                      onCheckedChange={(checked) => handleInputChange('disclaimerAccepted', checked)}
                       required
                     />
-                    <Label htmlFor="disclaimerAck" className="text-sm leading-relaxed">
-                      <strong>I understand that assistance is not guaranteed and depends on policy and available funds.</strong>
+                    <Label htmlFor="disclaimerAccepted" className="text-sm leading-relaxed">
+                      <strong>I understand that assistance is not guaranteed and depends on available funds and program guidelines.</strong>
                       <br />
-                      I acknowledge that Good Samaritan will review my request on a case-by-case basis and that 
-                      approval is subject to available resources and program guidelines.
+                      I acknowledge that Good Samaritan will review my request and contact me if additional information is needed.
                     </Label>
                   </div>
                 </CardContent>
               </Card>
 
               {/* Submit Button */}
-              <div className="flex justify-center">
+              <div className="flex justify-center pt-4">
                 <Button 
                   type="submit" 
                   variant="assistance" 
                   size="lg" 
-                  disabled={isSubmitting || !formData.disclaimerAck}
+                  disabled={isSubmitting || !formData.disclaimerAccepted}
                   className="min-w-[200px]"
-                  data-testid="submit-assistance-request"
                 >
                   {isSubmitting ? "Submitting..." : "Submit Request"}
                 </Button>
@@ -486,8 +432,10 @@ const RequestAssistance = () => {
             </form>
           </div>
 
-          {/* Resources Sidebar */}
-          <ResourcesSidebar />
+          {/* Sidebar */}
+          <div className="lg:w-80">
+            <ResourcesSidebar />
+          </div>
         </div>
       </main>
     </div>

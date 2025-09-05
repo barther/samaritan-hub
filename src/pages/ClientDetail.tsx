@@ -4,6 +4,7 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { 
   ArrowLeft, 
   User, 
@@ -13,10 +14,13 @@ import {
   Calendar,
   DollarSign,
   MessageSquare,
-  Plus
+  Plus,
+  ClipboardCheck,
+  FileText
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import TriageForm from "@/components/TriageForm";
 
 interface Client {
   id: string;
@@ -57,6 +61,15 @@ interface Disbursement {
   created_at: string;
 }
 
+interface AssistanceRequest {
+  id: string;
+  help_requested: string;
+  circumstances?: string;
+  triage_completed_at?: string;
+  triaged_by_user_id?: string;
+  created_at: string;
+}
+
 const ClientDetail = () => {
   const { clientId } = useParams<{ clientId: string }>();
   const navigate = useNavigate();
@@ -65,7 +78,10 @@ const ClientDetail = () => {
   const [client, setClient] = useState<Client | null>(null);
   const [interactions, setInteractions] = useState<Interaction[]>([]);
   const [disbursements, setDisbursements] = useState<Disbursement[]>([]);
+  const [assistanceRequests, setAssistanceRequests] = useState<AssistanceRequest[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [triageModalOpen, setTriageModalOpen] = useState(false);
+  const [selectedRequestId, setSelectedRequestId] = useState<string | null>(null);
 
   useEffect(() => {
     if (clientId) {
@@ -106,6 +122,16 @@ const ClientDetail = () => {
 
       if (disbursementsError) throw disbursementsError;
       setDisbursements(disbursementsData || []);
+
+      // Load assistance requests
+      const { data: requestsData, error: requestsError } = await supabase
+        .from('assistance_requests')
+        .select('*')
+        .eq('client_id', clientId)
+        .order('created_at', { ascending: false });
+
+      if (requestsError) throw requestsError;
+      setAssistanceRequests(requestsData || []);
 
     } catch (error) {
       console.error('Error loading client data:', error);
@@ -242,9 +268,12 @@ const ClientDetail = () => {
           </CardContent>
         </Card>
 
-        {/* Tabs for Interactions and Disbursements */}
-        <Tabs defaultValue="interactions" className="space-y-4">
+        {/* Tabs for Interactions, Disbursements, and Assistance Requests */}
+        <Tabs defaultValue="requests" className="space-y-4">
           <TabsList>
+            <TabsTrigger value="requests">
+              Assistance Requests ({assistanceRequests.length})
+            </TabsTrigger>
             <TabsTrigger value="interactions">
               Interactions ({interactions.length})
             </TabsTrigger>
@@ -252,6 +281,77 @@ const ClientDetail = () => {
               Disbursements ({disbursements.length})
             </TabsTrigger>
           </TabsList>
+
+          <TabsContent value="requests">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <FileText className="h-5 w-5" />
+                  Assistance Requests
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {assistanceRequests.length > 0 ? (
+                  <div className="space-y-4">
+                    {assistanceRequests.map((request) => (
+                      <div key={request.id} className="border border-border rounded-lg p-4">
+                        <div className="flex items-start justify-between mb-3">
+                          <div className="flex items-center gap-2">
+                            <Badge 
+                              variant={request.triage_completed_at ? "default" : "destructive"} 
+                              className="text-xs"
+                            >
+                              {request.triage_completed_at ? "Triaged" : "Pending Triage"}
+                            </Badge>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            {!request.triage_completed_at && (
+                              <Button
+                                size="sm"
+                                onClick={() => {
+                                  setSelectedRequestId(request.id);
+                                  setTriageModalOpen(true);
+                                }}
+                              >
+                                <ClipboardCheck className="h-4 w-4 mr-2" />
+                                Start Triage
+                              </Button>
+                            )}
+                            <span className="text-xs text-muted-foreground">
+                              {new Date(request.created_at).toLocaleDateString()}
+                            </span>
+                          </div>
+                        </div>
+                        
+                        <h4 className="font-medium mb-2">Help Requested:</h4>
+                        <p className="text-sm text-muted-foreground mb-3">{request.help_requested}</p>
+                        
+                        {request.circumstances && (
+                          <>
+                            <h4 className="font-medium mb-2">Circumstances:</h4>
+                            <p className="text-sm text-muted-foreground mb-3">{request.circumstances}</p>
+                          </>
+                        )}
+                        
+                        {request.triage_completed_at && (
+                          <div className="text-xs text-muted-foreground border-t pt-2">
+                            Triaged on: {new Date(request.triage_completed_at).toLocaleDateString()}
+                            {request.triaged_by_user_id && (
+                              <span> by User ID: {request.triaged_by_user_id}</span>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-center text-muted-foreground py-8">
+                    No assistance requests for this client.
+                  </p>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
 
           <TabsContent value="interactions">
             <Card>
@@ -367,6 +467,30 @@ const ClientDetail = () => {
             </Card>
           </TabsContent>
         </Tabs>
+
+        {/* Triage Modal */}
+        <Dialog open={triageModalOpen} onOpenChange={setTriageModalOpen}>
+          <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Complete Triage for {client.first_name} {client.last_name}</DialogTitle>
+            </DialogHeader>
+            {selectedRequestId && (
+              <TriageForm
+                assistanceRequestId={selectedRequestId}
+                initialData={assistanceRequests.find(r => r.id === selectedRequestId)}
+                onComplete={() => {
+                  setTriageModalOpen(false);
+                  setSelectedRequestId(null);
+                  loadClientData(); // Reload to show updated status
+                }}
+                onCancel={() => {
+                  setTriageModalOpen(false);
+                  setSelectedRequestId(null);
+                }}
+              />
+            )}
+          </DialogContent>
+        </Dialog>
       </main>
     </div>
   );
