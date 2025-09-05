@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,11 +11,13 @@ import { ArrowLeft, Settings, Bell, DollarSign, Mail, Users, Shield, Download } 
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import UserManagementModal from "@/components/modals/UserManagementModal";
+import { supabase } from "@/integrations/supabase/client";
 
 const SettingsPage = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [showUserManagement, setShowUserManagement] = useState(false);
+  const [loading, setLoading] = useState(false);
 
   // Settings state
   const [settings, setSettings] = useState({
@@ -54,12 +56,123 @@ Good Samaritan Assistance Team`,
     dataRetentionMonths: 36
   });
 
-  const handleSave = () => {
-    toast({
-      title: "Settings saved",
-      description: "Your changes have been saved successfully."
-    });
+  const loadSettings = async () => {
+    try {
+      setLoading(true);
+      const { data, error } = await supabase
+        .from('settings')
+        .select('key, value');
+
+      if (error) {
+        throw error;
+      }
+
+      if (data) {
+        const settingsObj: any = {};
+        data.forEach(setting => {
+          const value = setting.value as any;
+          if (setting.key === 'financial') {
+            settingsObj.lowFundThreshold = value.lowFundThreshold;
+            settingsObj.defaultAssistanceAmount = value.defaultAssistanceAmount;
+          } else if (setting.key === 'system') {
+            settingsObj.autoArchiveInteractions = value.autoArchiveInteractions;
+            settingsObj.requireClientLink = value.requireClientLink;
+            settingsObj.dataRetentionMonths = value.dataRetentionMonths;
+            settingsObj.enableAuditLog = value.enableAuditLog;
+          } else if (setting.key === 'notifications') {
+            settingsObj.emailNotifications = value.emailNotifications;
+            settingsObj.lowFundAlerts = value.lowFundAlerts;
+            settingsObj.newRequestAlerts = value.newRequestAlerts;
+          } else if (setting.key === 'email_templates') {
+            settingsObj.approvalEmailTemplate = value.approvalEmailTemplate;
+            settingsObj.denialEmailTemplate = value.denialEmailTemplate;
+          }
+        });
+        setSettings(prev => ({ ...prev, ...settingsObj }));
+      }
+    } catch (error) {
+      console.error('Error loading settings:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load settings",
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+    }
   };
+
+  const handleSave = async () => {
+    try {
+      setLoading(true);
+      
+      const updates = [
+        {
+          key: 'financial',
+          value: {
+            lowFundThreshold: settings.lowFundThreshold,
+            defaultAssistanceAmount: settings.defaultAssistanceAmount
+          }
+        },
+        {
+          key: 'system',
+          value: {
+            autoArchiveInteractions: settings.autoArchiveInteractions,
+            requireClientLink: settings.requireClientLink,
+            dataRetentionMonths: settings.dataRetentionMonths,
+            enableAuditLog: settings.enableAuditLog
+          }
+        },
+        {
+          key: 'notifications',
+          value: {
+            emailNotifications: settings.emailNotifications,
+            lowFundAlerts: settings.lowFundAlerts,
+            newRequestAlerts: settings.newRequestAlerts
+          }
+        },
+        {
+          key: 'email_templates',
+          value: {
+            approvalEmailTemplate: settings.approvalEmailTemplate,
+            denialEmailTemplate: settings.denialEmailTemplate
+          }
+        }
+      ];
+
+      for (const update of updates) {
+        const { error } = await supabase
+          .from('settings')
+          .upsert({
+            key: update.key,
+            value: update.value,
+            updated_by: (await supabase.auth.getUser()).data.user?.id
+          });
+
+        if (error) {
+          throw error;
+        }
+      }
+
+      toast({
+        title: "Settings saved",
+        description: "Your changes have been saved successfully."
+      });
+    } catch (error) {
+      console.error('Error saving settings:', error);
+      toast({
+        title: "Error",
+        description: "Failed to save settings",
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadSettings();
+  }, []);
 
   const handleExportData = () => {
     toast({
@@ -354,8 +467,8 @@ Good Samaritan Assistance Team`,
         </Tabs>
 
         <div className="mt-8 flex justify-end">
-          <Button onClick={handleSave}>
-            Save All Settings
+          <Button onClick={handleSave} disabled={loading}>
+            {loading ? "Saving..." : "Save All Settings"}
           </Button>
         </div>
       </main>
