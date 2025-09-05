@@ -53,9 +53,7 @@ const PortalDashboard = () => {
   // Derived role flags
   const isAdmin = userRoles.includes('admin');
   const isStaff = userRoles.includes('staff');
-  const isViewer = userRoles.includes('viewer');
-  const isFinance = userRoles.includes('finance');
-  const canViewFinancials = isAdmin || isFinance;
+  const canViewFinancials = isAdmin; // Only admins can view financial data now
   const canEditData = isAdmin || isStaff;
 
   useEffect(() => {
