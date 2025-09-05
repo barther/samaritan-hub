@@ -53,7 +53,7 @@ const ClientDetail = () => {
         .from('clients')
         .select('*')
         .eq('id', id)
-        .single();
+        .maybeSingle();
 
       if (clientError) throw clientError;
       setClient(clientData);
