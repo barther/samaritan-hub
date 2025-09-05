@@ -12,10 +12,11 @@ import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import UserManagementModal from "@/components/modals/UserManagementModal";
 import { supabase } from "@/integrations/supabase/client";
-
 const SettingsPage = () => {
   const navigate = useNavigate();
-  const { toast } = useToast();
+  const {
+    toast
+  } = useToast();
   const [showUserManagement, setShowUserManagement] = useState(false);
   const [loading, setLoading] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
@@ -27,16 +28,13 @@ const SettingsPage = () => {
     lowFundThreshold: 100,
     autoArchiveInteractions: true,
     defaultAssistanceAmount: 200,
-    
     // Notification settings
     emailNotifications: true,
     lowFundAlerts: true,
     newRequestAlerts: true,
-    
     // Email settings
     emailProvider: 'msgraph',
     defaultSenderMailbox: '',
-    
     // Email templates
     approvalEmailTemplate: `Dear {client_name},
 
@@ -46,7 +44,6 @@ Please contact us at your earliest convenience to arrange disbursement.
 
 Best regards,
 Good Samaritan Assistance Team`,
-    
     denialEmailTemplate: `Dear {client_name},
 
 Thank you for your assistance request. Unfortunately, we are unable to approve your request at this time due to {reason}.
@@ -55,26 +52,22 @@ Please feel free to contact us if your circumstances change.
 
 Best regards,
 Good Samaritan Assistance Team`,
-    
     // System settings
     requireClientLink: false,
     enableAuditLog: true,
     dataRetentionMonths: 36
   });
-
   const [sendingTestEmail, setSendingTestEmail] = useState(false);
-
   const loadSettings = async () => {
     try {
       setLoading(true);
-      const { data, error } = await supabase
-        .from('settings')
-        .select('key, value');
-
+      const {
+        data,
+        error
+      } = await supabase.from('settings').select('key, value');
       if (error) {
         throw error;
       }
-
       if (data) {
         const settingsObj: any = {};
         data.forEach(setting => {
@@ -99,7 +92,10 @@ Good Samaritan Assistance Team`,
             settingsObj.defaultSenderMailbox = value.defaultSenderMailbox;
           }
         });
-        setSettings(prev => ({ ...prev, ...settingsObj }));
+        setSettings(prev => ({
+          ...prev,
+          ...settingsObj
+        }));
       }
     } catch (error) {
       console.error('Error loading settings:', error);
@@ -112,7 +108,6 @@ Good Samaritan Assistance Team`,
       setLoading(false);
     }
   };
-
   const handleSave = async () => {
     if (!isAdmin) {
       toast({
@@ -122,35 +117,62 @@ Good Samaritan Assistance Team`,
       });
       return;
     }
-
     setLoading(true);
     try {
       // Save all settings to database
-      const updates = [
-        { key: 'financial', value: { lowFundThreshold: settings.lowFundThreshold, defaultAssistanceAmount: settings.defaultAssistanceAmount } },
-        { key: 'system', value: { autoArchiveInteractions: settings.autoArchiveInteractions, requireClientLink: settings.requireClientLink, dataRetentionMonths: settings.dataRetentionMonths, enableAuditLog: settings.enableAuditLog } },
-        { key: 'notifications', value: { emailNotifications: settings.emailNotifications, lowFundAlerts: settings.lowFundAlerts, newRequestAlerts: settings.newRequestAlerts } },
-        { key: 'email_templates', value: { approvalEmailTemplate: settings.approvalEmailTemplate, denialEmailTemplate: settings.denialEmailTemplate } },
-        { key: 'email', value: { emailProvider: settings.emailProvider, defaultSenderMailbox: settings.defaultSenderMailbox } },
-      ];
-
-      const { data: userRes } = await supabase.auth.getUser();
+      const updates = [{
+        key: 'financial',
+        value: {
+          lowFundThreshold: settings.lowFundThreshold,
+          defaultAssistanceAmount: settings.defaultAssistanceAmount
+        }
+      }, {
+        key: 'system',
+        value: {
+          autoArchiveInteractions: settings.autoArchiveInteractions,
+          requireClientLink: settings.requireClientLink,
+          dataRetentionMonths: settings.dataRetentionMonths,
+          enableAuditLog: settings.enableAuditLog
+        }
+      }, {
+        key: 'notifications',
+        value: {
+          emailNotifications: settings.emailNotifications,
+          lowFundAlerts: settings.lowFundAlerts,
+          newRequestAlerts: settings.newRequestAlerts
+        }
+      }, {
+        key: 'email_templates',
+        value: {
+          approvalEmailTemplate: settings.approvalEmailTemplate,
+          denialEmailTemplate: settings.denialEmailTemplate
+        }
+      }, {
+        key: 'email',
+        value: {
+          emailProvider: settings.emailProvider,
+          defaultSenderMailbox: settings.defaultSenderMailbox
+        }
+      }];
+      const {
+        data: userRes
+      } = await supabase.auth.getUser();
       const userId = userRes.user?.id ?? null;
-
       for (const update of updates) {
-        const { error } = await supabase
-          .from('settings')
-          .upsert(
-            { key: update.key, value: update.value, updated_by: userId },
-            { onConflict: 'key' }
-          );
-
+        const {
+          error
+        } = await supabase.from('settings').upsert({
+          key: update.key,
+          value: update.value,
+          updated_by: userId
+        }, {
+          onConflict: 'key'
+        });
         if (error) throw error;
       }
-
       toast({
         title: "Settings Saved",
-        description: "All settings have been saved successfully.",
+        description: "All settings have been saved successfully."
       });
     } catch (error: any) {
       console.error('Error saving settings:', error);
@@ -163,27 +185,24 @@ Good Samaritan Assistance Team`,
       setLoading(false);
     }
   };
-
   const handleAutoSave = async (settingType: string, newValue: any) => {
     if (!isAdmin) return;
-
     try {
-      const { data: userRes } = await supabase.auth.getUser();
+      const {
+        data: userRes
+      } = await supabase.auth.getUser();
       const userId = userRes.user?.id ?? null;
-
-      const { error } = await supabase
-        .from('settings')
-        .upsert({ 
-          key: settingType, 
-          value: newValue,
-          updated_by: userId 
-        });
-
+      const {
+        error
+      } = await supabase.from('settings').upsert({
+        key: settingType,
+        value: newValue,
+        updated_by: userId
+      });
       if (error) throw error;
-
       toast({
         title: "Settings saved",
-        description: "Your changes have been saved automatically.",
+        description: "Your changes have been saved automatically."
       });
     } catch (error) {
       console.error('Error auto-saving setting:', error);
@@ -194,11 +213,14 @@ Good Samaritan Assistance Team`,
       });
     }
   };
-
   useEffect(() => {
     const checkRoleAndLoad = async () => {
       try {
-        const { data: hasAdminRole } = await supabase.rpc('verify_user_role', { required_role: 'admin' });
+        const {
+          data: hasAdminRole
+        } = await supabase.rpc('verify_user_role', {
+          required_role: 'admin'
+        });
         setIsAdmin(!!hasAdminRole);
         if (hasAdminRole) {
           await loadSettings();
@@ -211,29 +233,30 @@ Good Samaritan Assistance Team`,
     };
     checkRoleAndLoad();
   }, []);
-
   const handleExportData = () => {
     toast({
       title: "Export initiated",
       description: "Your data export will be ready for download shortly."
     });
   };
-
   const handleSendTestEmail = async () => {
     if (!settings.defaultSenderMailbox) {
       toast({
         title: "Error",
         description: "Please set a default sender mailbox first.",
-        variant: "destructive",
+        variant: "destructive"
       });
       return;
     }
-
     setSendingTestEmail(true);
     try {
-      const { data, error } = await supabase.functions.invoke('send-email-msgraph', {
+      const {
+        data,
+        error
+      } = await supabase.functions.invoke('send-email-msgraph', {
         body: {
-          to: settings.defaultSenderMailbox, // Send test email to the sender mailbox
+          to: settings.defaultSenderMailbox,
+          // Send test email to the sender mailbox
           subject: 'Test Email from Good Samaritan System',
           html: `
             <h2>Test Email</h2>
@@ -244,38 +267,30 @@ Good Samaritan Assistance Team`,
           sender: settings.defaultSenderMailbox
         }
       });
-
       if (error) {
         throw error;
       }
-
       toast({
         title: "Test email sent",
-        description: `Test email sent successfully to ${settings.defaultSenderMailbox}`,
+        description: `Test email sent successfully to ${settings.defaultSenderMailbox}`
       });
     } catch (error: any) {
       console.error('Error sending test email:', error);
       toast({
         title: "Error",
         description: `Failed to send test email: ${error.message}`,
-        variant: "destructive",
+        variant: "destructive"
       });
     } finally {
       setSendingTestEmail(false);
     }
   };
-
-  return (
-    <div className="min-h-screen bg-background">
+  return <div className="min-h-screen bg-background">
       <header className="border-b border-border bg-background/95 backdrop-blur">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex h-16 items-center justify-between">
             <div className="flex items-center gap-4">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => navigate('/portal/dashboard')}
-              >
+              <Button variant="ghost" size="sm" onClick={() => navigate('/portal/dashboard')}>
                 <ArrowLeft className="h-4 w-4 mr-2" />
                 Back to Dashboard
               </Button>
@@ -321,19 +336,22 @@ Good Samaritan Assistance Team`,
                 <CardContent className="space-y-4">
                   <div>
                     <Label htmlFor="lowFundThreshold">Low Fund Alert Threshold ($)</Label>
-                    <Input
-                      id="lowFundThreshold"
-                      type="number"
-                      value={settings.lowFundThreshold}
-                      onChange={(e) => {
-                        const newSettings = { ...settings, lowFundThreshold: Number(e.target.value) };
-                        setSettings(newSettings);
-                      }}
-                      onBlur={(e) => {
-                        const newSettings = { ...settings, lowFundThreshold: Number(e.target.value) };
-                        handleAutoSave('financial', { lowFundThreshold: newSettings.lowFundThreshold, defaultAssistanceAmount: settings.defaultAssistanceAmount });
-                      }}
-                    />
+                    <Input id="lowFundThreshold" type="number" value={settings.lowFundThreshold} onChange={e => {
+                    const newSettings = {
+                      ...settings,
+                      lowFundThreshold: Number(e.target.value)
+                    };
+                    setSettings(newSettings);
+                  }} onBlur={e => {
+                    const newSettings = {
+                      ...settings,
+                      lowFundThreshold: Number(e.target.value)
+                    };
+                    handleAutoSave('financial', {
+                      lowFundThreshold: newSettings.lowFundThreshold,
+                      defaultAssistanceAmount: settings.defaultAssistanceAmount
+                    });
+                  }} />
                     <p className="text-xs text-muted-foreground mt-1">
                       Show warning when funds fall below this amount
                     </p>
@@ -341,12 +359,10 @@ Good Samaritan Assistance Team`,
 
                   <div>
                     <Label htmlFor="defaultAssistanceAmount">Default Assistance Amount ($)</Label>
-                    <Input
-                      id="defaultAssistanceAmount"
-                      type="number"
-                      value={settings.defaultAssistanceAmount}
-                      onChange={(e) => setSettings(prev => ({ ...prev, defaultAssistanceAmount: Number(e.target.value) }))}
-                    />
+                    <Input id="defaultAssistanceAmount" type="number" value={settings.defaultAssistanceAmount} onChange={e => setSettings(prev => ({
+                    ...prev,
+                    defaultAssistanceAmount: Number(e.target.value)
+                  }))} />
                     <p className="text-xs text-muted-foreground mt-1">
                       Pre-fill amount for new assistance requests
                     </p>
@@ -366,10 +382,10 @@ Good Samaritan Assistance Team`,
                         Automatically archive interactions older than 1 year
                       </p>
                     </div>
-                    <Switch
-                      checked={settings.autoArchiveInteractions}
-                      onCheckedChange={(checked) => setSettings(prev => ({ ...prev, autoArchiveInteractions: checked }))}
-                    />
+                    <Switch checked={settings.autoArchiveInteractions} onCheckedChange={checked => setSettings(prev => ({
+                    ...prev,
+                    autoArchiveInteractions: checked
+                  }))} />
                   </div>
 
                   <div className="flex items-center justify-between">
@@ -379,10 +395,10 @@ Good Samaritan Assistance Team`,
                         Force all disbursements to be linked to a client
                       </p>
                     </div>
-                    <Switch
-                      checked={settings.requireClientLink}
-                      onCheckedChange={(checked) => setSettings(prev => ({ ...prev, requireClientLink: checked }))}
-                    />
+                    <Switch checked={settings.requireClientLink} onCheckedChange={checked => setSettings(prev => ({
+                    ...prev,
+                    requireClientLink: checked
+                  }))} />
                   </div>
                 </CardContent>
               </Card>
@@ -405,10 +421,10 @@ Good Samaritan Assistance Team`,
                       Receive email updates for important events
                     </p>
                   </div>
-                  <Switch
-                    checked={settings.emailNotifications}
-                    onCheckedChange={(checked) => setSettings(prev => ({ ...prev, emailNotifications: checked }))}
-                  />
+                  <Switch checked={settings.emailNotifications} onCheckedChange={checked => setSettings(prev => ({
+                  ...prev,
+                  emailNotifications: checked
+                }))} />
                 </div>
 
                 <div className="flex items-center justify-between">
@@ -418,10 +434,10 @@ Good Samaritan Assistance Team`,
                       Get notified when funds are running low
                     </p>
                   </div>
-                  <Switch
-                    checked={settings.lowFundAlerts}
-                    onCheckedChange={(checked) => setSettings(prev => ({ ...prev, lowFundAlerts: checked }))}
-                  />
+                  <Switch checked={settings.lowFundAlerts} onCheckedChange={checked => setSettings(prev => ({
+                  ...prev,
+                  lowFundAlerts: checked
+                }))} />
                 </div>
 
                 <div className="flex items-center justify-between">
@@ -431,10 +447,10 @@ Good Samaritan Assistance Team`,
                       Get notified about new assistance requests
                     </p>
                   </div>
-                  <Switch
-                    checked={settings.newRequestAlerts}
-                    onCheckedChange={(checked) => setSettings(prev => ({ ...prev, newRequestAlerts: checked }))}
-                  />
+                  <Switch checked={settings.newRequestAlerts} onCheckedChange={checked => setSettings(prev => ({
+                  ...prev,
+                  newRequestAlerts: checked
+                }))} />
                 </div>
               </CardContent>
             </Card>
@@ -452,10 +468,10 @@ Good Samaritan Assistance Team`,
                       <Label>Email Provider</Label>
                       <p className="text-xs text-muted-foreground">Choose email sending method</p>
                     </div>
-                    <Select 
-                      value={settings.emailProvider} 
-                      onValueChange={(value) => setSettings(prev => ({ ...prev, emailProvider: value }))}
-                    >
+                    <Select value={settings.emailProvider} onValueChange={value => setSettings(prev => ({
+                    ...prev,
+                    emailProvider: value
+                  }))}>
                       <SelectTrigger className="w-48">
                         <SelectValue />
                       </SelectTrigger>
@@ -466,37 +482,25 @@ Good Samaritan Assistance Team`,
                     </Select>
                   </div>
 
-                  {settings.emailProvider === 'msgraph' && (
-                    <div className="space-y-4 pt-4 border-t">
+                  {settings.emailProvider === 'msgraph' && <div className="space-y-4 pt-4 border-t">
                       <div>
-                        <Label htmlFor="defaultSenderMailbox">Default Sender Mailbox</Label>
-                        <Input
-                          id="defaultSenderMailbox"
-                          type="email"
-                          value={settings.defaultSenderMailbox}
-                          onChange={(e) => setSettings(prev => ({ ...prev, defaultSenderMailbox: e.target.value }))}
-                          placeholder="noreply@yourdomain.com"
-                          className="mt-1"
-                        />
-                        <p className="text-xs text-muted-foreground mt-1">
-                          All emails will be sent from donotreply@lithiaspringsmethodist.org
-                        </p>
+                        <Label htmlFor="defaultSenderMailbox">Test Email System</Label>
+                        <Input id="defaultSenderMailbox" type="email" value={settings.defaultSenderMailbox} onChange={e => setSettings(prev => ({
+                      ...prev,
+                      defaultSenderMailbox: e.target.value
+                    }))} placeholder="noreply@yourdomain.com" className="mt-1" />
+                        <p className="text-xs text-muted-foreground mt-1">Enter your email address to test the system. All emails will be sent from donotreply@lithiaspringsmethodist.org</p>
                       </div>
 
                       <div className="pt-2">
-                        <Button 
-                          variant="outline" 
-                          onClick={handleSendTestEmail}
-                          disabled={sendingTestEmail || !settings.defaultSenderMailbox}
-                        >
+                        <Button variant="outline" onClick={handleSendTestEmail} disabled={sendingTestEmail || !settings.defaultSenderMailbox}>
                           {sendingTestEmail ? "Sending..." : "Send Test Email"}
                         </Button>
                         <p className="text-xs text-muted-foreground mt-1">
-                          Enter a custom email address to test the system. Test emails will be sent to your specified address from donotreply@lithiaspringsmethodist.org
+                          Send a test email to verify Microsoft Graph configuration
                         </p>
                       </div>
-                    </div>
-                  )}
+                    </div>}
                 </CardContent>
               </Card>
 
@@ -505,12 +509,10 @@ Good Samaritan Assistance Team`,
                   <CardTitle>Approval Email Template</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <Textarea
-                    placeholder="Email template for approved requests..."
-                    value={settings.approvalEmailTemplate}
-                    onChange={(e) => setSettings(prev => ({ ...prev, approvalEmailTemplate: e.target.value }))}
-                    rows={8}
-                  />
+                  <Textarea placeholder="Email template for approved requests..." value={settings.approvalEmailTemplate} onChange={e => setSettings(prev => ({
+                  ...prev,
+                  approvalEmailTemplate: e.target.value
+                }))} rows={8} />
                   <p className="text-xs text-muted-foreground mt-2">
                     Use {"{client_name}"}, {"{assistance_type}"}, and {"{amount}"} as placeholders
                   </p>
@@ -522,12 +524,10 @@ Good Samaritan Assistance Team`,
                   <CardTitle>Denial Email Template</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <Textarea
-                    placeholder="Email template for denied requests..."
-                    value={settings.denialEmailTemplate}
-                    onChange={(e) => setSettings(prev => ({ ...prev, denialEmailTemplate: e.target.value }))}
-                    rows={8}
-                  />
+                  <Textarea placeholder="Email template for denied requests..." value={settings.denialEmailTemplate} onChange={e => setSettings(prev => ({
+                  ...prev,
+                  denialEmailTemplate: e.target.value
+                }))} rows={8} />
                   <p className="text-xs text-muted-foreground mt-2">
                     Use {"{client_name}"} and {"{reason}"} as placeholders
                   </p>
@@ -553,15 +553,18 @@ Good Samaritan Assistance Team`,
                         Track all user actions for security
                       </p>
                     </div>
-                    <Switch
-                      checked={settings.enableAuditLog}
-                      onCheckedChange={(checked) => setSettings(prev => ({ ...prev, enableAuditLog: checked }))}
-                    />
+                    <Switch checked={settings.enableAuditLog} onCheckedChange={checked => setSettings(prev => ({
+                    ...prev,
+                    enableAuditLog: checked
+                  }))} />
                   </div>
 
                   <div>
                     <Label htmlFor="dataRetention">Data Retention (months)</Label>
-                    <Select value={settings.dataRetentionMonths.toString()} onValueChange={(value) => setSettings(prev => ({ ...prev, dataRetentionMonths: Number(value) }))}>
+                    <Select value={settings.dataRetentionMonths.toString()} onValueChange={value => setSettings(prev => ({
+                    ...prev,
+                    dataRetentionMonths: Number(value)
+                  }))}>
                       <SelectTrigger>
                         <SelectValue />
                       </SelectTrigger>
@@ -622,12 +625,7 @@ Good Samaritan Assistance Team`,
         </div>
       </main>
 
-      <UserManagementModal 
-        open={showUserManagement} 
-        onOpenChange={setShowUserManagement} 
-      />
-    </div>
-  );
+      <UserManagementModal open={showUserManagement} onOpenChange={setShowUserManagement} />
+    </div>;
 };
-
 export default SettingsPage;
