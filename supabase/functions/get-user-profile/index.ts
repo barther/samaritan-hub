@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.57.0';
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -33,11 +34,73 @@ const handler = async (req: Request): Promise<Response> => {
   }
 
   try {
+    // Get JWT from Authorization header
+    const authHeader = req.headers.get("authorization");
+    if (!authHeader) {
+      return new Response(JSON.stringify({ error: "Missing authorization header" }), {
+        status: 401,
+        headers: { "Content-Type": "application/json", ...corsHeaders },
+      });
+    }
+
+    // Create Supabase client with the user's JWT
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
+    
+    const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+      global: {
+        headers: {
+          authorization: authHeader,
+        },
+      },
+    });
+
+    // CRITICAL: Verify user has admin or staff role before proceeding
+    const { data: hasAdminRole, error: adminRoleError } = await supabase.rpc('verify_user_role', {
+      required_role: 'admin'
+    });
+    
+    const { data: hasStaffRole, error: staffRoleError } = await supabase.rpc('verify_user_role', {
+      required_role: 'staff'
+    });
+
+    if ((adminRoleError && staffRoleError) || (!hasAdminRole && !hasStaffRole)) {
+      console.log("Unauthorized profile lookup attempt");
+      
+      // Log the security event
+      await supabase.rpc('log_edge_function_usage', {
+        p_action: 'get_profile_unauthorized',
+        p_resource: 'get-user-profile',
+        p_details: { error: 'insufficient_privileges' }
+      });
+
+      return new Response(JSON.stringify({ error: "Insufficient privileges. Admin or staff role required." }), {
+        status: 403,
+        headers: { "Content-Type": "application/json", ...corsHeaders },
+      });
+    }
+
     const { userEmail }: { userEmail: string } = await req.json();
 
     // Validate required fields
     if (!userEmail) {
       return new Response(JSON.stringify({ error: "Missing required field: userEmail" }), {
+        status: 400,
+        headers: { "Content-Type": "application/json", ...corsHeaders },
+      });
+    }
+
+    // Validate email domain (organization emails only)
+    if (!userEmail.toLowerCase().endsWith("@lithiaspringsmethodist.org")) {
+      console.log("Attempted lookup of non-org email:", userEmail);
+      
+      await supabase.rpc('log_edge_function_usage', {
+        p_action: 'get_profile_blocked',
+        p_resource: 'get-user-profile',
+        p_details: { userEmail: userEmail, reason: 'non_org_domain' }
+      });
+
+      return new Response(JSON.stringify({ error: "Can only lookup organization domain emails" }), {
         status: 400,
         headers: { "Content-Type": "application/json", ...corsHeaders },
       });
@@ -104,6 +167,12 @@ const handler = async (req: Request): Promise<Response> => {
       
       // If user not found, return a fallback response
       if (profileResponse.status === 404) {
+        await supabase.rpc('log_edge_function_usage', {
+          p_action: 'get_profile_not_found',
+          p_resource: 'get-user-profile',
+          p_details: { userEmail: userEmail }
+        });
+
         return new Response(JSON.stringify({ 
           success: true,
           profile: {
@@ -119,6 +188,12 @@ const handler = async (req: Request): Promise<Response> => {
         });
       }
       
+      await supabase.rpc('log_edge_function_usage', {
+        p_action: 'get_profile_failed',
+        p_resource: 'get-user-profile',
+        p_details: { userEmail: userEmail, error: errorText }
+      });
+      
       return new Response(JSON.stringify({ error: "Failed to get user profile", details: errorText }), {
         status: 500,
         headers: { "Content-Type": "application/json", ...corsHeaders },
@@ -127,6 +202,16 @@ const handler = async (req: Request): Promise<Response> => {
 
     const userProfile: UserProfile = await profileResponse.json();
     console.log("User profile retrieved successfully");
+
+    // Log successful profile lookup
+    await supabase.rpc('log_edge_function_usage', {
+      p_action: 'get_profile_success',
+      p_resource: 'get-user-profile',
+      p_details: { 
+        userEmail: userEmail,
+        displayName: userProfile.displayName 
+      }
+    });
 
     return new Response(JSON.stringify({ 
       success: true, 
@@ -144,6 +229,28 @@ const handler = async (req: Request): Promise<Response> => {
 
   } catch (error: any) {
     console.error("Error in get-user-profile function:", error);
+    
+    // Try to log the error if we have supabase access
+    try {
+      const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+      const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
+      const authHeader = req.headers.get("authorization");
+      
+      if (authHeader) {
+        const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+          global: { headers: { authorization: authHeader } }
+        });
+        
+        await supabase.rpc('log_edge_function_usage', {
+          p_action: 'get_profile_error',
+          p_resource: 'get-user-profile',
+          p_details: { error: error.message }
+        });
+      }
+    } catch (logError) {
+      console.error("Failed to log error:", logError);
+    }
+
     return new Response(JSON.stringify({ error: error.message }), {
       status: 500,
       headers: { "Content-Type": "application/json", ...corsHeaders },

@@ -87,33 +87,31 @@ const PortalDashboard = () => {
         return;
       }
 
-      // Query user roles directly - we'll handle type issues with any
+      // Use secure RPC function to check roles instead of direct table access
       try {
-        const { data: rolesData, error } = await (supabase as any)
-          .from('user_roles')
-          .select('role')
-          .eq('user_id', session.session.user.id);
+        const userId = session.session.user.id;
+        
+        // Check for admin role
+        const { data: hasAdminRole, error: adminError } = await supabase
+          .rpc('has_role', { _user_id: userId, _role: 'admin' });
+        
+        // Check for staff role  
+        const { data: hasStaffRole, error: staffError } = await supabase
+          .rpc('has_role', { _user_id: userId, _role: 'staff' });
 
-        if (error) {
-          if (error.code === 'PGRST301') {
-            toast({
-              title: "Access denied",
-              description: "You don't have permission to access this portal. Contact an administrator.",
-              variant: "destructive"
-            });
-          } else {
-            console.error('Error loading user roles:', error);
-            toast({
-              title: "Error loading permissions", 
-              description: "Please contact an administrator.",
-              variant: "destructive"
-            });
-          }
+        if (adminError && staffError) {
+          console.error('Error checking user roles:', adminError, staffError);
+          toast({
+            title: "Error loading permissions", 
+            description: "Please contact an administrator.",
+            variant: "destructive"
+          });
           navigate("/portal", { replace: true });
           return;
         }
 
-        if (!rolesData || rolesData.length === 0) {
+        // User must have at least admin or staff role
+        if (!hasAdminRole && !hasStaffRole) {
           toast({
             title: "No permissions assigned",
             description: "Please contact an administrator to assign your role.",
@@ -123,7 +121,11 @@ const PortalDashboard = () => {
           return;
         }
 
-        const roleNames = rolesData.map((r: any) => r.role);
+        // Build roles array for compatibility with existing code
+        const roleNames: string[] = [];
+        if (hasAdminRole) roleNames.push('admin');
+        if (hasStaffRole) roleNames.push('staff');
+        
         setUserRoles(roleNames);
         
         // Load user profile from Azure

@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.57.0';
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -9,7 +10,7 @@ interface EmailRequest {
   to: string;
   subject: string;
   html: string;
-  sender?: string; // Optional sender mailbox, defaults to configured default
+  // Removed user-controlled sender field for security
 }
 
 interface GraphTokenResponse {
@@ -32,11 +33,69 @@ const handler = async (req: Request): Promise<Response> => {
   }
 
   try {
-    const { to, subject, html, sender }: EmailRequest = await req.json();
+    // Get JWT from Authorization header
+    const authHeader = req.headers.get("authorization");
+    if (!authHeader) {
+      return new Response(JSON.stringify({ error: "Missing authorization header" }), {
+        status: 401,
+        headers: { "Content-Type": "application/json", ...corsHeaders },
+      });
+    }
+
+    // Create Supabase client with the user's JWT
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
+    
+    const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+      global: {
+        headers: {
+          authorization: authHeader,
+        },
+      },
+    });
+
+    // CRITICAL: Verify user has admin role before proceeding
+    const { data: hasAdminRole, error: roleError } = await supabase.rpc('verify_user_role', {
+      required_role: 'admin'
+    });
+
+    if (roleError || !hasAdminRole) {
+      console.log("Unauthorized email send attempt:", roleError);
+      
+      // Log the security event
+      await supabase.rpc('log_edge_function_usage', {
+        p_action: 'send_email_unauthorized',
+        p_resource: 'send-email-msgraph',
+        p_details: { error: 'insufficient_privileges' }
+      });
+
+      return new Response(JSON.stringify({ error: "Insufficient privileges. Admin role required." }), {
+        status: 403,
+        headers: { "Content-Type": "application/json", ...corsHeaders },
+      });
+    }
+
+    const { to, subject, html }: EmailRequest = await req.json();
 
     // Validate required fields
     if (!to || !subject || !html) {
       return new Response(JSON.stringify({ error: "Missing required fields: to, subject, html" }), {
+        status: 400,
+        headers: { "Content-Type": "application/json", ...corsHeaders },
+      });
+    }
+
+    // Validate recipient domain (organization emails only)
+    if (!to.toLowerCase().endsWith("@lithiaspringsmethodist.org")) {
+      console.log("Attempted send to non-org email:", to);
+      
+      await supabase.rpc('log_edge_function_usage', {
+        p_action: 'send_email_blocked',
+        p_resource: 'send-email-msgraph',
+        p_details: { recipient: to, reason: 'non_org_domain' }
+      });
+
+      return new Response(JSON.stringify({ error: "Can only send emails to organization domain" }), {
         status: 400,
         headers: { "Content-Type": "application/json", ...corsHeaders },
       });
@@ -85,6 +144,15 @@ const handler = async (req: Request): Promise<Response> => {
     const tokenData: GraphTokenResponse = await tokenResponse.json();
     console.log("Access token obtained successfully");
 
+    // Get the default sender mailbox from settings (secure approach)
+    const { data: settings, error: settingsError } = await supabase
+      .from('settings')
+      .select('value')
+      .eq('key', 'defaultSenderMailbox')
+      .single();
+
+    const senderMailbox = settings?.value || "assistance@lithiaspringsmethodist.org";
+
     // Prepare email message
     const message = {
       message: {
@@ -105,7 +173,6 @@ const handler = async (req: Request): Promise<Response> => {
     };
 
     // Send email via Microsoft Graph
-    const senderMailbox = sender || "default-mailbox@yourdomain.com"; // Replace with actual default
     const sendUrl = `https://graph.microsoft.com/v1.0/users/${senderMailbox}/sendMail`;
     
     console.log(`Sending email to ${to} from ${senderMailbox}...`);
@@ -121,11 +188,29 @@ const handler = async (req: Request): Promise<Response> => {
     if (!sendResponse.ok) {
       const errorText = await sendResponse.text();
       console.error("Send email failed:", errorText);
+      
+      await supabase.rpc('log_edge_function_usage', {
+        p_action: 'send_email_failed',
+        p_resource: 'send-email-msgraph',
+        p_details: { recipient: to, error: errorText }
+      });
+
       return new Response(JSON.stringify({ error: "Failed to send email", details: errorText }), {
         status: 500,
         headers: { "Content-Type": "application/json", ...corsHeaders },
       });
     }
+
+    // Log successful email send
+    await supabase.rpc('log_edge_function_usage', {
+      p_action: 'send_email_success',
+      p_resource: 'send-email-msgraph',
+      p_details: { 
+        recipient: to, 
+        subject: subject,
+        sender: senderMailbox 
+      }
+    });
 
     console.log("Email sent successfully via Microsoft Graph");
     return new Response(JSON.stringify({ 
@@ -140,6 +225,28 @@ const handler = async (req: Request): Promise<Response> => {
 
   } catch (error: any) {
     console.error("Error in send-email-msgraph function:", error);
+    
+    // Try to log the error if we have supabase access
+    try {
+      const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+      const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
+      const authHeader = req.headers.get("authorization");
+      
+      if (authHeader) {
+        const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+          global: { headers: { authorization: authHeader } }
+        });
+        
+        await supabase.rpc('log_edge_function_usage', {
+          p_action: 'send_email_error',
+          p_resource: 'send-email-msgraph',
+          p_details: { error: error.message }
+        });
+      }
+    } catch (logError) {
+      console.error("Failed to log error:", logError);
+    }
+
     return new Response(JSON.stringify({ error: error.message }), {
       status: 500,
       headers: { "Content-Type": "application/json", ...corsHeaders },

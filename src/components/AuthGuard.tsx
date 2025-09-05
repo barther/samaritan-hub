@@ -42,34 +42,30 @@ const AuthGuard = ({ children }: AuthGuardProps) => {
           return;
         }
 
-        // Check user roles
+        // Check user roles using secure RPC function
         try {
-          const { data: rolesData, error } = await supabase
-            .from('user_roles')
-            .select('role')
-            .eq('user_id', session.session.user.id);
+          // Check for admin role
+          const { data: hasAdminRole, error: adminError } = await supabase
+            .rpc('has_role', { _user_id: session.session.user.id, _role: 'admin' });
+          
+          // Check for staff role
+          const { data: hasStaffRole, error: staffError } = await supabase
+            .rpc('has_role', { _user_id: session.session.user.id, _role: 'staff' });
 
-          if (error) {
-            if (error.code === 'PGRST301') {
-              toast({
-                title: "Access denied",
-                description: "You don't have permission to access this portal. Contact an administrator.",
-                variant: "destructive"
-              });
-            } else {
-              console.error('Error loading user roles:', error);
-              toast({
-                title: "Error loading permissions", 
-                description: "Please contact an administrator.",
-                variant: "destructive"
-              });
-            }
+          if (adminError && staffError) {
+            console.error('Error checking user roles:', adminError, staffError);
+            toast({
+              title: "Error loading permissions", 
+              description: "Please contact an administrator.",
+              variant: "destructive"
+            });
             setHasValidRole(false);
             setIsLoading(false);
             return;
           }
 
-          if (!rolesData || rolesData.length === 0) {
+          // User must have at least admin or staff role
+          if (!hasAdminRole && !hasStaffRole) {
             toast({
               title: "No permissions assigned",
               description: "Please contact an administrator to assign your role.",
