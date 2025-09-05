@@ -85,20 +85,30 @@ const handler = async (req: Request): Promise<Response> => {
       });
     }
 
-    // Validate recipient domain (organization emails only)
-    if (!to.toLowerCase().endsWith("@lithiaspringsmethodist.org")) {
-      console.log("Attempted send to non-org email:", to);
-      
-      await supabase.rpc('log_edge_function_usage', {
-        p_action: 'send_email_blocked',
-        p_resource: 'send-email-msgraph',
-        p_details: { recipient: to, reason: 'non_org_domain' }
-      });
+    // Check email policy from settings (allow external recipients by default)
+    const { data: emailSettings } = await supabase
+      .from('settings')
+      .select('value')
+      .eq('key', 'email')
+      .single();
 
-      return new Response(JSON.stringify({ error: "Can only send emails to organization domain" }), {
-        status: 400,
-        headers: { "Content-Type": "application/json", ...corsHeaders },
-      });
+    const allowExternal = (emailSettings as any)?.value?.allowExternalRecipients ?? true;
+    const orgDomain = 'lithiaspringsmethodist.org';
+
+    if (!allowExternal) {
+      // When external recipients are disabled by policy, restrict to org domain
+      if (!to.toLowerCase().endsWith(`@${orgDomain}`)) {
+        await supabase.rpc('log_edge_function_usage', {
+          p_action: 'send_email_blocked',
+          p_resource: 'send-email-msgraph',
+          p_details: { recipient: to, reason: 'external_recipients_disabled' }
+        });
+
+        return new Response(JSON.stringify({ error: "External recipients are disabled by policy" }), {
+          status: 400,
+          headers: { "Content-Type": "application/json", ...corsHeaders },
+        });
+      }
     }
 
     // Get Microsoft Graph credentials from environment
