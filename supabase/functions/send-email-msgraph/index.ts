@@ -43,9 +43,9 @@ const handler = async (req: Request): Promise<Response> => {
     }
 
     // Get Microsoft Graph credentials from environment
-    const tenantId = Deno.env.get("MS_GRAPH_TENANT_ID");
-    const clientId = Deno.env.get("MS_GRAPH_CLIENT_ID");
-    const clientSecret = Deno.env.get("MS_GRAPH_CLIENT_SECRET");
+    const tenantId = Deno.env.get("MICROSOFT_TENANT_ID");
+    const clientId = Deno.env.get("MICROSOFT_CLIENT_ID");
+    const clientSecret = Deno.env.get("MICROSOFT_CLIENT_SECRET");
 
     if (!tenantId || !clientId || !clientSecret) {
       console.error("Missing Microsoft Graph credentials");
