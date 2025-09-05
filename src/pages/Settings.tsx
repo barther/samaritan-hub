@@ -34,7 +34,6 @@ const SettingsPage = () => {
     newRequestAlerts: true,
     // Email settings
     emailProvider: 'msgraph',
-    defaultSenderMailbox: '',
     // Email templates
     approvalEmailTemplate: `Dear {client_name},
 
@@ -58,6 +57,7 @@ Good Samaritan Assistance Team`,
     dataRetentionMonths: 36
   });
   const [sendingTestEmail, setSendingTestEmail] = useState(false);
+  const [testEmailAddress, setTestEmailAddress] = useState('');
   const loadSettings = async () => {
     try {
       setLoading(true);
@@ -89,7 +89,6 @@ Good Samaritan Assistance Team`,
             settingsObj.denialEmailTemplate = value.denialEmailTemplate;
           } else if (setting.key === 'email') {
             settingsObj.emailProvider = value.emailProvider;
-            settingsObj.defaultSenderMailbox = value.defaultSenderMailbox;
           }
         });
         setSettings(prev => ({
@@ -150,8 +149,7 @@ Good Samaritan Assistance Team`,
       }, {
         key: 'email',
         value: {
-          emailProvider: settings.emailProvider,
-          defaultSenderMailbox: settings.defaultSenderMailbox
+          emailProvider: settings.emailProvider
         }
       }];
       const {
@@ -240,10 +238,10 @@ Good Samaritan Assistance Team`,
     });
   };
   const handleSendTestEmail = async () => {
-    if (!settings.defaultSenderMailbox) {
+    if (!testEmailAddress) {
       toast({
         title: "Error",
-        description: "Please set a default sender mailbox first.",
+        description: "Please enter an email address to test the system.",
         variant: "destructive"
       });
       return;
@@ -255,8 +253,7 @@ Good Samaritan Assistance Team`,
         error
       } = await supabase.functions.invoke('send-email-msgraph', {
         body: {
-          to: settings.defaultSenderMailbox,
-          // Send test email to the sender mailbox
+          to: testEmailAddress,
           subject: 'Test Email from Good Samaritan System',
           html: `
             <h2>Test Email</h2>
@@ -264,7 +261,7 @@ Good Samaritan Assistance Team`,
             <p>Sent at: ${new Date().toLocaleString()}</p>
             <p>From: Good Samaritan Assistance System</p>
           `,
-          sender: settings.defaultSenderMailbox
+          sender: 'donotreply@lithiaspringsmethodist.org'
         }
       });
       if (error) {
@@ -272,7 +269,7 @@ Good Samaritan Assistance Team`,
       }
       toast({
         title: "Test email sent",
-        description: `Test email sent successfully to ${settings.defaultSenderMailbox}`
+        description: `Test email sent successfully to ${testEmailAddress}`
       });
     } catch (error: any) {
       console.error('Error sending test email:', error);
@@ -484,16 +481,13 @@ Good Samaritan Assistance Team`,
 
                   {settings.emailProvider === 'msgraph' && <div className="space-y-4 pt-4 border-t">
                       <div>
-                        <Label htmlFor="defaultSenderMailbox">Test Email System</Label>
-                        <Input id="defaultSenderMailbox" type="email" value={settings.defaultSenderMailbox} onChange={e => setSettings(prev => ({
-                      ...prev,
-                      defaultSenderMailbox: e.target.value
-                    }))} placeholder="noreply@yourdomain.com" className="mt-1" />
+                        <Label htmlFor="testEmailAddress">Test Email System</Label>
+                        <Input id="testEmailAddress" type="email" value={testEmailAddress} onChange={e => setTestEmailAddress(e.target.value)} placeholder="your-email@example.com" className="mt-1" />
                         <p className="text-xs text-muted-foreground mt-1">Enter your email address to test the system. All emails will be sent from donotreply@lithiaspringsmethodist.org</p>
                       </div>
 
                       <div className="pt-2">
-                        <Button variant="outline" onClick={handleSendTestEmail} disabled={sendingTestEmail || !settings.defaultSenderMailbox}>
+                        <Button variant="outline" onClick={handleSendTestEmail} disabled={sendingTestEmail || !testEmailAddress}>
                           {sendingTestEmail ? "Sending..." : "Send Test Email"}
                         </Button>
                         <p className="text-xs text-muted-foreground mt-1">
