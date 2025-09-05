@@ -5,13 +5,17 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-
 const Portal = () => {
-  const { toast } = useToast();
+  const {
+    toast
+  } = useToast();
   const navigate = useNavigate();
-
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+    const {
+      data: {
+        subscription
+      }
+    } = supabase.auth.onAuthStateChange((event, session) => {
       console.log('Auth state change:', event, session?.user?.email);
       const email = session?.user?.email?.toLowerCase() || "";
       if (!session?.user) {
@@ -21,19 +25,24 @@ const Portal = () => {
       console.log('Checking email domain:', email);
       if (email.endsWith("@lithiaspringsmethodist.org")) {
         console.log('Valid domain, redirecting to dashboard');
-        navigate("/portal/dashboard", { replace: true });
+        navigate("/portal/dashboard", {
+          replace: true
+        });
       } else {
         console.log('Invalid domain, signing out');
         supabase.auth.signOut();
         toast({
           title: "Organization access only",
           description: "Please sign in with your @lithiaspringsmethodist.org account.",
-          variant: "destructive",
+          variant: "destructive"
         });
       }
     });
-
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    supabase.auth.getSession().then(({
+      data: {
+        session
+      }
+    }) => {
       console.log('Initial session check:', session?.user?.email);
       const email = session?.user?.email?.toLowerCase() || "";
       if (!session?.user) {
@@ -43,32 +52,35 @@ const Portal = () => {
       console.log('Initial email domain check:', email);
       if (email.endsWith("@lithiaspringsmethodist.org")) {
         console.log('Valid initial domain, redirecting to dashboard');
-        navigate("/portal/dashboard", { replace: true });
+        navigate("/portal/dashboard", {
+          replace: true
+        });
       } else {
         console.log('Invalid initial domain, signing out');
         supabase.auth.signOut();
       }
     });
-
     return () => subscription.unsubscribe();
   }, [navigate, toast]);
-
   const handleMicrosoftLogin = async () => {
     const redirectTo = `${window.location.origin}/portal/dashboard`;
-    const { error } = await supabase.auth.signInWithOAuth({
+    const {
+      error
+    } = await supabase.auth.signInWithOAuth({
       provider: "azure",
-      options: { redirectTo }
+      options: {
+        redirectTo
+      }
     });
     if (error) {
       toast({
         title: "Sign-in failed",
         description: error.message,
-        variant: "destructive",
+        variant: "destructive"
       });
     }
   };
-  return (
-    <div className="min-h-screen bg-background flex items-center justify-center p-4">
+  return <div className="min-h-screen bg-background flex items-center justify-center p-4">
       {/* SEO Meta - No Index */}
       <meta name="robots" content="noindex" />
       
@@ -94,12 +106,7 @@ const Portal = () => {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <Button 
-              onClick={handleMicrosoftLogin}
-              className="w-full"
-              variant="default"
-              size="lg"
-            >
+            <Button onClick={handleMicrosoftLogin} className="w-full" variant="default" size="lg">
               Sign in with Microsoft
             </Button>
 
@@ -107,10 +114,10 @@ const Portal = () => {
               <div className="flex items-start gap-2">
                 <AlertTriangle className="h-4 w-4 text-warning mt-0.5" />
                 <div>
-                  <p className="text-sm font-medium text-warning-foreground">
+                  <p className="text-sm font-medium text-center text-rose-700">
                     Access Restricted
                   </p>
-                  <p className="text-xs text-muted-foreground mt-1">
+                  <p className="text-xs text-muted-foreground mt-1 text-center">
                     Only @lithiaspringsmethodist.org email addresses are permitted.
                   </p>
                 </div>
@@ -125,8 +132,6 @@ const Portal = () => {
           </CardContent>
         </Card>
       </div>
-    </div>
-  );
+    </div>;
 };
-
 export default Portal;
