@@ -433,12 +433,33 @@ const IntakeRequests = () => {
 
   return (
     <div className="min-h-screen bg-background">
+      {/* SEO Meta - No Index */}
+      <meta name="robots" content="noindex" />
+      
+      {/* Header */}
       <header className="border-b border-border bg-background/95 backdrop-blur">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex h-16 items-center justify-between">
             <div>
               <h1 className="text-2xl font-bold text-foreground">Intake Requests</h1>
               <p className="text-sm text-muted-foreground">Review and process assistance requests from the public form</p>
+            </div>
+            <div className="flex items-center gap-3">
+              <Button variant="outline" size="sm" onClick={() => navigate('/portal/dashboard')}>
+                Dashboard
+              </Button>
+              <Button variant="outline" size="sm" onClick={() => navigate('/portal/reports')}>
+                Reports
+              </Button>
+              <Button variant="outline" size="sm" onClick={() => navigate('/portal/settings')}>
+                Settings
+              </Button>
+              <Button variant="ghost" size="sm" onClick={async () => {
+                await supabase.auth.signOut();
+                navigate("/portal", { replace: true });
+              }}>
+                Log Out
+              </Button>
             </div>
           </div>
         </div>
