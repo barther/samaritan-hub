@@ -10,17 +10,7 @@ const Portal = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
 
-  // Development bypass
-  useEffect(() => {
-    const urlParams = new URLSearchParams(window.location.search);
-    const isDev = import.meta.env.DEV && urlParams.get('dev') === 'true';
-    
-    if (isDev) {
-      console.log('Development bypass activated');
-      navigate("/portal/dashboard?dev=true", { replace: true });
-      return;
-    }
-  }, [navigate]);
+  // Removed insecure development bypass for security
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
@@ -86,12 +76,7 @@ const Portal = () => {
       {/* SEO Meta - No Index */}
       <meta name="robots" content="noindex" />
       
-      {/* Development Banner */}
-      {import.meta.env.DEV && (
-        <div className="fixed top-0 left-0 right-0 bg-orange-500 text-white text-center py-2 text-sm font-medium z-50">
-          Development Mode - <a href="/portal?dev=true" className="underline">Click here to bypass authentication</a>
-        </div>
-      )}
+      {/* Secure authentication - no bypass available */}
       
       <div className="w-full max-w-md">
         <div className="text-center mb-8">

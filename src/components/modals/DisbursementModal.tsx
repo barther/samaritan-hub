@@ -63,20 +63,71 @@ export const DisbursementModal = ({ open, onOpenChange }: DisbursementModalProps
     setIsSubmitting(true);
 
     try {
+      // Validate client selection for security
+      if (!formData.clientId) {
+        toast({
+          title: "Client required",
+          description: "Please select a client for this disbursement.",
+          variant: "destructive"
+        });
+        setIsSubmitting(false);
+        return;
+      }
+
+      // Check if client has completed triage (required by RLS policy)
+      const { data: triageData, error: triageError } = await supabase
+        .from('assistance_requests')
+        .select('id, triage_completed_at')
+        .eq('client_id', formData.clientId)
+        .not('triage_completed_at', 'is', null)
+        .limit(1);
+
+      if (triageError) {
+        console.error('Error checking triage status:', triageError);
+        toast({
+          title: "Error checking triage status",
+          description: "Please try again.",
+          variant: "destructive"
+        });
+        setIsSubmitting(false);
+        return;
+      }
+
+      if (!triageData || triageData.length === 0) {
+        toast({
+          title: "Triage required",
+          description: "Disbursements are only allowed after triage is completed for this client.",
+          variant: "destructive"
+        });
+        setIsSubmitting(false);
+        return;
+      }
+
       const { error } = await supabase
         .from('disbursements')
         .insert([{
           amount: parseFloat(formData.amount),
           assistance_type: formData.assistanceType as 'rent' | 'utilities' | 'food' | 'medical' | 'transportation' | 'other',
           recipient_name: formData.recipientName,
-          client_id: formData.clientId || null,
+          client_id: formData.clientId,
           disbursement_date: formData.disbursementDate,
           payment_method: formData.paymentMethod,
           check_number: formData.checkNumber || null,
           notes: formData.notes || null
         }]);
 
-      if (error) throw error;
+      if (error) {
+        if (error.code === 'PGRST301') {
+          toast({
+            title: "Access denied",
+            description: "You don't have permission to record disbursements. Contact an administrator.",
+            variant: "destructive"
+          });
+          setIsSubmitting(false);
+          return;
+        }
+        throw error;
+      }
 
       toast({
         title: "Disbursement recorded successfully",

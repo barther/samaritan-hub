@@ -23,9 +23,9 @@ const PortalDashboard = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   
-  // Development mode detection
-  const urlParams = new URLSearchParams(window.location.search);
-  const isDevMode = import.meta.env.DEV && urlParams.get('dev') === 'true';
+  // User roles state
+  const [userRoles, setUserRoles] = useState<string[]>([]);
+  const [isLoadingRoles, setIsLoadingRoles] = useState(true);
   
   // Modal states
   const [showDonationModal, setShowDonationModal] = useState(false);
@@ -41,22 +41,155 @@ const PortalDashboard = () => {
   const [interactionsPage, setInteractionsPage] = useState(0);
   const [hasMoreInteractions, setHasMoreInteractions] = useState(true);
   const [balance, setBalance] = useState(0);
+  const [monthlyDonations, setMonthlyDonations] = useState(0);
+  const [monthlyDisbursements, setMonthlyDisbursements] = useState(0);
   
   const lowFundThreshold = 100;
   const ITEMS_PER_PAGE = 5;
 
+  // Derived role flags
+  const isAdmin = userRoles.includes('admin');
+  const isStaff = userRoles.includes('staff');
+  const isViewer = userRoles.includes('viewer');
+  const isFinance = userRoles.includes('finance');
+  const canViewFinancials = isAdmin || isFinance;
+  const canEditData = isAdmin || isStaff;
+
   useEffect(() => {
-    loadInitialData();
+    loadUserRoles();
   }, []);
+
+  useEffect(() => {
+    if (!isLoadingRoles) {
+      loadInitialData();
+    }
+  }, [isLoadingRoles]);
+
+  const loadUserRoles = async () => {
+    try {
+      const { data: session } = await supabase.auth.getSession();
+      if (!session.session?.user) {
+        navigate("/portal", { replace: true });
+        return;
+      }
+
+      // Validate email domain
+      const email = session.session.user.email?.toLowerCase() || "";
+      if (!email.endsWith("@lithiaspringsmethodist.org")) {
+        supabase.auth.signOut();
+        toast({
+          title: "Organization access only",
+          description: "Please sign in with your @lithiaspringsmethodist.org account.",
+          variant: "destructive",
+        });
+        navigate("/portal", { replace: true });
+        return;
+      }
+
+      // Query user roles directly - we'll handle type issues with any
+      try {
+        const { data: rolesData, error } = await (supabase as any)
+          .from('user_roles')
+          .select('role')
+          .eq('user_id', session.session.user.id);
+
+        if (error) {
+          if (error.code === 'PGRST301') {
+            toast({
+              title: "Access denied",
+              description: "You don't have permission to access this portal. Contact an administrator.",
+              variant: "destructive"
+            });
+          } else {
+            console.error('Error loading user roles:', error);
+            toast({
+              title: "Error loading permissions", 
+              description: "Please contact an administrator.",
+              variant: "destructive"
+            });
+          }
+          navigate("/portal", { replace: true });
+          return;
+        }
+
+        if (!rolesData || rolesData.length === 0) {
+          toast({
+            title: "No permissions assigned",
+            description: "Please contact an administrator to assign your role.",
+            variant: "destructive"
+          });
+          navigate("/portal", { replace: true });
+          return;
+        }
+
+        const roleNames = rolesData.map((r: any) => r.role);
+        setUserRoles(roleNames);
+      } catch (roleError) {
+        console.error('Failed to load roles:', roleError);
+        toast({
+          title: "Permission check failed",
+          description: "Please contact an administrator to assign your role.",
+          variant: "destructive"
+        });
+        navigate("/portal", { replace: true });
+        return;
+      }
+    } catch (error) {
+      console.error('Error in loadUserRoles:', error);
+      navigate("/portal", { replace: true });
+    } finally {
+      setIsLoadingRoles(false);
+    }
+  };
 
   const loadInitialData = async () => {
     await Promise.all([
       loadInteractions(0, true),
-      loadBalance()
+      loadBalance(),
+      loadMonthlyTrends()
     ]);
   };
 
+  const loadMonthlyTrends = async () => {
+    if (!canViewFinancials) {
+      setMonthlyDonations(0);
+      setMonthlyDisbursements(0);
+      return;
+    }
+
+    try {
+      const thirtyDaysAgo = new Date();
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+      const [donationsRes, disbursementsRes] = await Promise.all([
+        supabase
+          .from('donations')
+          .select('amount')
+          .gte('donation_date', thirtyDaysAgo.toISOString().split('T')[0]),
+        supabase
+          .from('disbursements')
+          .select('amount')
+          .gte('disbursement_date', thirtyDaysAgo.toISOString().split('T')[0])
+      ]);
+
+      const monthlyDonationsTotal = donationsRes.data?.reduce((sum, d) => sum + d.amount, 0) || 0;
+      const monthlyDisbursementsTotal = disbursementsRes.data?.reduce((sum, d) => sum + d.amount, 0) || 0;
+      
+      setMonthlyDonations(monthlyDonationsTotal);
+      setMonthlyDisbursements(monthlyDisbursementsTotal);
+    } catch (error) {
+      console.error('Error loading monthly trends:', error);
+      setMonthlyDonations(0);
+      setMonthlyDisbursements(0);
+    }
+  };
+
   const loadBalance = async () => {
+    if (!canViewFinancials) {
+      setBalance(0);
+      return;
+    }
+
     try {
       const [donationsRes, disbursementsRes] = await Promise.all([
         supabase.from('donations').select('amount'),
@@ -69,6 +202,7 @@ const PortalDashboard = () => {
       setBalance(totalDonations - totalDisbursements);
     } catch (error) {
       console.error('Error loading balance:', error);
+      setBalance(0);
     }
   };
 
@@ -93,7 +227,18 @@ const PortalDashboard = () => {
         .order('occurred_at', { ascending: false })
         .range(page * ITEMS_PER_PAGE, (page + 1) * ITEMS_PER_PAGE - 1);
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error loading interactions:', error);
+        if (error.code === 'PGRST301') {
+          toast({
+            title: "Access denied",
+            description: "You don't have permission to view interactions. Contact an administrator.",
+            variant: "destructive"
+          });
+          return;
+        }
+        throw error;
+      }
 
       const processedData = data?.map(interaction => ({
         ...interaction,
@@ -140,37 +285,17 @@ const PortalDashboard = () => {
     }
   };
 
-  // Enforce Azure auth and allowed domain
-  const enforceSession = (session: any) => {
-    if (!session?.user) {
-      navigate("/portal", { replace: true });
-      return;
-    }
-    const email = session.user.email?.toLowerCase() || "";
-    if (!email.endsWith("@lithiaspringsmethodist.org")) {
-      supabase.auth.signOut();
-      toast({
-        title: "Organization access only",
-        description: "Please sign in with your @lithiaspringsmethodist.org account.",
-        variant: "destructive",
-      });
-      navigate("/portal", { replace: true });
-    }
-  };
-
-  useEffect(() => {
-    // Skip auth enforcement in development mode
-    if (isDevMode) {
-      console.log('Development mode: skipping auth enforcement');
-      return;
-    }
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      enforceSession(session);
-    });
-    supabase.auth.getSession().then(({ data: { session } }) => enforceSession(session));
-    return () => subscription.unsubscribe();
-  }, [isDevMode]);
+  // Show loading state while checking roles
+  if (isLoadingRoles) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Loading your permissions...</p>
+        </div>
+      </div>
+    );
+  }
 
   const isLowFunds = balance < lowFundThreshold;
 
@@ -179,20 +304,20 @@ const PortalDashboard = () => {
       {/* SEO Meta - No Index */}
       <meta name="robots" content="noindex" />
       
-      {/* Development Mode Banner */}
-      {isDevMode && (
-        <div className="bg-orange-500 text-white text-center py-2 text-sm font-medium">
-          🚧 Development Mode Active - Authentication Bypassed
-        </div>
-      )}
-      
       {/* Header */}
       <header className="border-b border-border bg-background/95 backdrop-blur">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex h-16 items-center justify-between">
             <div>
               <h1 className="text-2xl font-bold text-foreground">Good Samaritan Dashboard</h1>
-              <p className="text-sm text-muted-foreground">Staff Portal</p>
+              <p className="text-sm text-muted-foreground">
+                Staff Portal
+                {userRoles.length > 0 && (
+                  <span className="ml-2 text-xs bg-primary/10 text-primary px-2 py-1 rounded">
+                    {userRoles.join(', ')}
+                  </span>
+                )}
+              </p>
             </div>
             <div className="flex items-center gap-3">
               <Button variant="outline" size="sm" onClick={() => navigate('/portal/reports')}>
@@ -208,7 +333,7 @@ const PortalDashboard = () => {
 
       <main className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Low Funds Warning */}
-        {isLowFunds && (
+        {canViewFinancials && isLowFunds && (
           <div className="mb-6 bg-warning/10 border border-warning/20 rounded-lg p-4">
             <div className="flex items-center gap-3">
               <AlertCircle className="h-5 w-5 text-warning" />
@@ -224,43 +349,45 @@ const PortalDashboard = () => {
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Funds Overview */}
-          <Card className="shadow-card">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <DollarSign className="h-5 w-5 text-success" />
-                Funds Overview
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div>
-                <p className="text-sm text-muted-foreground">Available Balance</p>
-                <p className={`text-2xl font-bold ${isLowFunds ? 'text-warning' : 'text-success'}`}>
-                  ${balance.toFixed(2)}
-                </p>
-              </div>
-              
-              <div className="flex flex-col gap-2">
-                <Button variant="donation" size="sm" className="w-full" onClick={() => setShowDonationModal(true)}>
-                  <Plus className="h-4 w-4 mr-2" />
-                  Record Donation
-                </Button>
-                <Button variant="outline" size="sm" className="w-full" onClick={() => setShowDisbursementModal(true)}>
-                  <Plus className="h-4 w-4 mr-2" />
-                  Record Disbursement
-                </Button>
-              </div>
-
-              <div className="bg-muted/50 rounded-lg p-3 border border-border">
-                <div className="flex items-center gap-2 mb-2">
-                  <TrendingUp className="h-4 w-4 text-primary" />
-                  <span className="text-sm font-medium">30-Day Trend</span>
+          {canViewFinancials && (
+            <Card className="shadow-card">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <DollarSign className="h-5 w-5 text-success" />
+                  Funds Overview
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div>
+                  <p className="text-sm text-muted-foreground">Available Balance</p>
+                  <p className={`text-2xl font-bold ${isLowFunds ? 'text-warning' : 'text-success'}`}>
+                    ${balance.toFixed(2)}
+                  </p>
                 </div>
-                <p className="text-xs text-muted-foreground">
-                  Donations: $850 | Disbursements: $420
-                </p>
-              </div>
-            </CardContent>
-          </Card>
+                
+                <div className="flex flex-col gap-2">
+                  <Button variant="donation" size="sm" className="w-full" onClick={() => setShowDonationModal(true)}>
+                    <Plus className="h-4 w-4 mr-2" />
+                    Record Donation
+                  </Button>
+                  <Button variant="outline" size="sm" className="w-full" onClick={() => setShowDisbursementModal(true)}>
+                    <Plus className="h-4 w-4 mr-2" />
+                    Record Disbursement
+                  </Button>
+                </div>
+
+                <div className="bg-muted/50 rounded-lg p-3 border border-border">
+                  <div className="flex items-center gap-2 mb-2">
+                    <TrendingUp className="h-4 w-4 text-primary" />
+                    <span className="text-sm font-medium">30-Day Trend</span>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Donations: ${monthlyDonations.toFixed(2)} | Disbursements: ${monthlyDisbursements.toFixed(2)}
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          )}
 
           {/* Client Lookup */}
           <Card className="shadow-card">
@@ -289,12 +416,14 @@ const PortalDashboard = () => {
                 Search Clients
               </Button>
 
-              <div className="text-center">
-                <Button variant="ghost" size="sm" onClick={() => setShowInteractionModal(true)}>
-                  <Plus className="h-4 w-4 mr-2" />
-                  New Interaction
-                </Button>
-              </div>
+              {canEditData && (
+                <div className="text-center">
+                  <Button variant="ghost" size="sm" onClick={() => setShowInteractionModal(true)}>
+                    <Plus className="h-4 w-4 mr-2" />
+                    New Interaction
+                  </Button>
+                </div>
+              )}
             </CardContent>
           </Card>
 
@@ -307,10 +436,12 @@ const PortalDashboard = () => {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
-              <Button variant="assistance" className="w-full justify-start" onClick={() => setShowInteractionModal(true)}>
-                <Plus className="h-4 w-4 mr-2" />
-                Internal Intake
-              </Button>
+              {canEditData && (
+                <Button variant="assistance" className="w-full justify-start" onClick={() => setShowInteractionModal(true)}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Internal Intake
+                </Button>
+              )}
               
               <Button variant="outline" className="w-full justify-start" onClick={() => navigate('/portal/reports')}>
                 <FileText className="h-4 w-4 mr-2" />
@@ -425,9 +556,15 @@ const PortalDashboard = () => {
         </Card>
 
         {/* Modals */}
-        <DonationModal open={showDonationModal} onOpenChange={setShowDonationModal} />
-        <DisbursementModal open={showDisbursementModal} onOpenChange={setShowDisbursementModal} />
-        <NewInteractionModal open={showInteractionModal} onOpenChange={setShowInteractionModal} />
+        {canViewFinancials && (
+          <>
+            <DonationModal open={showDonationModal} onOpenChange={setShowDonationModal} />
+            <DisbursementModal open={showDisbursementModal} onOpenChange={setShowDisbursementModal} />
+          </>
+        )}
+        {canEditData && (
+          <NewInteractionModal open={showInteractionModal} onOpenChange={setShowInteractionModal} />
+        )}
       </main>
     </div>
   );

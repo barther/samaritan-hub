@@ -156,7 +156,7 @@ const TriageForm: React.FC<TriageFormProps> = ({
         .update({
           ...formData,
           triage_completed_at: new Date().toISOString(),
-          triaged_by_user_id: 'current_staff_user', // TODO: Replace with actual user ID
+          triaged_by_user_id: (await supabase.auth.getUser()).data.user?.id || null,
         })
         .eq('id', assistanceRequestId);
 
