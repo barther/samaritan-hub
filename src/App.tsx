@@ -5,6 +5,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import AuthGuard from "@/components/AuthGuard";
+import { SecurityProvider } from "@/components/SecurityProvider";
 import Index from "./pages/Index";
 import Give from "./pages/Give";
 import RequestAssistance from "./pages/RequestAssistance";
@@ -28,24 +29,26 @@ const App = () => (
       <Toaster />
       <Sonner />
       <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<Index />} />
-          <Route path="/give" element={<Give />} />
-          <Route path="/request" element={<RequestAssistance />} />
-          <Route path="/portal" element={<Portal />} />
-          <Route path="/portal/dashboard" element={<AuthGuard><PortalDashboard /></AuthGuard>} />
-          <Route path="/portal/intake" element={<AuthGuard><IntakeRequests /></AuthGuard>} />
-          <Route path="/portal/clients/search" element={<AuthGuard><ClientSearch /></AuthGuard>} />
-          <Route path="/portal/clients/new" element={<AuthGuard><NewClient /></AuthGuard>} />
-          <Route path="/portal/clients/:clientId" element={<AuthGuard><ClientDetail /></AuthGuard>} />
-          <Route path="/portal/reports" element={<AuthGuard><Reports /></AuthGuard>} />
-          <Route path="/portal/analytics" element={<AuthGuard><Analytics /></AuthGuard>} />
-          <Route path="/portal/settings" element={<AuthGuard><Settings /></AuthGuard>} />
-          <Route path="/payment-success" element={<PaymentSuccess />} />
-          <Route path="/admin" element={<Navigate to="/portal" replace />} />
-          {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-          <Route path="*" element={<NotFound />} />
-        </Routes>
+        <SecurityProvider>
+          <Routes>
+            <Route path="/" element={<Index />} />
+            <Route path="/give" element={<Give />} />
+            <Route path="/request" element={<RequestAssistance />} />
+            <Route path="/portal" element={<Portal />} />
+            <Route path="/portal/dashboard" element={<AuthGuard><PortalDashboard /></AuthGuard>} />
+            <Route path="/portal/intake" element={<AuthGuard><IntakeRequests /></AuthGuard>} />
+            <Route path="/portal/clients/search" element={<AuthGuard><ClientSearch /></AuthGuard>} />
+            <Route path="/portal/clients/new" element={<AuthGuard><NewClient /></AuthGuard>} />
+            <Route path="/portal/clients/:clientId" element={<AuthGuard><ClientDetail /></AuthGuard>} />
+            <Route path="/portal/reports" element={<AuthGuard><Reports /></AuthGuard>} />
+            <Route path="/portal/analytics" element={<AuthGuard><Analytics /></AuthGuard>} />
+            <Route path="/portal/settings" element={<AuthGuard><Settings /></AuthGuard>} />
+            <Route path="/payment-success" element={<PaymentSuccess />} />
+            <Route path="/admin" element={<Navigate to="/portal" replace />} />
+            {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </SecurityProvider>
       </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>
