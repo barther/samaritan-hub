@@ -417,6 +417,18 @@ const PortalDashboard = () => {
     }
   };
 
+  const handleAddNewClient = (interaction: any) => {
+    // Navigate to client search page with pre-filled data for adding new client
+    navigate('/portal/clients', { 
+      state: { 
+        createNew: true,
+        interactionId: interaction.id,
+        contactName: interaction.contact_name,
+        summary: interaction.summary 
+      } 
+    });
+  };
+
   // Show loading state while checking roles
   if (isLoadingRoles) {
     return (
@@ -703,11 +715,22 @@ const PortalDashboard = () => {
                         {new Date(interaction.occurred_at).toLocaleDateString()} at{' '}
                         {new Date(interaction.occurred_at).toLocaleTimeString()}
                       </p>
-                    </div>
-                    
-                    <Button variant="ghost" size="sm" onClick={() => handleViewDetails(interaction)}>
-                      View Details
-                    </Button>
+                     </div>
+                     
+                     <div className="flex gap-2">
+                       {interaction.client_id || interaction.hasIndividual ? (
+                         <Button variant="outline" size="sm" onClick={() => handleViewDetails(interaction)}>
+                           View Client
+                         </Button>
+                       ) : (
+                         <Button variant="default" size="sm" onClick={() => handleAddNewClient(interaction)}>
+                           Add New Client
+                         </Button>
+                       )}
+                       <Button variant="ghost" size="sm" onClick={() => handleViewDetails(interaction)}>
+                         View Details
+                       </Button>
+                     </div>
                   </div>
                   </div>
                 ))}
