@@ -1,4 +1,5 @@
 import { TriageFormStepper } from "./TriageFormStepper";
+import { ClientRiskAlert } from "./ClientRiskAlert";
 
 interface TriageFormData {
   requested_amount: string;

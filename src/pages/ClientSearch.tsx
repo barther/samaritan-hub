@@ -10,6 +10,7 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { ClientMergeModal } from "@/components/modals/ClientMergeModal";
+import { ClientRiskBadge } from "@/components/ClientRiskBadge";
 
 interface Client {
   id: string;
@@ -23,6 +24,10 @@ interface Client {
   zip_code?: string;
   county?: string;
   created_at: string;
+  risk_level?: string;
+  assistance_count?: number;
+  total_assistance_received?: number;
+  flagged_for_review?: boolean;
 }
 
 const ClientSearch = () => {
@@ -54,7 +59,7 @@ const ClientSearch = () => {
     try {
       const { data, error } = await supabase
         .from('clients')
-        .select('*')
+        .select('*, risk_level, assistance_count, total_assistance_received, flagged_for_review')
         .or(`first_name.ilike.%${term}%,last_name.ilike.%${term}%,email.ilike.%${term}%,phone.ilike.%${term}%`)
         .order('created_at', { ascending: false });
 
@@ -234,14 +239,21 @@ const ClientSearch = () => {
                        <div className="flex-1">
                          <div className="flex items-start justify-between">
                            <div className="flex-1">
-                             <div className="flex items-center gap-2 mb-2">
-                               <h3 className="font-medium text-foreground">
-                                 {client.first_name} {client.last_name}
-                               </h3>
-                               <Badge variant="outline" className="text-xs">
-                                 Client
-                               </Badge>
-                             </div>
+                              <div className="flex items-center gap-2 mb-2">
+                                <h3 className="font-medium text-foreground">
+                                  {client.first_name} {client.last_name}
+                                </h3>
+                                <Badge variant="outline" className="text-xs">
+                                  Client
+                                </Badge>
+                                {client.risk_level && (
+                                  <ClientRiskBadge 
+                                    riskLevel={client.risk_level}
+                                    assistanceCount={client.assistance_count}
+                                    totalReceived={client.total_assistance_received}
+                                  />
+                                )}
+                              </div>
                              
                              <div className="space-y-1 text-sm text-muted-foreground">
                                {client.email && (

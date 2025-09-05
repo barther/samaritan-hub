@@ -22,6 +22,7 @@ import {
   Activity,
   ArrowLeft
 } from "lucide-react";
+import { ClientRiskBadge } from "@/components/ClientRiskBadge";
 import { formatDistanceToNow } from "date-fns";
 import { NewInteractionModal } from "@/components/modals/NewInteractionModal";
 import { DisbursementModal } from "@/components/modals/DisbursementModal";
@@ -58,7 +59,7 @@ const ClientDetail = () => {
       console.log('Fetching client data...');
       const { data: clientData, error: clientError } = await supabase
         .from('clients')
-        .select('*')
+        .select('*, risk_level, assistance_count, total_assistance_received, flagged_for_review, review_reason')
         .eq('id', clientId)
         .maybeSingle();
 
@@ -187,6 +188,14 @@ const ClientDetail = () => {
                   {client.first_name} {client.last_name}
                 </h1>
                 <p className="text-sm text-muted-foreground">Client Details</p>
+                {client.risk_level && (
+                  <ClientRiskBadge 
+                    riskLevel={client.risk_level}
+                    assistanceCount={client.assistance_count}
+                    totalReceived={client.total_assistance_received}
+                    className="mt-2"
+                  />
+                )}
               </div>
             </div>
             <div className="flex items-center space-x-2">

@@ -29,22 +29,31 @@ export type Database = {
           employer_spouse: string | null
           employer_spouse_contact: string | null
           employer_spouse_phone: string | null
+          employment_status: string | null
           govt_aid_disability: boolean | null
           govt_aid_other: string | null
           govt_aid_ss: boolean | null
           govt_aid_unemployment: boolean | null
           govt_aid_workers_comp: boolean | null
           help_requested: string | null
+          household_size: number | null
+          housing_status: string | null
           id: string
+          income_range: string | null
           interaction_id: string | null
           lease_in_name: boolean | null
           marital_status: string | null
           other_assistance_sources: string | null
+          outcome_category: string | null
+          previous_assistance_count: number | null
+          referral_source: string | null
           rent_paid_3mo: boolean | null
           requested_amount: number | null
           spouse_email: string | null
           spouse_name: string | null
           spouse_phone: string | null
+          success_achieved: boolean | null
+          transportation_access: boolean | null
           triage_completed_at: string | null
           triaged_by_user_id: string | null
           unemployed_self: boolean | null
@@ -68,22 +77,31 @@ export type Database = {
           employer_spouse?: string | null
           employer_spouse_contact?: string | null
           employer_spouse_phone?: string | null
+          employment_status?: string | null
           govt_aid_disability?: boolean | null
           govt_aid_other?: string | null
           govt_aid_ss?: boolean | null
           govt_aid_unemployment?: boolean | null
           govt_aid_workers_comp?: boolean | null
           help_requested?: string | null
+          household_size?: number | null
+          housing_status?: string | null
           id?: string
+          income_range?: string | null
           interaction_id?: string | null
           lease_in_name?: boolean | null
           marital_status?: string | null
           other_assistance_sources?: string | null
+          outcome_category?: string | null
+          previous_assistance_count?: number | null
+          referral_source?: string | null
           rent_paid_3mo?: boolean | null
           requested_amount?: number | null
           spouse_email?: string | null
           spouse_name?: string | null
           spouse_phone?: string | null
+          success_achieved?: boolean | null
+          transportation_access?: boolean | null
           triage_completed_at?: string | null
           triaged_by_user_id?: string | null
           unemployed_self?: boolean | null
@@ -107,22 +125,31 @@ export type Database = {
           employer_spouse?: string | null
           employer_spouse_contact?: string | null
           employer_spouse_phone?: string | null
+          employment_status?: string | null
           govt_aid_disability?: boolean | null
           govt_aid_other?: string | null
           govt_aid_ss?: boolean | null
           govt_aid_unemployment?: boolean | null
           govt_aid_workers_comp?: boolean | null
           help_requested?: string | null
+          household_size?: number | null
+          housing_status?: string | null
           id?: string
+          income_range?: string | null
           interaction_id?: string | null
           lease_in_name?: boolean | null
           marital_status?: string | null
           other_assistance_sources?: string | null
+          outcome_category?: string | null
+          previous_assistance_count?: number | null
+          referral_source?: string | null
           rent_paid_3mo?: boolean | null
           requested_amount?: number | null
           spouse_email?: string | null
           spouse_name?: string | null
           spouse_phone?: string | null
+          success_achieved?: boolean | null
+          transportation_access?: boolean | null
           triage_completed_at?: string | null
           triaged_by_user_id?: string | null
           unemployed_self?: boolean | null
@@ -182,6 +209,53 @@ export type Database = {
         }
         Relationships: []
       }
+      client_alerts: {
+        Row: {
+          alert_type: string
+          client_id: string | null
+          created_at: string
+          id: string
+          is_active: boolean | null
+          message: string
+          metadata: Json | null
+          resolved_at: string | null
+          resolved_by: string | null
+          severity: string
+        }
+        Insert: {
+          alert_type: string
+          client_id?: string | null
+          created_at?: string
+          id?: string
+          is_active?: boolean | null
+          message: string
+          metadata?: Json | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          severity?: string
+        }
+        Update: {
+          alert_type?: string
+          client_id?: string | null
+          created_at?: string
+          id?: string
+          is_active?: boolean | null
+          message?: string
+          metadata?: Json | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          severity?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_alerts_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       client_merges: {
         Row: {
           created_at: string
@@ -212,46 +286,67 @@ export type Database = {
       clients: {
         Row: {
           address: string | null
+          assistance_count: number | null
           city: string | null
           county: string | null
           created_at: string
           created_by: string | null
           email: string | null
           first_name: string
+          flagged_for_review: boolean | null
           id: string
+          last_assistance_date: string | null
           last_name: string
+          notes: string | null
           phone: string | null
+          review_reason: string | null
+          risk_level: string | null
           state: string | null
+          total_assistance_received: number | null
           updated_at: string
           zip_code: string | null
         }
         Insert: {
           address?: string | null
+          assistance_count?: number | null
           city?: string | null
           county?: string | null
           created_at?: string
           created_by?: string | null
           email?: string | null
           first_name: string
+          flagged_for_review?: boolean | null
           id?: string
+          last_assistance_date?: string | null
           last_name: string
+          notes?: string | null
           phone?: string | null
+          review_reason?: string | null
+          risk_level?: string | null
           state?: string | null
+          total_assistance_received?: number | null
           updated_at?: string
           zip_code?: string | null
         }
         Update: {
           address?: string | null
+          assistance_count?: number | null
           city?: string | null
           county?: string | null
           created_at?: string
           created_by?: string | null
           email?: string | null
           first_name?: string
+          flagged_for_review?: boolean | null
           id?: string
+          last_assistance_date?: string | null
           last_name?: string
+          notes?: string | null
           phone?: string | null
+          review_reason?: string | null
+          risk_level?: string | null
           state?: string | null
+          total_assistance_received?: number | null
           updated_at?: string
           zip_code?: string | null
         }
@@ -353,6 +448,54 @@ export type Database = {
         }
         Relationships: []
       }
+      grant_reports: {
+        Row: {
+          avg_assistance_per_client: number | null
+          created_at: string
+          created_by: string | null
+          demographics: Json | null
+          id: string
+          narrative_summary: string | null
+          outcomes: Json | null
+          repeat_client_percentage: number | null
+          report_period_end: string
+          report_period_start: string
+          total_assistance_amount: number
+          total_clients_served: number
+          unique_families_helped: number
+        }
+        Insert: {
+          avg_assistance_per_client?: number | null
+          created_at?: string
+          created_by?: string | null
+          demographics?: Json | null
+          id?: string
+          narrative_summary?: string | null
+          outcomes?: Json | null
+          repeat_client_percentage?: number | null
+          report_period_end: string
+          report_period_start: string
+          total_assistance_amount?: number
+          total_clients_served?: number
+          unique_families_helped?: number
+        }
+        Update: {
+          avg_assistance_per_client?: number | null
+          created_at?: string
+          created_by?: string | null
+          demographics?: Json | null
+          id?: string
+          narrative_summary?: string | null
+          outcomes?: Json | null
+          repeat_client_percentage?: number | null
+          report_period_end?: string
+          report_period_start?: string
+          total_assistance_amount?: number
+          total_clients_served?: number
+          unique_families_helped?: number
+        }
+        Relationships: []
+      }
       interactions: {
         Row: {
           approved_amount: number | null
@@ -364,10 +507,15 @@ export type Database = {
           created_at: string
           created_by: string | null
           details: string | null
+          follow_up_date: string | null
+          follow_up_required: boolean | null
           id: string
+          impact_notes: string | null
           occurred_at: string
+          outcome: string | null
           requested_amount: number | null
           status: Database["public"]["Enums"]["interaction_status"]
+          success_rating: number | null
           summary: string
           updated_at: string
         }
@@ -383,10 +531,15 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           details?: string | null
+          follow_up_date?: string | null
+          follow_up_required?: boolean | null
           id?: string
+          impact_notes?: string | null
           occurred_at?: string
+          outcome?: string | null
           requested_amount?: number | null
           status?: Database["public"]["Enums"]["interaction_status"]
+          success_rating?: number | null
           summary: string
           updated_at?: string
         }
@@ -402,10 +555,15 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           details?: string | null
+          follow_up_date?: string | null
+          follow_up_required?: boolean | null
           id?: string
+          impact_notes?: string | null
           occurred_at?: string
+          outcome?: string | null
           requested_amount?: number | null
           status?: Database["public"]["Enums"]["interaction_status"]
+          success_rating?: number | null
           summary?: string
           updated_at?: string
         }

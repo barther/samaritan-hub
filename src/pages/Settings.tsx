@@ -12,6 +12,8 @@ import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import UserManagementModal from "@/components/modals/UserManagementModal";
 import { supabase } from "@/integrations/supabase/client";
+import { AccountabilityDashboard } from "@/components/AccountabilityDashboard";
+import { GrantReportGenerator } from "@/components/GrantReportGenerator";
 const SettingsPage = () => {
   const navigate = useNavigate();
   const {
@@ -373,6 +375,10 @@ Good Samaritan Assistance Team`,
               <Mail className="h-4 w-4 mr-2" />
               Email Templates
             </TabsTrigger>
+            <TabsTrigger value="accountability">
+              <Users className="h-4 w-4 mr-2" />
+              Accountability
+            </TabsTrigger>
             <TabsTrigger value="security">
               <Shield className="h-4 w-4 mr-2" />
               Security & Data
@@ -647,6 +653,13 @@ Good Samaritan Assistance Team`,
                   </div>
                 </CardContent>
               </Card>
+            </div>
+          </TabsContent>
+
+          <TabsContent value="accountability">
+            <div className="space-y-6">
+              <AccountabilityDashboard />
+              <GrantReportGenerator />
             </div>
           </TabsContent>
         </Tabs>
