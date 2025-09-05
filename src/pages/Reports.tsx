@@ -144,10 +144,12 @@ const Reports = () => {
           
           if (donationsError) throw donationsError;
           
+          console.log('Donations data:', donationsData?.length, 'records found');
+          
           csvContent = "Date,Donor Name,Amount,Source,Notes\n" + 
-            donationsData?.map(d => 
+            (donationsData?.map(d => 
               `${d.donation_date},"${d.donor_name || 'Anonymous'}","$${d.amount}","${d.source}","${d.notes || ''}"`
-            ).join('\n');
+            ).join('\n') || '');
           break;
           
         case "disbursements":
@@ -160,42 +162,48 @@ const Reports = () => {
           
           if (disbursementsError) throw disbursementsError;
           
+          console.log('Disbursements data:', disbursementsData?.length, 'records found');
+          
           csvContent = "Date,Recipient,Amount,Type,Payment Method,Check Number,Notes\n" + 
-            disbursementsData?.map(d => 
+            (disbursementsData?.map(d => 
               `${d.disbursement_date},"${d.recipient_name}","$${d.amount}","${d.assistance_type}","${d.payment_method}","${d.check_number || ''}","${d.notes || ''}"`
-            ).join('\n');
+            ).join('\n') || '');
           break;
           
         case "interactions":
           const { data: interactionsData, error: interactionsError } = await supabase
             .from('interactions')
             .select('*, clients(first_name, last_name)')
-            .gte('occurred_at', finalStartDate)
-            .lte('occurred_at', finalEndDate)
+            .gte('occurred_at', `${finalStartDate}T00:00:00`)
+            .lte('occurred_at', `${finalEndDate}T23:59:59`)
             .order('occurred_at', { ascending: false });
           
           if (interactionsError) throw interactionsError;
           
+          console.log('Interactions data:', interactionsData?.length, 'records found');
+          
           csvContent = "Date,Client,Channel,Status,Summary,Requested Amount,Approved Amount\n" + 
-            interactionsData?.map(i => 
-              `${new Date(i.occurred_at).toLocaleDateString()},"${i.clients?.first_name} ${i.clients?.last_name}","${i.channel}","${i.status}","${i.summary}","$${i.requested_amount || 0}","$${i.approved_amount || 0}"`
-            ).join('\n');
+            (interactionsData?.map(i => 
+              `${new Date(i.occurred_at).toLocaleDateString()},"${i.clients?.first_name || ''} ${i.clients?.last_name || ''}","${i.channel}","${i.status}","${i.summary}","$${i.requested_amount || 0}","$${i.approved_amount || 0}"`
+            ).join('\n') || '');
           break;
           
         case "clients":
           const { data: clientsData, error: clientsError } = await supabase
             .from('clients')
             .select('*')
-            .gte('created_at', finalStartDate)
-            .lte('created_at', finalEndDate)
+            .gte('created_at', `${finalStartDate}T00:00:00`)
+            .lte('created_at', `${finalEndDate}T23:59:59`)
             .order('created_at', { ascending: false });
           
           if (clientsError) throw clientsError;
           
+          console.log('Clients data:', clientsData?.length, 'records found');
+          
           csvContent = "Date Created,First Name,Last Name,Email,Phone,City,State,County\n" + 
-            clientsData?.map(c => 
+            (clientsData?.map(c => 
               `${new Date(c.created_at).toLocaleDateString()},"${c.first_name}","${c.last_name}","${c.email || ''}","${c.phone || ''}","${c.city || ''}","${c.state || ''}","${c.county || ''}"`
-            ).join('\n');
+            ).join('\n') || '');
           break;
           
         case "financial":
