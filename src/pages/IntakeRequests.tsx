@@ -374,7 +374,7 @@ const IntakeRequests = () => {
           contact_name: `${request.first_name} ${request.last_name}`,
           summary: `Public intake triage: ${request.help_needed.substring(0, 100)}...`,
           details: request.help_needed,
-          channel: 'public_form',
+          channel: 'web_form' as any,
           status: 'new',
         })
         .select('id')

@@ -82,6 +82,50 @@ const NewClient = () => {
     if (passedPhone) setPhone(passedPhone);
   }, [contactName, passedEmail, passedPhone]);
 
+  // Get interaction ID from URL parameters if coming from unlinked interactions
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const urlInteractionId = params.get('interactionId');
+    if (urlInteractionId) {
+      // Fetch the interaction details and pre-fill form
+      fetchInteractionDetails(urlInteractionId);
+    }
+  }, [location]);
+
+  const fetchInteractionDetails = async (urlInteractionId: string) => {
+    try {
+      const { data: interaction, error } = await supabase
+        .from('interactions')
+        .select('*')
+        .eq('id', urlInteractionId)
+        .single();
+
+      if (error) throw error;
+
+      if (interaction) {
+        const nameParts = interaction.contact_name.split(' ');
+        setFirstName(nameParts[0] || '');
+        setLastName(nameParts.slice(1).join(' ') || '');
+        
+        // Use location.state to pass the interaction info for processing
+        location.state = {
+          ...location.state,
+          interactionId: urlInteractionId,
+          contactName: interaction.contact_name,
+          summary: interaction.summary,
+          type: 'staff_interaction'
+        };
+      }
+    } catch (error) {
+      console.error('Error fetching interaction:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load interaction details.",
+        variant: "destructive"
+      });
+    }
+  };
+
   // Auto-search for matches when form data changes
   useEffect(() => {
     if (firstName.length > 2 || email.length > 5 || phone.length > 9) {

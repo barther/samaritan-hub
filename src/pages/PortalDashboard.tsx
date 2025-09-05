@@ -10,6 +10,7 @@ import { DonationModal } from "@/components/modals/DonationModal";
 import { DisbursementModal } from "@/components/modals/DisbursementModal";
 import { NewInteractionModal } from "@/components/modals/NewInteractionModal";
 import { QuickEntryModal } from "@/components/modals/QuickEntryModal";
+import { UnlinkedInteractions } from "@/components/UnlinkedInteractions";
 import { TransactionLedger } from "@/components/TransactionLedger";
 const PortalDashboard = () => {
   const navigate = useNavigate();
@@ -542,6 +543,13 @@ const PortalDashboard = () => {
                     <FileText className="h-4 w-4" />
                     Full Interaction Form
                   </Button>
+                  <Button variant="outline" onClick={() => { 
+                    setShowInteractionModal(true);
+                    // Pre-fill with walk-in channel
+                  }} className="w-full justify-start gap-2 text-blue-700 border-blue-200 hover:bg-blue-50" size="sm">
+                    <Users className="h-4 w-4" />
+                    Log Walk-in
+                  </Button>
                 </>}
               <Button variant="outline" onClick={() => navigate('/portal/clients/search')} className="w-full justify-start gap-2" size="sm">
                 <Search className="h-4 w-4" />
@@ -549,6 +557,11 @@ const PortalDashboard = () => {
               </Button>
             </CardContent>
           </Card>
+        </div>
+
+        {/* Unlinked Interactions Widget */}
+        <div className="mb-6">
+          <UnlinkedInteractions />
         </div>
 
         {/* Recent Interactions */}
