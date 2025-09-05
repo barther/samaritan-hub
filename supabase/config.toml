@@ -43,3 +43,6 @@ enable_confirmations = false
 
 [functions.send-email-msgraph]
 verify_jwt = true
+
+[functions.get-user-profile]
+verify_jwt = true

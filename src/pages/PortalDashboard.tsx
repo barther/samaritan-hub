@@ -23,6 +23,9 @@ const PortalDashboard = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   
+  // User profile state
+  const [userProfile, setUserProfile] = useState<{ displayName: string } | null>(null);
+  
   // User roles state
   const [userRoles, setUserRoles] = useState<string[]>([]);
   const [isLoadingRoles, setIsLoadingRoles] = useState(true);
@@ -124,6 +127,9 @@ const PortalDashboard = () => {
 
         const roleNames = rolesData.map((r: any) => r.role);
         setUserRoles(roleNames);
+        
+        // Load user profile from Azure
+        await loadUserProfile(session.session.user.email!);
       } catch (roleError) {
         console.error('Failed to load roles:', roleError);
         toast({
@@ -139,6 +145,46 @@ const PortalDashboard = () => {
       navigate("/portal", { replace: true });
     } finally {
       setIsLoadingRoles(false);
+    }
+  };
+
+  const loadUserProfile = async (email: string) => {
+    try {
+      const { data, error } = await supabase.functions.invoke('get-user-profile', {
+        body: { userEmail: email }
+      });
+
+      if (error) {
+        console.error('Error loading user profile:', error);
+        // Set fallback profile
+        setUserProfile({ displayName: email.split('@')[0] });
+        return;
+      }
+
+      if (data?.profile) {
+        setUserProfile({ displayName: data.profile.displayName });
+      } else {
+        // Set fallback profile
+        setUserProfile({ displayName: email.split('@')[0] });
+      }
+    } catch (error) {
+      console.error('Error loading user profile:', error);
+      // Set fallback profile
+      setUserProfile({ displayName: email.split('@')[0] });
+    }
+  };
+
+  const handleLogout = async () => {
+    try {
+      await supabase.auth.signOut();
+      navigate("/portal", { replace: true });
+    } catch (error) {
+      console.error('Error signing out:', error);
+      toast({
+        title: "Error",
+        description: "Failed to sign out. Please try again.",
+        variant: "destructive",
+      });
     }
   };
 
@@ -320,11 +366,20 @@ const PortalDashboard = () => {
               </p>
             </div>
             <div className="flex items-center gap-3">
+              {userProfile && (
+                <div className="text-right">
+                  <p className="text-sm font-medium text-foreground">{userProfile.displayName}</p>
+                  <p className="text-xs text-muted-foreground">Logged in</p>
+                </div>
+              )}
               <Button variant="outline" size="sm" onClick={() => navigate('/portal/reports')}>
                 Reports
               </Button>
               <Button variant="outline" size="sm" onClick={() => navigate('/portal/settings')}>
                 Settings
+              </Button>
+              <Button variant="ghost" size="sm" onClick={handleLogout}>
+                Log Out
               </Button>
             </div>
           </div>
