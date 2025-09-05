@@ -21,6 +21,7 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import TriageForm from "@/components/TriageForm";
+import { NewInteractionModal } from "@/components/modals/NewInteractionModal";
 
 interface Client {
   id: string;
@@ -82,6 +83,7 @@ const ClientDetail = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [triageModalOpen, setTriageModalOpen] = useState(false);
   const [selectedRequestId, setSelectedRequestId] = useState<string | null>(null);
+  const [showInteractionModal, setShowInteractionModal] = useState(false);
 
   useEffect(() => {
     if (clientId) {
@@ -196,7 +198,7 @@ const ClientDetail = () => {
                 <p className="text-sm text-muted-foreground">Client Details</p>
               </div>
             </div>
-            <Button>
+            <Button onClick={() => setShowInteractionModal(true)}>
               <Plus className="h-4 w-4 mr-2" />
               New Interaction
             </Button>
@@ -526,6 +528,12 @@ const ClientDetail = () => {
             )}
           </DialogContent>
         </Dialog>
+
+        {/* New Interaction Modal */}
+        <NewInteractionModal
+          open={showInteractionModal}
+          onOpenChange={setShowInteractionModal}
+        />
       </main>
     </div>
   );

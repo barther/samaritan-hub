@@ -40,7 +40,13 @@ const ClientSearch = () => {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      setClients(data || []);
+      
+      // Deduplicate by unique client ID
+      const uniqueClients = data?.filter((client, index, self) => 
+        index === self.findIndex(c => c.id === client.id)
+      ) || [];
+      
+      setClients(uniqueClients);
     } catch (error) {
       console.error('Error searching clients:', error);
       toast({

@@ -599,7 +599,7 @@ const PortalDashboard = () => {
               {canEditData && (
                 <Button variant="assistance" className="w-full justify-start" onClick={() => setShowInteractionModal(true)}>
                   <Plus className="h-4 w-4 mr-2" />
-                  Internal Intake
+                  New Interaction
                 </Button>
               )}
               

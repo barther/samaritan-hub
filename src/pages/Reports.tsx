@@ -31,6 +31,35 @@ const Reports = () => {
     { value: "clients", label: "Client Report", description: "List of all clients and their interactions" }
   ];
 
+  const datePresets = [
+    { 
+      label: "Last 7 days", 
+      getValue: () => {
+        const end = new Date();
+        const start = new Date();
+        start.setDate(start.getDate() - 7);
+        return { start: start.toISOString().split('T')[0], end: end.toISOString().split('T')[0] };
+      }
+    },
+    { 
+      label: "Last 30 days", 
+      getValue: () => {
+        const end = new Date();
+        const start = new Date();
+        start.setDate(start.getDate() - 30);
+        return { start: start.toISOString().split('T')[0], end: end.toISOString().split('T')[0] };
+      }
+    },
+    { 
+      label: "Year to Date", 
+      getValue: () => {
+        const end = new Date();
+        const start = new Date(end.getFullYear(), 0, 1);
+        return { start: start.toISOString().split('T')[0], end: end.toISOString().split('T')[0] };
+      }
+    }
+  ];
+
   useEffect(() => {
     loadStats();
   }, []);
@@ -74,13 +103,28 @@ const Reports = () => {
   };
 
   const generateReport = async () => {
-    if (!reportType || !startDate || !endDate) {
+    if (!reportType) {
       toast({
         title: "Missing information",
-        description: "Please select report type and date range.",
+        description: "Please select a report type.",
         variant: "destructive"
       });
       return;
+    }
+
+    // Use default date range if not specified
+    let finalStartDate = startDate;
+    let finalEndDate = endDate;
+    
+    if (!startDate || !endDate) {
+      const defaultRange = datePresets[1].getValue(); // Last 30 days
+      finalStartDate = defaultRange.start;
+      finalEndDate = defaultRange.end;
+      
+      toast({
+        title: "Using default date range",
+        description: "Last 30 days will be used since no date range was specified."
+      });
     }
 
     setIsGenerating(true);
@@ -94,8 +138,8 @@ const Reports = () => {
           const { data: donationsData, error: donationsError } = await supabase
             .from('donations')
             .select('*')
-            .gte('donation_date', startDate)
-            .lte('donation_date', endDate)
+            .gte('donation_date', finalStartDate)
+            .lte('donation_date', finalEndDate)
             .order('donation_date', { ascending: false });
           
           if (donationsError) throw donationsError;
@@ -110,8 +154,8 @@ const Reports = () => {
           const { data: disbursementsData, error: disbursementsError } = await supabase
             .from('disbursements')
             .select('*, clients(first_name, last_name)')
-            .gte('disbursement_date', startDate)
-            .lte('disbursement_date', endDate)
+            .gte('disbursement_date', finalStartDate)
+            .lte('disbursement_date', finalEndDate)
             .order('disbursement_date', { ascending: false });
           
           if (disbursementsError) throw disbursementsError;
@@ -126,8 +170,8 @@ const Reports = () => {
           const { data: interactionsData, error: interactionsError } = await supabase
             .from('interactions')
             .select('*, clients(first_name, last_name)')
-            .gte('occurred_at', startDate)
-            .lte('occurred_at', endDate)
+            .gte('occurred_at', finalStartDate)
+            .lte('occurred_at', finalEndDate)
             .order('occurred_at', { ascending: false });
           
           if (interactionsError) throw interactionsError;
@@ -142,8 +186,8 @@ const Reports = () => {
           const { data: clientsData, error: clientsError } = await supabase
             .from('clients')
             .select('*')
-            .gte('created_at', startDate)
-            .lte('created_at', endDate)
+            .gte('created_at', finalStartDate)
+            .lte('created_at', finalEndDate)
             .order('created_at', { ascending: false });
           
           if (clientsError) throw clientsError;
@@ -157,8 +201,8 @@ const Reports = () => {
         case "financial":
           // Combined financial report
           const [donationsRes, disbursementsRes] = await Promise.all([
-            supabase.from('donations').select('*').gte('donation_date', startDate).lte('donation_date', endDate),
-            supabase.from('disbursements').select('*').gte('disbursement_date', startDate).lte('disbursement_date', endDate)
+            supabase.from('donations').select('*').gte('donation_date', finalStartDate).lte('donation_date', finalEndDate),
+            supabase.from('disbursements').select('*').gte('disbursement_date', finalStartDate).lte('disbursement_date', finalEndDate)
           ]);
           
           if (donationsRes.error || disbursementsRes.error) {
@@ -168,7 +212,7 @@ const Reports = () => {
           const totalDonations = donationsRes.data?.reduce((sum, d) => sum + Number(d.amount), 0) || 0;
           const totalDisbursements = disbursementsRes.data?.reduce((sum, d) => sum + Number(d.amount), 0) || 0;
           
-          csvContent = `Financial Summary (${startDate} to ${endDate})\n\n` +
+          csvContent = `Financial Summary (${finalStartDate} to ${finalEndDate})\n\n` +
             `Total Donations,$${totalDonations}\n` +
             `Total Disbursements,$${totalDisbursements}\n` +
             `Net Balance,$${totalDonations - totalDisbursements}\n\n` +
@@ -188,7 +232,7 @@ const Reports = () => {
       const a = document.createElement('a');
       a.style.display = 'none';
       a.href = url;
-      a.download = `${reportType}-report-${startDate}-to-${endDate}.csv`;
+      a.download = `${reportType}-report-${finalStartDate}-to-${finalEndDate}.csv`;
       document.body.appendChild(a);
       a.click();
       window.URL.revokeObjectURL(url);
@@ -259,23 +303,46 @@ const Reports = () => {
               </div>
 
               <div>
-                <Label htmlFor="startDate">Start Date</Label>
+                <Label htmlFor="startDate">Start Date (Optional)</Label>
                 <Input
                   id="startDate"
                   type="date"
                   value={startDate}
                   onChange={(e) => setStartDate(e.target.value)}
+                  placeholder="Leave empty for default (last 30 days)"
                 />
               </div>
 
               <div>
-                <Label htmlFor="endDate">End Date</Label>
+                <Label htmlFor="endDate">End Date (Optional)</Label>
                 <Input
                   id="endDate"
                   type="date"
                   value={endDate}
                   onChange={(e) => setEndDate(e.target.value)}
+                  placeholder="Leave empty for default (today)"
                 />
+              </div>
+
+              <div className="space-y-2">
+                <Label>Quick Date Ranges</Label>
+                <div className="flex flex-wrap gap-2">
+                  {datePresets.map((preset) => (
+                    <Button
+                      key={preset.label}
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        const range = preset.getValue();
+                        setStartDate(range.start);
+                        setEndDate(range.end);
+                      }}
+                    >
+                      {preset.label}
+                    </Button>
+                  ))}
+                </div>
               </div>
 
               <Button 
