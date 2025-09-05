@@ -16,11 +16,13 @@ import {
   FileText,
   AlertTriangle,
   CheckCircle,
-  ClipboardCheck
+  ClipboardCheck,
+  Scan
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { TriageForm } from "@/components/TriageForm";
+import { PDF417Scanner } from "@/components/PDF417Scanner";
 
 interface PotentialClient {
   id: string;
@@ -70,6 +72,7 @@ const NewClient = () => {
   const [showTriage, setShowTriage] = useState(false);
   const [newClientId, setNewClientId] = useState<string | null>(null);
   const [assistanceRequestId, setAssistanceRequestId] = useState<string | null>(null);
+  const [showScanner, setShowScanner] = useState(false);
 
   // Parse contact name and populate fields on component mount
   useEffect(() => {
@@ -226,6 +229,26 @@ const NewClient = () => {
     } finally {
       setIsCreating(false);
     }
+  };
+
+  const handleScanData = (scannedData: any) => {
+    // Pre-fill form with scanned data
+    if (scannedData.firstName) setFirstName(scannedData.firstName);
+    if (scannedData.lastName) setLastName(scannedData.lastName);
+    if (scannedData.address) setAddress(scannedData.address);
+    if (scannedData.city) setCity(scannedData.city);
+    if (scannedData.state) setState(scannedData.state);
+    if (scannedData.zipCode) setZipCode(scannedData.zipCode);
+    
+    toast({
+      title: "License Scanned",
+      description: "Form has been pre-filled with scanned information. Please review and complete any missing fields.",
+    });
+    
+    // Trigger search for matches with new data
+    setTimeout(() => {
+      searchForMatches();
+    }, 100);
   };
 
   const createNewClient = async () => {
@@ -392,10 +415,23 @@ const NewClient = () => {
                   Client Information
                 </CardTitle>
                 <CardDescription>
-                  {interactionId ? "Pre-filled from interaction" : "Enter client details"}
+                  {interactionId ? "Pre-filled from interaction" : "Enter client details or scan driver's license"}
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
+                {/* Scan License Button */}
+                <div className="flex justify-center pb-4 border-b">
+                  <Button 
+                    onClick={() => setShowScanner(true)}
+                    variant="outline" 
+                    size="lg"
+                    className="gap-2"
+                  >
+                    <Scan className="h-5 w-5" />
+                    Scan Driver's License
+                  </Button>
+                </div>
+
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <Label htmlFor="firstName">First Name *</Label>
@@ -597,6 +633,13 @@ const NewClient = () => {
           </div>
         </div>
       </main>
+      
+      {/* PDF417 Scanner Modal */}
+      <PDF417Scanner
+        open={showScanner}
+        onOpenChange={setShowScanner}
+        onDataScanned={handleScanData}
+      />
     </div>
   );
 };
