@@ -47,6 +47,7 @@ const PortalDashboard = () => {
   const [monthlyDonations, setMonthlyDonations] = useState(0);
   const [monthlyDisbursements, setMonthlyDisbursements] = useState(0);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [isInteractionsHidden, setIsInteractionsHidden] = useState(false);
   
   const lowFundThreshold = 100;
   const ITEMS_PER_PAGE = 5;
@@ -607,21 +608,37 @@ const PortalDashboard = () => {
         {/* Logbook */}
         <Card className="shadow-card mt-6">
           <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Clock className="h-5 w-5 text-primary" />
-            Recent Interactions
-            {unreadCount > 0 && (
-              <Badge variant="destructive" className="ml-2">
-                {unreadCount} unread
-              </Badge>
-            )}
+          <CardTitle className="flex items-center gap-2 justify-between">
+            <div className="flex items-center gap-2">
+              <Clock className="h-5 w-5 text-primary" />
+              Recent Interactions
+              {unreadCount > 0 && (
+                <Badge variant="destructive" className="ml-2">
+                  {unreadCount} unread
+                </Badge>
+              )}
+            </div>
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={() => setIsInteractionsHidden(!isInteractionsHidden)}
+            >
+              {isInteractionsHidden ? 'Show' : 'Clear'}
+            </Button>
           </CardTitle>
             <CardDescription>
               Latest client interactions and requests
             </CardDescription>
           </CardHeader>
           <CardContent>
-            {isLoadingInteractions && interactions.length === 0 ? (
+            {isInteractionsHidden ? (
+              <div className="flex items-center justify-center py-8">
+                <div className="text-center text-muted-foreground">
+                  <p>Interactions hidden for privacy</p>
+                  <p className="text-xs mt-1">Click "Show" to view interactions</p>
+                </div>
+              </div>
+            ) : isLoadingInteractions && interactions.length === 0 ? (
               <div className="flex items-center justify-center py-8">
                 <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
                 <span className="ml-2 text-muted-foreground">Loading interactions...</span>
