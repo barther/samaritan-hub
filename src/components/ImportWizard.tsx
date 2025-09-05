@@ -410,8 +410,8 @@ export const ImportWizard = ({ trigger }: ImportWizardProps) => {
                       <SelectTrigger className="flex-1">
                         <SelectValue placeholder="Map to..." />
                       </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="">Skip field</SelectItem>
+                       <SelectContent>
+                         <SelectItem value="skip">Skip field</SelectItem>
                         {selectedType?.fields.map(field => (
                           <SelectItem key={field} value={field}>{field}</SelectItem>
                         ))}
