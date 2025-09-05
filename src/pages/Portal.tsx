@@ -5,17 +5,25 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+
 const Portal = () => {
-  const {
-    toast
-  } = useToast();
+  const { toast } = useToast();
   const navigate = useNavigate();
+
+  // Development bypass
   useEffect(() => {
-    const {
-      data: {
-        subscription
-      }
-    } = supabase.auth.onAuthStateChange((event, session) => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const isDev = import.meta.env.DEV && urlParams.get('dev') === 'true';
+    
+    if (isDev) {
+      console.log('Development bypass activated');
+      navigate("/portal/dashboard?dev=true", { replace: true });
+      return;
+    }
+  }, [navigate]);
+
+  useEffect(() => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       console.log('Auth state change:', event, session?.user?.email);
       const email = session?.user?.email?.toLowerCase() || "";
       if (!session?.user) {
@@ -25,9 +33,7 @@ const Portal = () => {
       console.log('Checking email domain:', email);
       if (email.endsWith("@lithiaspringsmethodist.org")) {
         console.log('Valid domain, redirecting to dashboard');
-        navigate("/portal/dashboard", {
-          replace: true
-        });
+        navigate("/portal/dashboard", { replace: true });
       } else {
         console.log('Invalid domain, signing out');
         supabase.auth.signOut();
@@ -38,11 +44,8 @@ const Portal = () => {
         });
       }
     });
-    supabase.auth.getSession().then(({
-      data: {
-        session
-      }
-    }) => {
+
+    supabase.auth.getSession().then(({ data: { session } }) => {
       console.log('Initial session check:', session?.user?.email);
       const email = session?.user?.email?.toLowerCase() || "";
       if (!session?.user) {
@@ -52,26 +55,23 @@ const Portal = () => {
       console.log('Initial email domain check:', email);
       if (email.endsWith("@lithiaspringsmethodist.org")) {
         console.log('Valid initial domain, redirecting to dashboard');
-        navigate("/portal/dashboard", {
-          replace: true
-        });
+        navigate("/portal/dashboard", { replace: true });
       } else {
         console.log('Invalid initial domain, signing out');
         supabase.auth.signOut();
       }
     });
+
     return () => subscription.unsubscribe();
   }, [navigate, toast]);
+
   const handleMicrosoftLogin = async () => {
     const redirectTo = `${window.location.origin}/portal/dashboard`;
-    const {
-      error
-    } = await supabase.auth.signInWithOAuth({
+    const { error } = await supabase.auth.signInWithOAuth({
       provider: "azure",
-      options: {
-        redirectTo
-      }
+      options: { redirectTo }
     });
+
     if (error) {
       toast({
         title: "Sign-in failed",
@@ -80,9 +80,18 @@ const Portal = () => {
       });
     }
   };
-  return <div className="min-h-screen bg-background flex items-center justify-center p-4">
+
+  return (
+    <div className="min-h-screen bg-background flex items-center justify-center p-4">
       {/* SEO Meta - No Index */}
       <meta name="robots" content="noindex" />
+      
+      {/* Development Banner */}
+      {import.meta.env.DEV && (
+        <div className="fixed top-0 left-0 right-0 bg-orange-500 text-white text-center py-2 text-sm font-medium z-50">
+          Development Mode - <a href="/portal?dev=true" className="underline">Click here to bypass authentication</a>
+        </div>
+      )}
       
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
@@ -112,7 +121,6 @@ const Portal = () => {
 
             <div className="bg-warning/10 rounded-lg p-3 border border-warning/20">
               <div className="flex items-start gap-2">
-                
                 <div>
                   <p className="text-sm font-medium text-center text-rose-700">Access is Restricted.</p>
                   <p className="text-xs text-muted-foreground mt-1 text-center">
@@ -130,6 +138,8 @@ const Portal = () => {
           </CardContent>
         </Card>
       </div>
-    </div>;
+    </div>
+  );
 };
+
 export default Portal;

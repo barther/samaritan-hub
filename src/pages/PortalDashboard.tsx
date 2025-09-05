@@ -19,6 +19,10 @@ import { useToast } from "@/hooks/use-toast";
 const PortalDashboard = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
+  
+  // Development mode detection
+  const urlParams = new URLSearchParams(window.location.search);
+  const isDevMode = import.meta.env.DEV && urlParams.get('dev') === 'true';
   // Mock data - will be replaced with real data when Supabase is connected
   const mockBalance = 1250.75;
   const lowFundThreshold = 100;
@@ -75,12 +79,18 @@ const PortalDashboard = () => {
   };
 
   useEffect(() => {
+    // Skip auth enforcement in development mode
+    if (isDevMode) {
+      console.log('Development mode: skipping auth enforcement');
+      return;
+    }
+
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       enforceSession(session);
     });
     supabase.auth.getSession().then(({ data: { session } }) => enforceSession(session));
     return () => subscription.unsubscribe();
-  }, []);
+  }, [isDevMode]);
 
   const isLowFunds = mockBalance < lowFundThreshold;
 
@@ -88,6 +98,14 @@ const PortalDashboard = () => {
     <div className="min-h-screen bg-background">
       {/* SEO Meta - No Index */}
       <meta name="robots" content="noindex" />
+      
+      {/* Development Mode Banner */}
+      {isDevMode && (
+        <div className="bg-orange-500 text-white text-center py-2 text-sm font-medium">
+          🚧 Development Mode Active - Authentication Bypassed
+        </div>
+      )}
+      
       {/* Header */}
       <header className="border-b border-border bg-background/95 backdrop-blur">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
