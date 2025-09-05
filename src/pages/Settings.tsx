@@ -10,10 +10,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { ArrowLeft, Settings, Bell, DollarSign, Mail, Users, Shield, Download } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
+import UserManagementModal from "@/components/modals/UserManagementModal";
 
 const SettingsPage = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const [showUserManagement, setShowUserManagement] = useState(false);
 
   // Settings state
   const [settings, setSettings] = useState({
@@ -340,10 +342,7 @@ Good Samaritan Assistance Team`,
                     <p className="text-sm text-muted-foreground mb-3">
                       Manage staff access and permissions
                     </p>
-                    <Button variant="outline" onClick={() => toast({
-                      title: "User Management",
-                      description: "User management interface will be available soon."
-                    })}>
+                    <Button variant="outline" onClick={() => setShowUserManagement(true)}>
                       <Users className="h-4 w-4 mr-2" />
                       Manage Users
                     </Button>
@@ -360,6 +359,11 @@ Good Samaritan Assistance Team`,
           </Button>
         </div>
       </main>
+
+      <UserManagementModal 
+        open={showUserManagement} 
+        onOpenChange={setShowUserManagement} 
+      />
     </div>
   );
 };
