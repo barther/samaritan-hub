@@ -92,60 +92,106 @@ const handler = async (req: Request): Promise<Response> => {
       </div>
     `;
 
-    // Send email notification using the existing Microsoft Graph function
-    const { data: emailResult, error: emailError } = await supabase.functions.invoke('send-email-msgraph', {
-      body: {
-        to: 'office@lithiaspringsmethodist.org',
-        subject: subject,
-        html: emailBody
-      }
-    });
+    // Send email notification directly via Microsoft Graph (server-to-server)
+    // Determine sender mailbox from settings or fallback
+    const { data: senderSetting } = await supabase
+      .from('settings')
+      .select('value')
+      .eq('key', 'defaultSenderMailbox')
+      .single();
+    const senderMailbox = (senderSetting?.value as string) || 'office@lithiaspringsmethodist.org';
 
-    if (emailError) {
-      console.error('Failed to send notification email:', emailError);
-      
-      // Log the error but don't fail the request - the intake was still recorded
+    // Resolve Graph credentials from env (support both prefix variants)
+    const tenantId = Deno.env.get('MICROSOFT_TENANT_ID') || Deno.env.get('MS_GRAPH_TENANT_ID');
+    const clientId = Deno.env.get('MICROSOFT_CLIENT_ID') || Deno.env.get('MS_GRAPH_CLIENT_ID');
+    const clientSecret = Deno.env.get('MICROSOFT_CLIENT_SECRET') || Deno.env.get('MS_GRAPH_CLIENT_SECRET');
+
+    if (!tenantId || !clientId || !clientSecret) {
+      console.error('Microsoft Graph credentials missing in environment');
       await supabase.rpc('log_edge_function_usage', {
         p_action: 'intake_notification_email_failed',
         p_resource: 'notify-intake-submission',
-        p_details: { 
-          intake_id: intakeId, 
-          error: emailError.message 
-        }
+        p_details: { intake_id: intakeId, error: 'missing_graph_credentials' }
       });
-
-      return new Response(JSON.stringify({ 
-        success: true, 
-        emailSent: false, 
-        error: 'Email notification failed but intake was recorded' 
-      }), {
+      return new Response(JSON.stringify({ success: true, emailSent: false }), {
         status: 200,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
+    // Get access token
+    const tokenResp = await fetch(`https://login.microsoftonline.com/${tenantId}/oauth2/v2.0/token`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({
+        client_id: clientId,
+        client_secret: clientSecret,
+        scope: 'https://graph.microsoft.com/.default',
+        grant_type: 'client_credentials',
+      }),
+    });
+
+    if (!tokenResp.ok) {
+      const err = await tokenResp.text();
+      console.error('Graph token fetch failed:', err);
+      await supabase.rpc('log_edge_function_usage', {
+        p_action: 'intake_notification_email_failed',
+        p_resource: 'notify-intake-submission',
+        p_details: { intake_id: intakeId, error: 'token_fetch_failed', details: err }
+      });
+      return new Response(JSON.stringify({ success: true, emailSent: false }), {
+        status: 200,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    const { access_token } = await tokenResp.json();
+
+    const message = {
+      message: {
+        subject,
+        body: { contentType: 'HTML', content: emailBody },
+        toRecipients: [{ emailAddress: { address: 'office@lithiaspringsmethodist.org' } }],
+      },
+      saveToSentItems: true,
+    };
+
+    const sendResp = await fetch(`https://graph.microsoft.com/v1.0/users/${senderMailbox}/sendMail`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${access_token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(message),
+    });
+
+    if (!sendResp.ok) {
+      const err = await sendResp.text();
+      console.error('Failed to send Graph email:', err);
+      await supabase.rpc('log_edge_function_usage', {
+        p_action: 'intake_notification_email_failed',
+        p_resource: 'notify-intake-submission',
+        p_details: { intake_id: intakeId, error: 'send_failed', details: err }
+      });
+      return new Response(JSON.stringify({ success: true, emailSent: false }), {
+        status: 200,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
     // Log successful notification
     await supabase.rpc('log_edge_function_usage', {
       p_action: 'intake_notification_sent',
       p_resource: 'notify-intake-submission',
-      p_details: { 
-        intake_id: intakeId,
-        recipient: 'office@lithiaspringsmethodist.org' 
-      }
+      p_details: { intake_id: intakeId, recipient: 'office@lithiaspringsmethodist.org', sender: senderMailbox }
     });
 
-    console.log('Intake notification email sent successfully for:', intakeId);
-    
-    return new Response(JSON.stringify({ 
-      success: true, 
+    return new Response(JSON.stringify({
+      success: true,
       emailSent: true,
-      message: 'Notification sent successfully' 
+      message: 'Notification sent successfully'
     }), {
       status: 200,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
-
-  } catch (error: any) {
     console.error('Error in notify-intake-submission function:', error);
 
     // Try to log the error

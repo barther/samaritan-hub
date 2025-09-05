@@ -151,7 +151,7 @@ const handler = async (req: Request): Promise<Response> => {
       .eq('key', 'defaultSenderMailbox')
       .single();
 
-    const senderMailbox = settings?.value || "assistance@lithiaspringsmethodist.org";
+    const senderMailbox = settings?.value || "office@lithiaspringsmethodist.org";
 
     // Prepare email message
     const message = {
@@ -188,6 +188,32 @@ const handler = async (req: Request): Promise<Response> => {
     if (!sendResponse.ok) {
       const errorText = await sendResponse.text();
       console.error("Send email failed:", errorText);
+
+      // Fallback: if sender mailbox is invalid, retry with office@ mailbox
+      if (errorText.includes('ErrorInvalidUser') && senderMailbox !== 'office@lithiaspringsmethodist.org') {
+        const fallbackMailbox = 'office@lithiaspringsmethodist.org';
+        console.log(`Retrying send with fallback sender: ${fallbackMailbox}`);
+        const retryResponse = await fetch(`https://graph.microsoft.com/v1.0/users/${fallbackMailbox}/sendMail`, {
+          method: "POST",
+          headers: {
+            "Authorization": `Bearer ${tokenData.access_token}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(message),
+        });
+
+        if (retryResponse.ok) {
+          await supabase.rpc('log_edge_function_usage', {
+            p_action: 'send_email_success_fallback',
+            p_resource: 'send-email-msgraph',
+            p_details: { recipient: to, subject, sender: fallbackMailbox }
+          });
+          return new Response(JSON.stringify({ success: true, message: "Email sent via fallback sender", sender: fallbackMailbox, recipient: to }), {
+            status: 200,
+            headers: { "Content-Type": "application/json", ...corsHeaders },
+          });
+        }
+      }
       
       await supabase.rpc('log_edge_function_usage', {
         p_action: 'send_email_failed',
