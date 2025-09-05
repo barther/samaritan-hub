@@ -8,6 +8,9 @@ import Give from "./pages/Give";
 import RequestAssistance from "./pages/RequestAssistance";
 import Portal from "./pages/Portal";
 import PortalDashboard from "./pages/PortalDashboard";
+import ClientSearch from "./pages/ClientSearch";
+import Reports from "./pages/Reports";
+import Analytics from "./pages/Analytics";
 import PaymentSuccess from "./pages/PaymentSuccess";
 import NotFound from "./pages/NotFound";
 
@@ -25,6 +28,9 @@ const App = () => (
           <Route path="/request" element={<RequestAssistance />} />
           <Route path="/portal" element={<Portal />} />
           <Route path="/portal/dashboard" element={<PortalDashboard />} />
+          <Route path="/portal/clients" element={<ClientSearch />} />
+          <Route path="/portal/reports" element={<Reports />} />
+          <Route path="/portal/analytics" element={<Analytics />} />
           <Route path="/payment-success" element={<PaymentSuccess />} />
           <Route path="/admin" element={<Navigate to="/portal" replace />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}

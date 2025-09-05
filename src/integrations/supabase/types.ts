@@ -14,7 +14,203 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      clients: {
+        Row: {
+          address: string | null
+          city: string | null
+          created_at: string
+          created_by: string | null
+          email: string | null
+          first_name: string
+          id: string
+          last_name: string
+          phone: string | null
+          state: string | null
+          updated_at: string
+          zip_code: string | null
+        }
+        Insert: {
+          address?: string | null
+          city?: string | null
+          created_at?: string
+          created_by?: string | null
+          email?: string | null
+          first_name: string
+          id?: string
+          last_name: string
+          phone?: string | null
+          state?: string | null
+          updated_at?: string
+          zip_code?: string | null
+        }
+        Update: {
+          address?: string | null
+          city?: string | null
+          created_at?: string
+          created_by?: string | null
+          email?: string | null
+          first_name?: string
+          id?: string
+          last_name?: string
+          phone?: string | null
+          state?: string | null
+          updated_at?: string
+          zip_code?: string | null
+        }
+        Relationships: []
+      }
+      disbursements: {
+        Row: {
+          amount: number
+          assistance_type: Database["public"]["Enums"]["assistance_type"]
+          check_number: string | null
+          created_at: string
+          created_by: string | null
+          disbursement_date: string
+          id: string
+          interaction_id: string | null
+          notes: string | null
+          payment_method: string | null
+          recipient_name: string
+        }
+        Insert: {
+          amount: number
+          assistance_type: Database["public"]["Enums"]["assistance_type"]
+          check_number?: string | null
+          created_at?: string
+          created_by?: string | null
+          disbursement_date?: string
+          id?: string
+          interaction_id?: string | null
+          notes?: string | null
+          payment_method?: string | null
+          recipient_name: string
+        }
+        Update: {
+          amount?: number
+          assistance_type?: Database["public"]["Enums"]["assistance_type"]
+          check_number?: string | null
+          created_at?: string
+          created_by?: string | null
+          disbursement_date?: string
+          id?: string
+          interaction_id?: string | null
+          notes?: string | null
+          payment_method?: string | null
+          recipient_name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "disbursements_interaction_id_fkey"
+            columns: ["interaction_id"]
+            isOneToOne: false
+            referencedRelation: "interactions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      donations: {
+        Row: {
+          amount: number
+          created_at: string
+          created_by: string | null
+          donation_date: string
+          donor_email: string | null
+          donor_name: string | null
+          id: string
+          notes: string | null
+          source: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          created_by?: string | null
+          donation_date?: string
+          donor_email?: string | null
+          donor_name?: string | null
+          id?: string
+          notes?: string | null
+          source: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          created_by?: string | null
+          donation_date?: string
+          donor_email?: string | null
+          donor_name?: string | null
+          id?: string
+          notes?: string | null
+          source?: string
+        }
+        Relationships: []
+      }
+      interactions: {
+        Row: {
+          approved_amount: number | null
+          assigned_to: string | null
+          assistance_type: Database["public"]["Enums"]["assistance_type"] | null
+          channel: Database["public"]["Enums"]["interaction_channel"]
+          client_id: string | null
+          contact_name: string
+          created_at: string
+          created_by: string | null
+          details: string | null
+          id: string
+          occurred_at: string
+          requested_amount: number | null
+          status: Database["public"]["Enums"]["interaction_status"]
+          summary: string
+          updated_at: string
+        }
+        Insert: {
+          approved_amount?: number | null
+          assigned_to?: string | null
+          assistance_type?:
+            | Database["public"]["Enums"]["assistance_type"]
+            | null
+          channel: Database["public"]["Enums"]["interaction_channel"]
+          client_id?: string | null
+          contact_name: string
+          created_at?: string
+          created_by?: string | null
+          details?: string | null
+          id?: string
+          occurred_at?: string
+          requested_amount?: number | null
+          status?: Database["public"]["Enums"]["interaction_status"]
+          summary: string
+          updated_at?: string
+        }
+        Update: {
+          approved_amount?: number | null
+          assigned_to?: string | null
+          assistance_type?:
+            | Database["public"]["Enums"]["assistance_type"]
+            | null
+          channel?: Database["public"]["Enums"]["interaction_channel"]
+          client_id?: string | null
+          contact_name?: string
+          created_at?: string
+          created_by?: string | null
+          details?: string | null
+          id?: string
+          occurred_at?: string
+          requested_amount?: number | null
+          status?: Database["public"]["Enums"]["interaction_status"]
+          summary?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "interactions_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
@@ -23,7 +219,20 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
-      [_ in never]: never
+      assistance_type:
+        | "rent"
+        | "utilities"
+        | "food"
+        | "medical"
+        | "transportation"
+        | "other"
+      interaction_channel:
+        | "public_form"
+        | "phone"
+        | "email"
+        | "in_person"
+        | "text"
+      interaction_status: "new" | "in_progress" | "completed" | "closed"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +359,23 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      assistance_type: [
+        "rent",
+        "utilities",
+        "food",
+        "medical",
+        "transportation",
+        "other",
+      ],
+      interaction_channel: [
+        "public_form",
+        "phone",
+        "email",
+        "in_person",
+        "text",
+      ],
+      interaction_status: ["new", "in_progress", "completed", "closed"],
+    },
   },
 } as const

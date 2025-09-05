@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -15,6 +15,9 @@ import {
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { DonationModal } from "@/components/modals/DonationModal";
+import { DisbursementModal } from "@/components/modals/DisbursementModal";
+import { NewInteractionModal } from "@/components/modals/NewInteractionModal";
 
 const PortalDashboard = () => {
   const navigate = useNavigate();
@@ -23,6 +26,14 @@ const PortalDashboard = () => {
   // Development mode detection
   const urlParams = new URLSearchParams(window.location.search);
   const isDevMode = import.meta.env.DEV && urlParams.get('dev') === 'true';
+  
+  // Modal states
+  const [showDonationModal, setShowDonationModal] = useState(false);
+  const [showDisbursementModal, setShowDisbursementModal] = useState(false);
+  const [showInteractionModal, setShowInteractionModal] = useState(false);
+  
+  // Search term for client lookup
+  const [searchTerm, setSearchTerm] = useState("");
   // Mock data - will be replaced with real data when Supabase is connected
   const mockBalance = 1250.75;
   const lowFundThreshold = 100;
@@ -115,7 +126,7 @@ const PortalDashboard = () => {
               <p className="text-sm text-muted-foreground">Staff Portal</p>
             </div>
             <div className="flex items-center gap-3">
-              <Button variant="outline" size="sm">
+              <Button variant="outline" size="sm" onClick={() => navigate('/portal/reports')}>
                 Reports
               </Button>
               <Button variant="outline" size="sm">
@@ -160,11 +171,11 @@ const PortalDashboard = () => {
               </div>
               
               <div className="flex flex-col gap-2">
-                <Button variant="donation" size="sm" className="w-full">
+                <Button variant="donation" size="sm" className="w-full" onClick={() => setShowDonationModal(true)}>
                   <Plus className="h-4 w-4 mr-2" />
                   Record Donation
                 </Button>
-                <Button variant="outline" size="sm" className="w-full">
+                <Button variant="outline" size="sm" className="w-full" onClick={() => setShowDisbursementModal(true)}>
                   <Plus className="h-4 w-4 mr-2" />
                   Record Disbursement
                 </Button>
@@ -199,16 +210,18 @@ const PortalDashboard = () => {
                 <input
                   type="text"
                   placeholder="Name, phone, email, or address..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
                   className="w-full pl-10 pr-4 py-2 border border-border rounded-md bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring"
                 />
               </div>
               
-              <Button variant="default" className="w-full">
+              <Button variant="default" className="w-full" onClick={() => navigate('/portal/clients')}>
                 Search Clients
               </Button>
 
               <div className="text-center">
-                <Button variant="ghost" size="sm">
+                <Button variant="ghost" size="sm" onClick={() => setShowInteractionModal(true)}>
                   <Plus className="h-4 w-4 mr-2" />
                   New Interaction
                 </Button>
@@ -225,17 +238,17 @@ const PortalDashboard = () => {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
-              <Button variant="assistance" className="w-full justify-start">
+              <Button variant="assistance" className="w-full justify-start" onClick={() => setShowInteractionModal(true)}>
                 <Plus className="h-4 w-4 mr-2" />
                 Internal Intake
               </Button>
               
-              <Button variant="outline" className="w-full justify-start">
+              <Button variant="outline" className="w-full justify-start" onClick={() => navigate('/portal/reports')}>
                 <FileText className="h-4 w-4 mr-2" />
                 Generate Report
               </Button>
               
-              <Button variant="outline" className="w-full justify-start">
+              <Button variant="outline" className="w-full justify-start" onClick={() => navigate('/portal/analytics')}>
                 <TrendingUp className="h-4 w-4 mr-2" />
                 View Analytics
               </Button>
@@ -318,6 +331,11 @@ const PortalDashboard = () => {
             </div>
           </CardContent>
         </Card>
+
+        {/* Modals */}
+        <DonationModal open={showDonationModal} onOpenChange={setShowDonationModal} />
+        <DisbursementModal open={showDisbursementModal} onOpenChange={setShowDisbursementModal} />
+        <NewInteractionModal open={showInteractionModal} onOpenChange={setShowInteractionModal} />
       </main>
     </div>
   );
