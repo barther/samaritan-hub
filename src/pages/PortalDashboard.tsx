@@ -418,10 +418,9 @@ const PortalDashboard = () => {
   };
 
   const handleAddNewClient = (interaction: any) => {
-    // Navigate to client search page with pre-filled data for adding new client
-    navigate('/portal/clients', { 
+    // Navigate to new client page with pre-filled data
+    navigate('/portal/clients/new', { 
       state: { 
-        createNew: true,
         interactionId: interaction.id,
         contactName: interaction.contact_name,
         summary: interaction.summary 

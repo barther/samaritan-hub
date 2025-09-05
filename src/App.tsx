@@ -11,6 +11,7 @@ import RequestAssistance from "./pages/RequestAssistance";
 import Portal from "./pages/Portal";
 import PortalDashboard from "./pages/PortalDashboard";
 import ClientSearch from "./pages/ClientSearch";
+import NewClient from "./pages/NewClient";
 import ClientDetail from "./pages/ClientDetail";
 import IntakeRequests from "./pages/IntakeRequests";
 import Reports from "./pages/Reports";
@@ -35,6 +36,7 @@ const App = () => (
           <Route path="/portal/dashboard" element={<AuthGuard><PortalDashboard /></AuthGuard>} />
           <Route path="/portal/intake" element={<AuthGuard><IntakeRequests /></AuthGuard>} />
           <Route path="/portal/clients" element={<AuthGuard><ClientSearch /></AuthGuard>} />
+          <Route path="/portal/clients/new" element={<AuthGuard><NewClient /></AuthGuard>} />
           <Route path="/portal/clients/:clientId" element={<AuthGuard><ClientDetail /></AuthGuard>} />
           <Route path="/portal/reports" element={<AuthGuard><Reports /></AuthGuard>} />
           <Route path="/portal/analytics" element={<AuthGuard><Analytics /></AuthGuard>} />
