@@ -164,7 +164,7 @@ const ClientSearch = () => {
                         </p>
                       </div>
                       
-                      <Button variant="outline" size="sm">
+                      <Button variant="outline" size="sm" onClick={() => navigate(`/portal/clients/${client.id}`)}>
                         View Details
                       </Button>
                     </div>

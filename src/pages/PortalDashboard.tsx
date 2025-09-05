@@ -34,42 +34,111 @@ const PortalDashboard = () => {
   
   // Search term for client lookup
   const [searchTerm, setSearchTerm] = useState("");
-  // Mock data - will be replaced with real data when Supabase is connected
-  const mockBalance = 1250.75;
+  
+  // Real data states
+  const [interactions, setInteractions] = useState<any[]>([]);
+  const [isLoadingInteractions, setIsLoadingInteractions] = useState(true);
+  const [interactionsPage, setInteractionsPage] = useState(0);
+  const [hasMoreInteractions, setHasMoreInteractions] = useState(true);
+  const [balance, setBalance] = useState(0);
+  
   const lowFundThreshold = 100;
+  const ITEMS_PER_PAGE = 5;
 
-  const mockInteractions = [
-    {
-      id: "1",
-      occurredAt: "2024-01-15T10:30:00Z",
-      contactName: "John Smith",
-      channel: "public_form",
-      summary: "Request for rent assistance",
-      hasIndividual: true,
-      isNewRequest: true,
-      ageInDays: 1
-    },
-    {
-      id: "2", 
-      occurredAt: "2024-01-10T14:15:00Z",
-      contactName: "Mary Johnson",
-      channel: "phone",
-      summary: "Follow-up on utility assistance",
-      hasIndividual: true,
-      isNewRequest: false,
-      ageInDays: 6
-    },
-    {
-      id: "3",
-      occurredAt: "2024-01-08T09:45:00Z",
-      contactName: "Unknown Caller",
-      channel: "phone", 
-      summary: "General inquiry about services",
-      hasIndividual: false,
-      isNewRequest: false,
-      ageInDays: 8
+  useEffect(() => {
+    loadInitialData();
+  }, []);
+
+  const loadInitialData = async () => {
+    await Promise.all([
+      loadInteractions(0, true),
+      loadBalance()
+    ]);
+  };
+
+  const loadBalance = async () => {
+    try {
+      const [donationsRes, disbursementsRes] = await Promise.all([
+        supabase.from('donations').select('amount'),
+        supabase.from('disbursements').select('amount')
+      ]);
+
+      const totalDonations = donationsRes.data?.reduce((sum, d) => sum + d.amount, 0) || 0;
+      const totalDisbursements = disbursementsRes.data?.reduce((sum, d) => sum + d.amount, 0) || 0;
+      
+      setBalance(totalDonations - totalDisbursements);
+    } catch (error) {
+      console.error('Error loading balance:', error);
     }
-  ];
+  };
+
+  const loadInteractions = async (page: number, reset: boolean = false) => {
+    try {
+      setIsLoadingInteractions(true);
+      
+      const { data, error } = await supabase
+        .from('interactions')
+        .select(`
+          id,
+          contact_name,
+          channel,
+          summary,
+          status,
+          assistance_type,
+          requested_amount,
+          occurred_at,
+          client_id,
+          clients(first_name, last_name)
+        `)
+        .order('occurred_at', { ascending: false })
+        .range(page * ITEMS_PER_PAGE, (page + 1) * ITEMS_PER_PAGE - 1);
+
+      if (error) throw error;
+
+      const processedData = data?.map(interaction => ({
+        ...interaction,
+        hasIndividual: !!interaction.client_id,
+        isNewRequest: interaction.status === 'new',
+        ageInDays: Math.floor((new Date().getTime() - new Date(interaction.occurred_at).getTime()) / (1000 * 60 * 60 * 24))
+      })) || [];
+
+      if (reset) {
+        setInteractions(processedData);
+      } else {
+        setInteractions(prev => [...prev, ...processedData]);
+      }
+
+      setHasMoreInteractions(data?.length === ITEMS_PER_PAGE);
+      setInteractionsPage(page);
+    } catch (error) {
+      console.error('Error loading interactions:', error);
+      toast({
+        title: "Error loading interactions",
+        description: "Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoadingInteractions(false);
+    }
+  };
+
+  const loadMoreInteractions = () => {
+    if (!isLoadingInteractions && hasMoreInteractions) {
+      loadInteractions(interactionsPage + 1, false);
+    }
+  };
+
+  const handleViewDetails = (interaction: any) => {
+    if (interaction.client_id) {
+      navigate(`/portal/clients/${interaction.client_id}`);
+    } else {
+      toast({
+        title: "No client linked",
+        description: "This interaction is not linked to a specific client.",
+        variant: "destructive"
+      });
+    }
+  };
 
   // Enforce Azure auth and allowed domain
   const enforceSession = (session: any) => {
@@ -103,7 +172,7 @@ const PortalDashboard = () => {
     return () => subscription.unsubscribe();
   }, [isDevMode]);
 
-  const isLowFunds = mockBalance < lowFundThreshold;
+  const isLowFunds = balance < lowFundThreshold;
 
   return (
     <div className="min-h-screen bg-background">
@@ -166,7 +235,7 @@ const PortalDashboard = () => {
               <div>
                 <p className="text-sm text-muted-foreground">Available Balance</p>
                 <p className={`text-2xl font-bold ${isLowFunds ? 'text-warning' : 'text-success'}`}>
-                  ${mockBalance.toFixed(2)}
+                  ${balance.toFixed(2)}
                 </p>
               </div>
               
@@ -268,24 +337,30 @@ const PortalDashboard = () => {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="space-y-4">
-              {mockInteractions.map((interaction) => (
+            {isLoadingInteractions && interactions.length === 0 ? (
+              <div className="flex items-center justify-center py-8">
+                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
+                <span className="ml-2 text-muted-foreground">Loading interactions...</span>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {interactions.map((interaction) => (
                 <div 
                   key={interaction.id}
                   className="border border-border rounded-lg p-4 hover:bg-muted/50 transition-colors"
                 >
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-2">
-                        <span className="font-medium text-foreground">
-                          {interaction.contactName}
-                        </span>
-                        <Badge 
-                          variant={interaction.channel === 'public_form' ? 'default' : 'outline'}
-                          className="text-xs"
-                        >
-                          {interaction.channel.replace('_', ' ')}
-                        </Badge>
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-2">
+                          <span className="font-medium text-foreground">
+                            {interaction.contact_name}
+                          </span>
+                          <Badge 
+                            variant={interaction.channel === 'public_form' ? 'default' : 'outline'}
+                            className="text-xs"
+                          >
+                            {interaction.channel.replace('_', ' ')}
+                          </Badge>
                         
                         {!interaction.hasIndividual && (
                           <Badge variant="destructive" className="text-xs">
@@ -311,24 +386,41 @@ const PortalDashboard = () => {
                       </p>
                       
                       <p className="text-xs text-muted-foreground">
-                        {new Date(interaction.occurredAt).toLocaleDateString()} at{' '}
-                        {new Date(interaction.occurredAt).toLocaleTimeString()}
+                        {new Date(interaction.occurred_at).toLocaleDateString()} at{' '}
+                        {new Date(interaction.occurred_at).toLocaleTimeString()}
                       </p>
                     </div>
                     
-                    <Button variant="ghost" size="sm">
+                    <Button variant="ghost" size="sm" onClick={() => handleViewDetails(interaction)}>
                       View Details
                     </Button>
                   </div>
-                </div>
-              ))}
-            </div>
+                  </div>
+                ))}
+                
+                {interactions.length === 0 && !isLoadingInteractions && (
+                  <p className="text-center text-muted-foreground py-8">
+                    No interactions found. Create your first interaction to get started.
+                  </p>
+                )}
+              </div>
+            )}
             
-            <div className="mt-4 text-center">
-              <Button variant="ghost">
-                Load More Interactions
-              </Button>
-            </div>
+            {interactions.length > 0 && (
+              <div className="mt-4 text-center">
+                {hasMoreInteractions ? (
+                  <Button 
+                    variant="ghost" 
+                    onClick={loadMoreInteractions}
+                    disabled={isLoadingInteractions}
+                  >
+                    {isLoadingInteractions ? "Loading..." : "Load More Interactions"}
+                  </Button>
+                ) : (
+                  <p className="text-sm text-muted-foreground">End of list</p>
+                )}
+              </div>
+            )}
           </CardContent>
         </Card>
 

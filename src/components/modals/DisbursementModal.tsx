@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -19,11 +19,13 @@ export const DisbursementModal = ({ open, onOpenChange }: DisbursementModalProps
     amount: "",
     assistanceType: "",
     recipientName: "",
+    clientId: "",
     disbursementDate: new Date().toISOString().split('T')[0],
     paymentMethod: "check",
     checkNumber: "",
     notes: ""
   });
+  const [clients, setClients] = useState<Array<{id: string, first_name: string, last_name: string}>>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
 
@@ -36,6 +38,26 @@ export const DisbursementModal = ({ open, onOpenChange }: DisbursementModalProps
     { value: "other", label: "Other" }
   ];
 
+  useEffect(() => {
+    if (open) {
+      loadClients();
+    }
+  }, [open]);
+
+  const loadClients = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('clients')
+        .select('id, first_name, last_name')
+        .order('first_name');
+
+      if (error) throw error;
+      setClients(data || []);
+    } catch (error) {
+      console.error('Error loading clients:', error);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
@@ -47,6 +69,7 @@ export const DisbursementModal = ({ open, onOpenChange }: DisbursementModalProps
           amount: parseFloat(formData.amount),
           assistance_type: formData.assistanceType as 'rent' | 'utilities' | 'food' | 'medical' | 'transportation' | 'other',
           recipient_name: formData.recipientName,
+          client_id: formData.clientId || null,
           disbursement_date: formData.disbursementDate,
           payment_method: formData.paymentMethod,
           check_number: formData.checkNumber || null,
@@ -64,6 +87,7 @@ export const DisbursementModal = ({ open, onOpenChange }: DisbursementModalProps
         amount: "",
         assistanceType: "",
         recipientName: "",
+        clientId: "",
         disbursementDate: new Date().toISOString().split('T')[0],
         paymentMethod: "check",
         checkNumber: "",
@@ -135,14 +159,19 @@ export const DisbursementModal = ({ open, onOpenChange }: DisbursementModalProps
           </div>
 
           <div>
-            <Label htmlFor="disbursementDate">Disbursement Date</Label>
-            <Input
-              id="disbursementDate"
-              type="date"
-              value={formData.disbursementDate}
-              onChange={(e) => setFormData(prev => ({ ...prev, disbursementDate: e.target.value }))}
-              required
-            />
+            <Label htmlFor="clientId">Client (Optional)</Label>
+            <Select value={formData.clientId} onValueChange={(value) => setFormData(prev => ({ ...prev, clientId: value }))}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select a client (optional)" />
+              </SelectTrigger>
+              <SelectContent>
+                {clients.map((client) => (
+                  <SelectItem key={client.id} value={client.id}>
+                    {client.first_name} {client.last_name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           <div>

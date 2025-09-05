@@ -10,6 +10,7 @@ import RequestAssistance from "./pages/RequestAssistance";
 import Portal from "./pages/Portal";
 import PortalDashboard from "./pages/PortalDashboard";
 import ClientSearch from "./pages/ClientSearch";
+import ClientDetail from "./pages/ClientDetail";
 import Reports from "./pages/Reports";
 import Analytics from "./pages/Analytics";
 import PaymentSuccess from "./pages/PaymentSuccess";
@@ -30,6 +31,7 @@ const App = () => (
           <Route path="/portal" element={<Portal />} />
           <Route path="/portal/dashboard" element={<PortalDashboard />} />
           <Route path="/portal/clients" element={<ClientSearch />} />
+          <Route path="/portal/clients/:clientId" element={<ClientDetail />} />
           <Route path="/portal/reports" element={<Reports />} />
           <Route path="/portal/analytics" element={<Analytics />} />
           <Route path="/payment-success" element={<PaymentSuccess />} />

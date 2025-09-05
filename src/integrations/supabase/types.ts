@@ -64,6 +64,7 @@ export type Database = {
           amount: number
           assistance_type: Database["public"]["Enums"]["assistance_type"]
           check_number: string | null
+          client_id: string | null
           created_at: string
           created_by: string | null
           disbursement_date: string
@@ -77,6 +78,7 @@ export type Database = {
           amount: number
           assistance_type: Database["public"]["Enums"]["assistance_type"]
           check_number?: string | null
+          client_id?: string | null
           created_at?: string
           created_by?: string | null
           disbursement_date?: string
@@ -90,6 +92,7 @@ export type Database = {
           amount?: number
           assistance_type?: Database["public"]["Enums"]["assistance_type"]
           check_number?: string | null
+          client_id?: string | null
           created_at?: string
           created_by?: string | null
           disbursement_date?: string
@@ -100,6 +103,13 @@ export type Database = {
           recipient_name?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "disbursements_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "disbursements_interaction_id_fkey"
             columns: ["interaction_id"]
