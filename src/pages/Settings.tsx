@@ -460,26 +460,7 @@ Good Samaritan Assistance Team`,
                   <CardTitle>Email Provider Settings</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <Label>Email Provider</Label>
-                      <p className="text-xs text-muted-foreground">Choose email sending method</p>
-                    </div>
-                    <Select value={settings.emailProvider} onValueChange={value => setSettings(prev => ({
-                    ...prev,
-                    emailProvider: value
-                  }))}>
-                      <SelectTrigger className="w-48">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="msgraph">Microsoft Graph (Exchange)</SelectItem>
-                        <SelectItem value="smtp">SMTP (Legacy)</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  {settings.emailProvider === 'msgraph' && <div className="space-y-4 pt-4 border-t">
+                  <div className="space-y-4">
                       <div>
                         <Label htmlFor="testEmailAddress">Test Email System</Label>
                         <Input id="testEmailAddress" type="email" value={testEmailAddress} onChange={e => setTestEmailAddress(e.target.value)} placeholder="your-email@example.com" className="mt-1" />
@@ -494,7 +475,7 @@ Good Samaritan Assistance Team`,
                           Send a test email to verify Microsoft Graph configuration
                         </p>
                       </div>
-                    </div>}
+                    </div>
                 </CardContent>
               </Card>
 
