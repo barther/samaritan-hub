@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
-import { Search, Users, Phone, Mail, MapPin, ArrowLeft, GitMerge } from "lucide-react";
+import { Search, Users, Phone, Mail, MapPin, ArrowLeft, GitMerge, Plus } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -146,6 +146,13 @@ const ClientSearch = () => {
                 <p className="text-sm text-muted-foreground">Find existing clients</p>
               </div>
             </div>
+            <Button
+              onClick={() => navigate('/portal/clients/new')}
+              className="gap-2"
+            >
+              <Plus className="h-4 w-4" />
+              New Client
+            </Button>
           </div>
         </div>
       </header>
