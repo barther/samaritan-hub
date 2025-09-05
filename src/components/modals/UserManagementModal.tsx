@@ -27,14 +27,14 @@ const UserManagementModal = ({ open, onOpenChange }: UserManagementModalProps) =
   const [users] = useState<User[]>([
     {
       id: "1",
-      email: "admin@goodsamaritan.org",
+      email: "bart.arther@lithiaspringsmethodist.org",
       role: "admin",
       status: "active",
       lastLogin: "2025-01-08"
     },
     {
       id: "2", 
-      email: "staff@goodsamaritan.org",
+      email: "staff@lithiaspringsmethodist.org",
       role: "staff",
       status: "active",
       lastLogin: "2025-01-07"
