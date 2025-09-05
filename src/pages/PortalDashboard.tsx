@@ -20,6 +20,7 @@ import { DonationModal } from "@/components/modals/DonationModal";
 import { DisbursementModal } from "@/components/modals/DisbursementModal";
 import { NewInteractionModal } from "@/components/modals/NewInteractionModal";
 import { QuickEntryModal } from "@/components/modals/QuickEntryModal";
+import { TransactionLedger } from "@/components/TransactionLedger";
 
 const PortalDashboard = () => {
   const navigate = useNavigate();
@@ -510,128 +511,99 @@ const PortalDashboard = () => {
           </div>
         )}
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Funds Overview */}
-          {canViewFinancials && (
-            <Card className="shadow-card">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <DollarSign className="h-5 w-5 text-success" />
-                  Funds Overview
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div>
-                  <p className="text-sm text-muted-foreground">Available Balance</p>
-                  <p className={`text-2xl font-bold ${isLowFunds ? 'text-warning' : 'text-success'}`}>
-                    ${balance.toFixed(2)}
-                  </p>
+        {/* Balance and Quick Actions Row */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+          {/* Current Balance - Prominent Display */}
+          <Card className="lg:col-span-2 border-2 border-primary/20">
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center gap-2 text-lg">
+                <DollarSign className="h-5 w-5 text-primary" />
+                Good Samaritan Fund Balance
+              </CardTitle>
+              <CardDescription>Current available funds for assistance</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <div className="flex items-baseline gap-3">
+                  <span className={`text-4xl font-bold ${balance >= 0 ? 'text-primary' : 'text-destructive'}`}>
+                    ${Math.abs(balance).toFixed(2)}
+                  </span>
+                  {balance < 0 && (
+                    <Badge variant="destructive" className="text-xs">OVERDRAWN</Badge>
+                  )}
+                  {balance > 0 && balance < lowFundThreshold && (
+                    <Badge variant="outline" className="text-xs border-warning text-warning">LOW FUNDS</Badge>
+                  )}
                 </div>
                 
-                <div className="flex flex-col gap-2">
-                  <Button variant="donation" size="sm" className="w-full" onClick={() => setShowDonationModal(true)}>
-                    <Plus className="h-4 w-4 mr-2" />
-                    Record Donation
-                  </Button>
-                  <Button variant="outline" size="sm" className="w-full" onClick={() => setShowDisbursementModal(true)}>
-                    <Plus className="h-4 w-4 mr-2" />
-                    Record Disbursement
-                  </Button>
-                </div>
-
-                <div className="bg-muted/50 rounded-lg p-3 border border-border">
-                  <div className="flex items-center gap-2 mb-2">
-                    <TrendingUp className="h-4 w-4 text-primary" />
-                    <span className="text-sm font-medium">30-Day Trend</span>
+                {canViewFinancials && (
+                  <div className="grid grid-cols-2 gap-4 text-sm">
+                    <div>
+                      <p className="text-muted-foreground">This Month Donations</p>
+                      <p className="font-semibold text-green-600">+${monthlyDonations.toFixed(2)}</p>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground">This Month Disbursements</p>
+                      <p className="font-semibold text-red-600">-${monthlyDisbursements.toFixed(2)}</p>
+                    </div>
                   </div>
-                  <p className="text-xs text-muted-foreground">
-                    Donations: ${monthlyDonations.toFixed(2)} | Disbursements: ${monthlyDisbursements.toFixed(2)}
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Client Lookup */}
-          <Card className="shadow-card">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Users className="h-5 w-5 text-primary" />
-                Client Lookup
-              </CardTitle>
-              <CardDescription>
-                Search for existing clients
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <input
-                  type="text"
-                  placeholder="Name, phone, email, or address..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2 border border-border rounded-md bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-                />
+                )}
               </div>
-              
-              <Button variant="default" className="w-full" onClick={() => navigate('/portal/clients')}>
-                Search Clients
-              </Button>
-
-              {canEditData && (
-                <div className="text-center">
-                  <Button variant="ghost" size="sm" onClick={() => setShowInteractionModal(true)}>
-                    <Plus className="h-4 w-4 mr-2" />
-                    New Interaction
-                  </Button>
-                </div>
-              )}
             </CardContent>
           </Card>
 
           {/* Quick Actions */}
-          <Card className="shadow-card">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <FileText className="h-5 w-5 text-primary" />
-                Quick Actions
-              </CardTitle>
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base">Quick Actions</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-3">
+            <CardContent className="space-y-2">
               {canEditData && (
                 <>
-                  <Button variant="hero" size="lg" className="w-full justify-start shadow-glow" onClick={() => setShowQuickEntryModal(true)}>
-                    <Zap className="h-5 w-5 mr-2" />
+                  <Button 
+                    onClick={() => setShowQuickEntryModal(true)}
+                    className="w-full justify-start gap-2 bg-gradient-to-r from-primary to-primary-glow hover:from-primary-glow hover:to-primary text-white font-medium shadow-lg"
+                    size="sm"
+                  >
+                    <Zap className="h-4 w-4" />
                     Quick Entry
                   </Button>
-                  
-                  <Button variant="assistance" className="w-full justify-start" onClick={() => setShowInteractionModal(true)}>
-                    <Plus className="h-4 w-4 mr-2" />
+                  {canViewFinancials && (
+                    <Button 
+                      variant="outline" 
+                      onClick={() => setShowDonationModal(true)}
+                      className="w-full justify-start gap-2 text-green-700 border-green-200 hover:bg-green-50"
+                      size="sm"
+                    >
+                      <Plus className="h-4 w-4" />
+                      Add Donation
+                    </Button>
+                  )}
+                  <Button 
+                    variant="outline" 
+                    onClick={() => setShowInteractionModal(true)}
+                    className="w-full justify-start gap-2"
+                    size="sm"
+                  >
+                    <FileText className="h-4 w-4" />
                     Full Interaction Form
                   </Button>
                 </>
               )}
-              
-              <Button variant="outline" className="w-full justify-start" onClick={() => navigate('/portal/intake')}>
-                <FileText className="h-4 w-4 mr-2" />
-                Public Intake Requests
-              </Button>
-              
-              <Button variant="outline" className="w-full justify-start" onClick={() => navigate('/portal/reports')}>
-                <FileText className="h-4 w-4 mr-2" />
-                Generate Report
-              </Button>
-              
-              <Button variant="outline" className="w-full justify-start" onClick={() => navigate('/portal/analytics')}>
-                <TrendingUp className="h-4 w-4 mr-2" />
-                View Analytics
+              <Button 
+                variant="outline" 
+                onClick={() => navigate('/portal/clients/search')}
+                className="w-full justify-start gap-2"
+                size="sm"
+              >
+                <Search className="h-4 w-4" />
+                Search Clients
               </Button>
             </CardContent>
           </Card>
         </div>
 
-        {/* Logbook */}
+        {/* Recent Interactions */}
         <Card className="shadow-card mt-6">
           <CardHeader>
           <CardTitle className="flex items-center gap-2 justify-between">
@@ -775,6 +747,17 @@ const PortalDashboard = () => {
           </CardContent>
         </Card>
 
+        {/* Transaction Ledger */}
+        {canViewFinancials && (
+          <TransactionLedger 
+            balance={balance} 
+            onRefresh={() => {
+              loadBalance();
+              loadMonthlyTrends();
+            }} 
+          />
+        )}
+
         {/* Modals */}
         {canViewFinancials && (
           <>
@@ -792,7 +775,11 @@ const PortalDashboard = () => {
             <QuickEntryModal 
               open={showQuickEntryModal} 
               onOpenChange={setShowQuickEntryModal} 
-              onSuccess={() => loadInteractions(0, true)}
+              onSuccess={() => {
+                loadInteractions(0, true);
+                loadBalance();
+                loadMonthlyTrends();
+              }}
             />
           </>
         )}
