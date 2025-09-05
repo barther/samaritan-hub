@@ -401,18 +401,6 @@ const Reports = () => {
                 />
               </div>
 
-              <div>
-                <Label htmlFor="exportFormat">Export Format</Label>
-                <Select value={exportFormat} onValueChange={(value: "csv" | "pdf") => setExportFormat(value)}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select format" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="csv">CSV (Spreadsheet)</SelectItem>
-                    <SelectItem value="pdf">PDF (Professional Report)</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
 
               <div className="space-y-2">
                 <Label>Quick Date Ranges</Label>
@@ -435,18 +423,18 @@ const Reports = () => {
                 </div>
               </div>
 
-              <div className="space-y-3">
+              <div className="grid grid-cols-2 gap-3">
                 <Button 
-                  onClick={generateReport} 
+                  onClick={() => {
+                    setExportFormat("csv");
+                    generateReport();
+                  }} 
                   disabled={isGenerating}
+                  variant="outline"
                   className="w-full"
                 >
-                  {exportFormat === "pdf" ? (
-                    <FileDown className="h-4 w-4 mr-2" />
-                  ) : (
-                    <Download className="h-4 w-4 mr-2" />
-                  )}
-                  {isGenerating ? "Generating..." : `Generate ${exportFormat.toUpperCase()} Report`}
+                  <Download className="h-4 w-4 mr-2" />
+                  {isGenerating ? "Generating..." : "Export CSV"}
                 </Button>
                 
                 <Button 
@@ -455,11 +443,10 @@ const Reports = () => {
                     generateReport();
                   }} 
                   disabled={isGenerating}
-                  variant="outline"
                   className="w-full"
                 >
                   <FileDown className="h-4 w-4 mr-2" />
-                  {isGenerating ? "Generating..." : "Quick PDF Export"}
+                  {isGenerating ? "Generating..." : "Export PDF"}
                 </Button>
               </div>
             </CardContent>
