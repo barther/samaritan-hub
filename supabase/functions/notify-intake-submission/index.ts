@@ -177,6 +177,8 @@ const handler = async (req: Request): Promise<Response> => {
         status: 200,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
+    }
+
     // Log successful notification
     await supabase.rpc('log_edge_function_usage', {
       p_action: 'intake_notification_sent',
@@ -192,6 +194,7 @@ const handler = async (req: Request): Promise<Response> => {
       status: 200,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
+  } catch (error: any) {
     console.error('Error in notify-intake-submission function:', error);
 
     // Try to log the error
