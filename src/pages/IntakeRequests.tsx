@@ -338,13 +338,20 @@ const IntakeRequests = () => {
   }
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h2 className="text-2xl font-bold tracking-tight">Intake Requests</h2>
-        <p className="text-muted-foreground">
-          Review and process assistance requests from the public form
-        </p>
-      </div>
+    <div className="min-h-screen bg-background">
+      <header className="border-b border-border bg-background/95 backdrop-blur">
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex h-16 items-center justify-between">
+            <div>
+              <h1 className="text-2xl font-bold text-foreground">Intake Requests</h1>
+              <p className="text-sm text-muted-foreground">Review and process assistance requests from the public form</p>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <main className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="space-y-6">
 
       {/* Pending Requests */}
       <Card>
@@ -626,6 +633,8 @@ const IntakeRequests = () => {
           </Card>
         </div>
       )}
+        </div>
+      </main>
     </div>
   );
 };
