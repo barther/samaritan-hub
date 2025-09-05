@@ -43,59 +43,85 @@ const ClientDetail = () => {
   const [selectedAssistanceRequest, setSelectedAssistanceRequest] = useState<any>(null);
 
   const fetchClientDetails = async () => {
-    if (!id) return;
+    if (!id) {
+      console.log('No client ID provided');
+      setLoading(false);
+      return;
+    }
+    
+    console.log('Fetching client details for ID:', id);
     
     try {
       setLoading(true);
       
       // Fetch client data
+      console.log('Fetching client data...');
       const { data: clientData, error: clientError } = await supabase
         .from('clients')
         .select('*')
         .eq('id', id)
         .maybeSingle();
 
+      console.log('Client data result:', { clientData, clientError });
+
       if (clientError) throw clientError;
+      
+      if (!clientData) {
+        console.log('No client found with ID:', id);
+        setClient(null);
+        setLoading(false);
+        return;
+      }
+      
       setClient(clientData);
 
       // Fetch interactions
+      console.log('Fetching interactions...');
       const { data: interactionsData, error: interactionsError } = await supabase
         .from('interactions')
         .select('*')
         .eq('client_id', id)
         .order('occurred_at', { ascending: false });
 
+      console.log('Interactions result:', { interactionsData, interactionsError });
       if (interactionsError) throw interactionsError;
       setInteractions(interactionsData || []);
 
       // Fetch disbursements
+      console.log('Fetching disbursements...');
       const { data: disbursementsData, error: disbursementsError } = await supabase
         .from('disbursements')
         .select('*')
         .eq('client_id', id)
         .order('disbursement_date', { ascending: false });
 
+      console.log('Disbursements result:', { disbursementsData, disbursementsError });
       if (disbursementsError) throw disbursementsError;
       setDisbursements(disbursementsData || []);
 
       // Fetch assistance requests
+      console.log('Fetching assistance requests...');
       const { data: requestsData, error: requestsError } = await supabase
         .from('assistance_requests')
         .select('*')
         .eq('client_id', id)
         .order('created_at', { ascending: false });
 
+      console.log('Assistance requests result:', { requestsData, requestsError });
       if (requestsError) throw requestsError;
       setAssistanceRequests(requestsData || []);
+
+      console.log('All data fetched successfully');
 
     } catch (error) {
       console.error('Error fetching client details:', error);
       toast({
         title: "Error",
-        description: "Failed to load client details",
+        description: `Failed to load client details: ${error.message || 'Unknown error'}`,
         variant: "destructive"
       });
     } finally {
+      console.log('Setting loading to false');
       setLoading(false);
     }
   };
