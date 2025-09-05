@@ -681,15 +681,6 @@ const PortalDashboard = () => {
                 Search Clients
               </Button>
               
-              {/* Import Wizard */}
-              <ImportWizard 
-                trigger={
-                  <Button variant="outline" className="w-full justify-start gap-2" size="sm">
-                    <Upload className="h-4 w-4" />
-                    Import Wizard
-                  </Button>
-                }
-              />
               
               {/* Quick PDF Export Section */}
               <div className="border-t pt-2 mt-3">
