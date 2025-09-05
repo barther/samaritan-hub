@@ -151,7 +151,7 @@ const handler = async (req: Request): Promise<Response> => {
       .eq('key', 'defaultSenderMailbox')
       .single();
 
-    const senderMailbox = settings?.value || "office@lithiaspringsmethodist.org";
+    const senderMailbox = settings?.value || "donotreply@lithiaspringsmethodist.org";
 
     // Prepare email message
     const message = {
@@ -189,9 +189,9 @@ const handler = async (req: Request): Promise<Response> => {
       const errorText = await sendResponse.text();
       console.error("Send email failed:", errorText);
 
-      // Fallback: if sender mailbox is invalid, retry with office@ mailbox
-      if (errorText.includes('ErrorInvalidUser') && senderMailbox !== 'office@lithiaspringsmethodist.org') {
-        const fallbackMailbox = 'office@lithiaspringsmethodist.org';
+      // Fallback: if sender mailbox is invalid, retry with donotreply@ mailbox
+      if (errorText.includes('ErrorInvalidUser') && senderMailbox !== 'donotreply@lithiaspringsmethodist.org') {
+        const fallbackMailbox = 'donotreply@lithiaspringsmethodist.org';
         console.log(`Retrying send with fallback sender: ${fallbackMailbox}`);
         const retryResponse = await fetch(`https://graph.microsoft.com/v1.0/users/${fallbackMailbox}/sendMail`, {
           method: "POST",

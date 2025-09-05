@@ -92,14 +92,13 @@ const handler = async (req: Request): Promise<Response> => {
       </div>
     `;
 
-    // Send email notification directly via Microsoft Graph (server-to-server)
     // Determine sender mailbox from settings or fallback
     const { data: senderSetting } = await supabase
       .from('settings')
       .select('value')
       .eq('key', 'defaultSenderMailbox')
       .single();
-    const senderMailbox = (senderSetting?.value as string) || 'office@lithiaspringsmethodist.org';
+    const senderMailbox = (senderSetting?.value as string) || 'donotreply@lithiaspringsmethodist.org';
 
     // Resolve Graph credentials from env (support both prefix variants)
     const tenantId = Deno.env.get('MICROSOFT_TENANT_ID') || Deno.env.get('MS_GRAPH_TENANT_ID');
