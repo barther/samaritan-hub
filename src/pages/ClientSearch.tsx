@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -27,6 +27,7 @@ interface Client {
 
 const ClientSearch = () => {
   const [searchTerm, setSearchTerm] = useState("");
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
   const [clients, setClients] = useState<Client[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [selectedClients, setSelectedClients] = useState<string[]>([]);
@@ -34,15 +35,27 @@ const ClientSearch = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
 
-  const searchClients = async () => {
-    if (!searchTerm.trim()) return;
+  // Debounce search term
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearchTerm(searchTerm);
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
+
+  const searchClients = useCallback(async (term: string) => {
+    if (!term.trim()) {
+      setClients([]);
+      return;
+    }
     
     setIsLoading(true);
     try {
       const { data, error } = await supabase
         .from('clients')
         .select('*')
-        .or(`first_name.ilike.%${searchTerm}%,last_name.ilike.%${searchTerm}%,email.ilike.%${searchTerm}%,phone.ilike.%${searchTerm}%`)
+        .or(`first_name.ilike.%${term}%,last_name.ilike.%${term}%,email.ilike.%${term}%,phone.ilike.%${term}%`)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
@@ -63,12 +76,15 @@ const ClientSearch = () => {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [toast]);
 
-  const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') {
-      searchClients();
-    }
+  // Auto-search when debounced term changes
+  useEffect(() => {
+    searchClients(debouncedSearchTerm);
+  }, [debouncedSearchTerm, searchClients]);
+
+  const handleManualSearch = () => {
+    searchClients(searchTerm);
   };
 
   const handleClientSelect = (clientId: string, checked: boolean) => {
@@ -101,7 +117,7 @@ const ClientSearch = () => {
 
   const handleMergeComplete = () => {
     setSelectedClients([]);
-    searchClients(); // Refresh the search results
+    searchClients(debouncedSearchTerm); // Refresh the search results
   };
 
   const selectedClientObjects = clients.filter(c => selectedClients.includes(c.id));
@@ -142,15 +158,19 @@ const ClientSearch = () => {
               <div className="flex-1 relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
-                  placeholder="Search by name, email, or phone..."
+                  placeholder="Search by name, email, or phone... (searches as you type)"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  onKeyPress={handleKeyPress}
                   className="pl-10"
                 />
+                {isLoading && (
+                  <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></div>
+                  </div>
+                )}
               </div>
-              <Button onClick={searchClients} disabled={isLoading || !searchTerm.trim()}>
-                {isLoading ? "Searching..." : "Search"}
+              <Button onClick={handleManualSearch} variant="outline" size="sm">
+                Search Now
               </Button>
             </div>
           </CardContent>
@@ -265,10 +285,18 @@ const ClientSearch = () => {
           </Card>
         )}
 
-        {searchTerm && clients.length === 0 && !isLoading && (
+        {debouncedSearchTerm && clients.length === 0 && !isLoading && (
           <Card>
             <CardContent className="text-center py-8">
-              <p className="text-muted-foreground">No clients found matching your search.</p>
+              <p className="text-muted-foreground">No clients found matching your search for "{debouncedSearchTerm}".</p>
+            </CardContent>
+          </Card>
+        )}
+
+        {!debouncedSearchTerm && clients.length === 0 && !isLoading && (
+          <Card>
+            <CardContent className="text-center py-8">
+              <p className="text-muted-foreground">Start typing to search for clients...</p>
             </CardContent>
           </Card>
         )}
