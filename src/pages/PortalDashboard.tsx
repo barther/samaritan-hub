@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Users, DollarSign, FileText, Search, Plus, TrendingUp, AlertCircle, Clock, Zap } from "lucide-react";
+import { Users, DollarSign, FileText, Search, Plus, TrendingUp, AlertCircle, Clock, Zap, Menu, X } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -35,6 +35,9 @@ const PortalDashboard = () => {
 
   // Search term for client lookup
   const [searchTerm, setSearchTerm] = useState("");
+  
+  // Mobile menu state
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   // Real data states
   const [interactions, setInteractions] = useState<any[]>([]);
@@ -444,16 +447,18 @@ const PortalDashboard = () => {
       <header className="border-b border-border bg-background/95 backdrop-blur">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex h-16 items-center justify-between">
-            <div>
-              <h1 className="text-2xl font-bold text-foreground">Good Samaritan Dashboard</h1>
-              <p className="text-sm text-muted-foreground">
+            <div className="flex-1 min-w-0">
+              <h1 className="text-lg sm:text-2xl font-bold text-foreground truncate">Good Samaritan Dashboard</h1>
+              <p className="text-xs sm:text-sm text-muted-foreground">
                 Staff Portal
-                {userRoles.length > 0 && <span className="ml-2 text-xs bg-primary/10 text-primary px-2 py-1 rounded">
+                {userRoles.length > 0 && <span className="ml-1 sm:ml-2 text-xs bg-primary/10 text-primary px-1 sm:px-2 py-1 rounded">
                     {userRoles.join(', ')}
                   </span>}
               </p>
             </div>
-            <div className="flex items-center gap-3">
+            
+            {/* Desktop Navigation */}
+            <div className="hidden lg:flex items-center gap-3">
               {userProfile && <div className="text-right">
                   <p className="text-sm font-medium text-foreground">{userProfile.displayName}</p>
                   <p className="text-xs text-muted-foreground">Logged in</p>
@@ -471,7 +476,45 @@ const PortalDashboard = () => {
                 Log Out
               </Button>
             </div>
+
+            {/* Mobile Menu Button & User */}
+            <div className="flex lg:hidden items-center gap-2">
+              {userProfile && <div className="text-right">
+                  <p className="text-sm font-medium text-foreground truncate max-w-24">{userProfile.displayName}</p>
+                </div>}
+              <button
+                onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+                className="p-2 rounded-md hover:bg-muted"
+                aria-label="Toggle menu"
+              >
+                {isMobileMenuOpen ? (
+                  <X className="h-5 w-5 text-foreground" />
+                ) : (
+                  <Menu className="h-5 w-5 text-foreground" />
+                )}
+              </button>
+            </div>
           </div>
+
+          {/* Mobile Navigation Menu */}
+          {isMobileMenuOpen && (
+            <div className="lg:hidden border-t border-border bg-background">
+              <nav className="flex flex-col space-y-2 px-4 py-4">
+                <Button variant="outline" size="sm" onClick={() => { navigate('/portal/intake'); setIsMobileMenuOpen(false); }} className="justify-start">
+                  Intake Requests
+                </Button>
+                <Button variant="outline" size="sm" onClick={() => { navigate('/portal/reports'); setIsMobileMenuOpen(false); }} className="justify-start">
+                  Reports
+                </Button>
+                <Button variant="outline" size="sm" onClick={() => { navigate('/portal/settings'); setIsMobileMenuOpen(false); }} className="justify-start">
+                  Settings
+                </Button>
+                <Button variant="ghost" size="sm" onClick={() => { handleLogout(); setIsMobileMenuOpen(false); }} className="justify-start">
+                  Log Out
+                </Button>
+              </nav>
+            </div>
+          )}
         </div>
       </header>
 
@@ -490,9 +533,9 @@ const PortalDashboard = () => {
           </div>}
 
         {/* Balance and Quick Actions Row */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 mb-6 sm:mb-8">
           {/* Current Balance - Prominent Display */}
-          <Card className="lg:col-span-2 border-2 border-primary/20">
+          <Card className="md:col-span-2 lg:col-span-2 border-2 border-primary/20">
             <CardHeader className="pb-3">
               <CardTitle className="flex items-center gap-2 text-lg">
                 <DollarSign className="h-5 w-5 text-primary" />
@@ -502,15 +545,15 @@ const PortalDashboard = () => {
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                <div className="flex items-baseline gap-3">
-                  <span className={`text-4xl font-bold ${balance >= 0 ? 'text-primary' : 'text-destructive'}`}>
+                <div className="flex items-baseline gap-2 sm:gap-3">
+                  <span className={`text-2xl sm:text-3xl lg:text-4xl font-bold ${balance >= 0 ? 'text-primary' : 'text-destructive'}`}>
                     ${Math.abs(balance).toFixed(2)}
                   </span>
                   {balance < 0 && <Badge variant="destructive" className="text-xs">OVERDRAWN</Badge>}
                   {balance > 0 && balance < lowFundThreshold && <Badge variant="outline" className="text-xs border-warning text-warning">LOW FUNDS</Badge>}
                 </div>
                 
-                {canViewFinancials && <div className="grid grid-cols-2 gap-4 text-sm">
+                {canViewFinancials && <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-4 text-sm">
                     <div>
                       <p className="text-muted-foreground">This Month Donations</p>
                       <p className="font-semibold text-green-600">+${monthlyDonations.toFixed(2)}</p>
@@ -565,21 +608,21 @@ const PortalDashboard = () => {
         </div>
 
         {/* Recent Interactions */}
-        <Card className="shadow-card mt-6">
+        <Card className="shadow-card mt-4 sm:mt-6">
           <CardHeader>
-          <CardTitle className="flex items-center gap-2 justify-between">
+          <CardTitle className="flex items-center gap-2 justify-between flex-wrap">
             <div className="flex items-center gap-2">
-              <Clock className="h-5 w-5 text-primary" />
-              Recent Interactions
-              {unreadCount > 0 && <Badge variant="destructive" className="ml-2">
-                  {unreadCount} unread
+              <Clock className="h-4 sm:h-5 w-4 sm:w-5 text-primary" />
+              <span className="text-base sm:text-lg">Recent Interactions</span>
+              {unreadCount > 0 && <Badge variant="destructive" className="text-xs">
+                  {unreadCount}
                 </Badge>}
             </div>
-            <Button variant="outline" size="sm" onClick={() => setIsInteractionsHidden(!isInteractionsHidden)}>
+            <Button variant="outline" size="sm" onClick={() => setIsInteractionsHidden(!isInteractionsHidden)} className="text-xs sm:text-sm">
               {isInteractionsHidden ? 'Show' : 'Clear'}
             </Button>
           </CardTitle>
-            <CardDescription>
+            <CardDescription className="text-xs sm:text-sm">
               Latest client interactions and requests
             </CardDescription>
           </CardHeader>
@@ -592,19 +635,19 @@ const PortalDashboard = () => {
               </div> : isLoadingInteractions && interactions.length === 0 ? <div className="flex items-center justify-center py-8">
                 <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
                 <span className="ml-2 text-muted-foreground">Loading interactions...</span>
-              </div> : <div className="space-y-4">
-                {interactions.map(interaction => <div key={interaction.id} className="border border-border rounded-lg p-4 hover:bg-muted/50 transition-colors">
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                         <div className="flex items-center gap-2 mb-2">
-                           <span className="font-medium text-foreground">
-                             {interaction.contact_name}
-                           </span>
-                           <Badge variant={interaction.channel === 'public_form' ? 'default' : 'outline'} className="text-xs">
-                             {interaction.channel === 'public_form' ? 'Public Form' : interaction.channel.replace('_', ' ')}
-                           </Badge>
-                         
-                         {interaction.isUnread && <Badge variant="destructive" className="text-xs animate-pulse">
+              </div> : <div className="space-y-3 sm:space-y-4">
+                {interactions.map(interaction => <div key={interaction.id} className="border border-border rounded-lg p-3 sm:p-4 hover:bg-muted/50 transition-colors">
+                    <div className="flex flex-col sm:flex-row items-start justify-between gap-3">
+                      <div className="flex-1 min-w-0">
+                         <div className="flex items-center gap-2 mb-2 flex-wrap">
+                            <span className="font-medium text-foreground text-sm sm:text-base truncate">
+                              {interaction.contact_name}
+                            </span>
+                            <Badge variant={interaction.channel === 'public_form' ? 'default' : 'outline'} className="text-xs shrink-0">
+                              {interaction.channel === 'public_form' ? 'Public Form' : interaction.channel.replace('_', ' ')}
+                            </Badge>
+                          
+                          {interaction.isUnread && <Badge variant="destructive" className="text-xs animate-pulse shrink-0">
                              UNREAD
                            </Badge>}
                          
@@ -626,26 +669,26 @@ const PortalDashboard = () => {
                            </Badge>}
                        </div>
                       
-                      <p className="text-sm text-muted-foreground mb-2">
-                        {interaction.summary}
-                      </p>
+                       <p className="text-xs sm:text-sm text-muted-foreground mb-2 line-clamp-2">
+                         {interaction.summary}
+                       </p>
+                       
+                       <p className="text-xs text-muted-foreground">
+                         {new Date(interaction.occurred_at).toLocaleDateString()} at{' '}
+                         {new Date(interaction.occurred_at).toLocaleTimeString()}
+                       </p>
+                      </div>
                       
-                      <p className="text-xs text-muted-foreground">
-                        {new Date(interaction.occurred_at).toLocaleDateString()} at{' '}
-                        {new Date(interaction.occurred_at).toLocaleTimeString()}
-                      </p>
-                     </div>
-                     
-                     <div className="flex gap-2">
-                       {interaction.client_id || interaction.hasIndividual ? <Button variant="outline" size="sm" onClick={() => handleViewDetails(interaction)}>
-                           View Client
-                         </Button> : <Button variant="default" size="sm" onClick={() => handleAddNewClient(interaction)}>
-                           Add New Client
-                         </Button>}
-                       <Button variant="ghost" size="sm" onClick={() => handleViewDetails(interaction)}>
-                         View Details
-                       </Button>
-                     </div>
+                      <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+                        {interaction.client_id || interaction.hasIndividual ? <Button variant="outline" size="sm" onClick={() => handleViewDetails(interaction)} className="text-xs sm:text-sm">
+                            View Client
+                          </Button> : <Button variant="default" size="sm" onClick={() => handleAddNewClient(interaction)} className="text-xs sm:text-sm">
+                            Add New Client
+                          </Button>}
+                        <Button variant="ghost" size="sm" onClick={() => handleViewDetails(interaction)} className="text-xs sm:text-sm">
+                          View Details
+                        </Button>
+                      </div>
                   </div>
                   </div>)}
                 

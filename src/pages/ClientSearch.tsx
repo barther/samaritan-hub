@@ -132,48 +132,52 @@ const ClientSearch = () => {
       <header className="border-b border-border bg-background/95 backdrop-blur">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex h-16 items-center justify-between">
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2 sm:gap-4 flex-1 min-w-0">
               <Button
                 variant="ghost"
                 size="sm"
                 onClick={() => navigate('/portal/dashboard')}
+                className="shrink-0"
               >
-                <ArrowLeft className="h-4 w-4 mr-2" />
-                Back to Dashboard
+                <ArrowLeft className="h-4 w-4 mr-1 sm:mr-2" />
+                <span className="hidden sm:inline">Back to Dashboard</span>
+                <span className="sm:hidden">Back</span>
               </Button>
-              <div>
-                <h1 className="text-2xl font-bold text-foreground">Client Search</h1>
-                <p className="text-sm text-muted-foreground">Find existing clients</p>
+              <div className="min-w-0">
+                <h1 className="text-lg sm:text-2xl font-bold text-foreground truncate">Client Search</h1>
+                <p className="text-xs sm:text-sm text-muted-foreground">Find existing clients</p>
               </div>
             </div>
             <Button
               onClick={() => navigate('/portal/clients/new')}
-              className="gap-2"
+              className="gap-1 sm:gap-2 shrink-0"
+              size="sm"
             >
               <Plus className="h-4 w-4" />
-              New Client
+              <span className="hidden sm:inline">New Client</span>
+              <span className="sm:hidden">New</span>
             </Button>
           </div>
         </div>
       </header>
 
-      <main className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <Card className="mb-6">
+      <main className="container mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-8">
+        <Card className="mb-4 sm:mb-6">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Search className="h-5 w-5" />
+            <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
+              <Search className="h-4 sm:h-5 w-4 sm:w-5" />
               Search Clients
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="flex gap-2">
+            <div className="flex flex-col sm:flex-row gap-2">
               <div className="flex-1 relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
-                  placeholder="Search by name, email, or phone... (searches as you type)"
+                  placeholder="Search by name, email, or phone..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10"
+                  className="pl-10 text-sm"
                 />
                 {isLoading && (
                   <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
@@ -181,7 +185,7 @@ const ClientSearch = () => {
                   </div>
                 )}
               </div>
-              <Button onClick={handleManualSearch} variant="outline" size="sm">
+              <Button onClick={handleManualSearch} variant="outline" size="sm" className="sm:w-auto w-full">
                 Search Now
               </Button>
             </div>
@@ -191,14 +195,14 @@ const ClientSearch = () => {
         {clients.length > 0 && (
           <Card>
             <CardHeader>
-              <div className="flex items-center justify-between">
-                <CardTitle className="flex items-center gap-2">
-                  <Users className="h-5 w-5" />
-                  Search Results ({clients.length})
+              <div className="flex items-center justify-between flex-wrap gap-2">
+                <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
+                  <Users className="h-4 sm:h-5 w-4 sm:w-5" />
+                  <span>Search Results ({clients.length})</span>
                 </CardTitle>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 flex-wrap">
                   {selectedClients.length > 0 && (
-                    <Badge variant="secondary">
+                    <Badge variant="secondary" className="text-xs">
                       {selectedClients.length} selected
                     </Badge>
                   )}
@@ -206,10 +210,11 @@ const ClientSearch = () => {
                     <Button
                       onClick={handleMergeClients}
                       size="sm"
-                      className="gap-2"
+                      className="gap-1 sm:gap-2 text-xs sm:text-sm"
                     >
-                      <GitMerge className="h-4 w-4" />
-                      Merge Selected ({selectedClients.length})
+                      <GitMerge className="h-3 sm:h-4 w-3 sm:w-4" />
+                      <span className="hidden sm:inline">Merge Selected ({selectedClients.length})</span>
+                      <span className="sm:hidden">Merge ({selectedClients.length})</span>
                     </Button>
                   )}
                 </div>
@@ -228,78 +233,80 @@ const ClientSearch = () => {
               )}
             </CardHeader>
             <CardContent>
-              <div className="space-y-4">
-                {clients.map((client) => (
-                  <div
-                    key={client.id}
-                    className={`border border-border rounded-lg p-4 hover:bg-muted/50 transition-colors ${
-                      selectedClients.includes(client.id) ? 'bg-muted/30 border-primary' : ''
-                    }`}
-                  >
-                     <div className="flex items-start gap-3">
-                       <Checkbox
-                         id={`client-${client.id}`}
-                         checked={selectedClients.includes(client.id)}
-                         onCheckedChange={(checked) => handleClientSelect(client.id, checked as boolean)}
-                         className="mt-1"
-                       />
-                       <div className="flex-1">
-                         <div className="flex items-start justify-between">
-                           <div className="flex-1">
-                              <div className="flex items-center gap-2 mb-2">
-                                <h3 className="font-medium text-foreground">
-                                  {client.first_name} {client.last_name}
-                                </h3>
-                                <Badge variant="outline" className="text-xs">
-                                  Client
-                                </Badge>
-                                {client.risk_level && (
-                                  <ClientRiskBadge 
-                                    riskLevel={client.risk_level}
-                                    assistanceCount={client.assistance_count}
-                                    totalReceived={client.total_assistance_received}
-                                  />
-                                )}
-                              </div>
-                             
-                             <div className="space-y-1 text-sm text-muted-foreground">
-                               {client.email && (
-                                 <div className="flex items-center gap-2">
-                                   <Mail className="h-3 w-3" />
-                                   {client.email}
-                                 </div>
-                               )}
-                               {client.phone && (
-                                 <div className="flex items-center gap-2">
-                                   <Phone className="h-3 w-3" />
-                                   {client.phone}
-                                 </div>
-                               )}
-                               {client.address && (
-                                 <div className="flex items-center gap-2">
-                                   <MapPin className="h-3 w-3" />
-                                   {client.address}
-                                   {client.city && `, ${client.city}`}
-                                   {client.state && `, ${client.state}`}
-                                   {client.zip_code && ` ${client.zip_code}`}
-                                 </div>
-                               )}
+                <div className="space-y-3 sm:space-y-4">
+                  {clients.map((client) => (
+                    <div
+                      key={client.id}
+                      className={`border border-border rounded-lg p-3 sm:p-4 hover:bg-muted/50 transition-colors ${
+                        selectedClients.includes(client.id) ? 'bg-muted/30 border-primary' : ''
+                      }`}
+                    >
+                       <div className="flex items-start gap-3">
+                         <Checkbox
+                           id={`client-${client.id}`}
+                           checked={selectedClients.includes(client.id)}
+                           onCheckedChange={(checked) => handleClientSelect(client.id, checked as boolean)}
+                           className="mt-1 shrink-0"
+                         />
+                         <div className="flex-1 min-w-0">
+                           <div className="flex flex-col sm:flex-row items-start justify-between gap-3">
+                             <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2 mb-2 flex-wrap">
+                                  <h3 className="font-medium text-foreground text-sm sm:text-base truncate">
+                                    {client.first_name} {client.last_name}
+                                  </h3>
+                                  <Badge variant="outline" className="text-xs shrink-0">
+                                    Client
+                                  </Badge>
+                                  {client.risk_level && (
+                                    <ClientRiskBadge 
+                                      riskLevel={client.risk_level}
+                                      assistanceCount={client.assistance_count}
+                                      totalReceived={client.total_assistance_received}
+                                    />
+                                  )}
+                                </div>
+                               
+                               <div className="space-y-1 text-xs sm:text-sm text-muted-foreground">
+                                 {client.email && (
+                                   <div className="flex items-center gap-2">
+                                     <Mail className="h-3 w-3 shrink-0" />
+                                     <span className="truncate">{client.email}</span>
+                                   </div>
+                                 )}
+                                 {client.phone && (
+                                   <div className="flex items-center gap-2">
+                                     <Phone className="h-3 w-3 shrink-0" />
+                                     <span className="truncate">{client.phone}</span>
+                                   </div>
+                                 )}
+                                 {client.address && (
+                                   <div className="flex items-center gap-2">
+                                     <MapPin className="h-3 w-3 shrink-0" />
+                                     <span className="truncate">
+                                       {client.address}
+                                       {client.city && `, ${client.city}`}
+                                       {client.state && `, ${client.state}`}
+                                       {client.zip_code && ` ${client.zip_code}`}
+                                     </span>
+                                   </div>
+                                 )}
+                               </div>
+                               
+                               <p className="text-xs text-muted-foreground mt-2">
+                                 Added: {new Date(client.created_at).toLocaleDateString()}
+                               </p>
                              </div>
                              
-                             <p className="text-xs text-muted-foreground mt-2">
-                               Added: {new Date(client.created_at).toLocaleDateString()}
-                             </p>
+                             <Button variant="outline" size="sm" onClick={() => navigate(`/portal/clients/${client.id}`)} className="text-xs sm:text-sm">
+                               View Details
+                             </Button>
                            </div>
-                           
-                           <Button variant="outline" size="sm" onClick={() => navigate(`/portal/clients/${client.id}`)}>
-                             View Details
-                           </Button>
                          </div>
                        </div>
-                     </div>
-                  </div>
-                ))}
-              </div>
+                    </div>
+                  ))}
+                </div>
             </CardContent>
           </Card>
         )}
