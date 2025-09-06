@@ -57,10 +57,27 @@ const ClientSearch = () => {
     
     setIsLoading(true);
     try {
+      // Build flexible phone search by normalizing digits and matching common segments
+      const digits = term.replace(/\D/g, "");
+      const ors: string[] = [
+        `first_name.ilike.%${term}%`,
+        `last_name.ilike.%${term}%`,
+        `email.ilike.%${term}%`,
+        `phone.ilike.%${term}%`,
+      ];
+      if (digits.length >= 3) {
+        ors.push(`phone.ilike.%${digits.slice(0, 3)}%`);
+      }
+      if (digits.length >= 6) {
+        ors.push(`phone.ilike.%${digits.slice(3, 6)}%`);
+      }
+      if (digits.length >= 4) {
+        ors.push(`phone.ilike.%${digits.slice(-4)}%`);
+      }
       const { data, error } = await supabase
         .from('clients')
         .select('*, risk_level, assistance_count, total_assistance_received, flagged_for_review')
-        .or(`first_name.ilike.%${term}%,last_name.ilike.%${term}%,email.ilike.%${term}%,phone.ilike.%${term}%`)
+        .or(ors.join(','))
         .order('created_at', { ascending: false });
 
       if (error) throw error;
