@@ -185,6 +185,7 @@ export const PDF417Scanner = ({ open, onOpenChange, onDataScanned }: PDF417Scann
   };
 
   const startScanning = async () => {
+    console.log('Starting PDF417 scanner...');
     try {
       setError(null);
       setSuccess(false);
@@ -204,6 +205,7 @@ export const PDF417Scanner = ({ open, onOpenChange, onDataScanned }: PDF417Scann
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
         await videoRef.current.play();
+        console.log('Camera started, beginning scan loop...');
         
         // Start scanning loop
         startScanningLoop();
@@ -307,8 +309,14 @@ export const PDF417Scanner = ({ open, onOpenChange, onDataScanned }: PDF417Scann
                 </div>
                 
                 {/* Scanning animation */}
-                <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-64 h-40">
-                  <div className="w-full h-0.5 bg-red-500 animate-pulse"></div>
+                <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-64 h-40 overflow-hidden">
+                  <div 
+                    className="w-full h-0.5 bg-red-500 absolute"
+                    style={{
+                      animation: 'scanLine 2s ease-in-out infinite',
+                      animationDirection: 'alternate'
+                    }}
+                  ></div>
                 </div>
               </div>
             )}

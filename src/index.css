@@ -148,3 +148,10 @@ All colors MUST be HSL.
     -webkit-line-clamp: 2;
   }
 }
+
+@layer components {
+  @keyframes scanLine {
+    0% { top: 0; }
+    100% { top: calc(100% - 2px); }
+  }
+}
