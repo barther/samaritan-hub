@@ -1,6 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import { Heart, HandHeart } from "lucide-react";
+import MonthlyStats from "./MonthlyStats";
 
 const Hero = () => {
   return (
@@ -21,6 +22,9 @@ const Hero = () => {
               most fitting help—whether through our fund or trusted community resources.
             </p>
           </div>
+
+          {/* Monthly Stats */}
+          <MonthlyStats />
 
           {/* Disclaimer */}
           <div className="bg-muted/50 rounded-lg p-4 mb-8 border border-border">
