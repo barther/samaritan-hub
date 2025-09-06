@@ -94,10 +94,7 @@ const MonthlyStats = () => {
     );
   }
 
-  if (stats.familiesHelped === 0 && stats.peopleContacted === 0) {
-    return null; // Don't show if no data
-  }
-
+  // Always show the component, even with zero stats for previous month
   return (
     <div className="bg-primary/5 rounded-lg p-6 mb-8 border border-primary/10">
       <div className="flex items-center justify-center gap-8 flex-wrap">
