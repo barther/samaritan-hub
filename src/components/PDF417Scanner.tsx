@@ -41,28 +41,6 @@ export const PDF417Scanner = ({ open, onOpenChange, onDataScanned }: PDF417Scann
 
   // --- Utils -----------------------------------------------------------------
 
-  const isIOS = () =>
-    /iPad|iPhone|iPod/.test(navigator.userAgent) ||
-    (navigator.platform === "MacIntel" && (navigator as any).maxTouchPoints > 1);
-
-  const preflightPermission = useCallback(async () => {
-    // HTTPS required on iOS (localhost allowed)
-    if (!window.isSecureContext && location.hostname !== "localhost") {
-      throw new Error("Camera requires HTTPS (or localhost).");
-    }
-    const tmp = await navigator.mediaDevices.getUserMedia({ video: true });
-    tmp.getTracks().forEach((t) => t.stop());
-  }, []);
-
-  const pickBackCamera = useCallback(async (): Promise<string | undefined> => {
-    const devices = await BrowserMultiFormatReader.listVideoInputDevices();
-    // On iOS, labels only appear after preflight
-    const back = devices.find(
-      (d) => /back|rear|environment/i.test(d.label) || /facing back/i.test(d.label)
-    );
-    return (back ?? devices[0])?.deviceId;
-  }, []);
-
   const applyCameraTuning = useCallback(async () => {
     const stream = (videoRef.current?.srcObject as MediaStream) || null;
     const track = stream?.getVideoTracks?.()[0];
@@ -198,25 +176,15 @@ export const PDF417Scanner = ({ open, onOpenChange, onDataScanned }: PDF417Scann
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
-  // Pause if the tab/page becomes hidden (saves battery & avoids iOS quirks)
-  useEffect(() => {
-    const onVis = () => {
-      if (document.hidden) stopScanning();
-    };
-    document.addEventListener("visibilitychange", onVis);
-    return () => document.removeEventListener("visibilitychange", onVis);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  const onDecode: Parameters<BrowserMultiFormatReader["decodeFromVideoDevice"]>[2] = (
+  const onDecode: Parameters<BrowserMultiFormatReader["decodeFromVideoElement"]>[1] = (
     result,
-    err,
-    controls
+    err
   ) => {
     if (result) {
+      console.log('Barcode detected:', result.getText());
       const parsed = parsePDF417Data(result.getText());
       setSuccess(true);
-      controls.stop(); // stop immediately to prevent double-fires
+      stopScanning(); // stop scanning
       onDataScanned(parsed);
       onOpenChange(false);
       toast({
@@ -224,39 +192,10 @@ export const PDF417Scanner = ({ open, onOpenChange, onDataScanned }: PDF417Scann
         description: `Parsed info for ${parsed.firstName ?? ""} ${parsed.lastName ?? ""}`.trim(),
       });
     }
-    // Ignore err (NotFoundException etc.) while scanning
+    if (err) {
+      console.log('Scan attempt:', err.message);
+    }
   };
-
-  const startWithConstraintsFallback = useCallback(async () => {
-    // Try exact back camera first (may fail on some Safari builds)
-    try {
-      controlsRef.current = await readerRef.current!.decodeFromConstraints(
-        { video: { facingMode: { exact: "environment" } } as any },
-        videoRef.current!,
-        onDecode
-      );
-      return;
-    } catch {
-      // fall through
-    }
-    // Soft prefer back camera
-    try {
-      controlsRef.current = await readerRef.current!.decodeFromConstraints(
-        { video: { facingMode: "environment" } as any },
-        videoRef.current!,
-        onDecode
-      );
-      return;
-    } catch {
-      // fall through
-    }
-    // Generic fallback
-    controlsRef.current = await readerRef.current!.decodeFromConstraints(
-      { video: true },
-      videoRef.current!,
-      onDecode
-    );
-  }, [onDecode]);
 
   const startScanning = useCallback(async () => {
     setError(null);
@@ -265,31 +204,35 @@ export const PDF417Scanner = ({ open, onOpenChange, onDataScanned }: PDF417Scann
     setTorchOn(false);
 
     try {
-      // Avoid starting during dialog mount animation (Safari quirk)
-      await new Promise((r) => setTimeout(r, 50));
-
-      if (isIOS()) {
-        await preflightPermission(); // unlock enumerateDevices on iOS
-      }
-
-      const deviceId = await pickBackCamera();
-
-      if (deviceId) {
-        try {
-          controlsRef.current = await readerRef.current!.decodeFromVideoDevice(
-            deviceId,
-            videoRef.current!,
-            onDecode
-          );
-        } catch {
-          await startWithConstraintsFallback();
+      console.log('Starting camera...');
+      
+      // Use camera constraints instead of device enumeration for mobile
+      const constraints = {
+        video: {
+          facingMode: { ideal: 'environment' },
+          width: { ideal: 1920, min: 640 },
+          height: { ideal: 1080, min: 480 },
         }
-      } else {
-        await startWithConstraintsFallback();
+      };
+
+      const stream = await navigator.mediaDevices.getUserMedia(constraints);
+      
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+        await videoRef.current.play();
+        console.log('Video playing, starting barcode detection...');
+        
+        // Start continuous barcode scanning
+        controlsRef.current = await readerRef.current!.decodeFromVideoElement(
+          videoRef.current,
+          onDecode
+        );
+        
+        console.log('Barcode detection started');
       }
 
       // After stream is live, try focus/zoom tuning
-      setTimeout(applyCameraTuning, 300);
+      setTimeout(applyCameraTuning, 500);
     } catch (e: any) {
       console.error("Camera error:", e);
       const msg =
@@ -299,7 +242,7 @@ export const PDF417Scanner = ({ open, onOpenChange, onDataScanned }: PDF417Scann
       setError(msg);
       setIsScanning(false);
     }
-  }, [applyCameraTuning, onDecode, pickBackCamera, preflightPermission, startWithConstraintsFallback]);
+  }, [applyCameraTuning, onDecode]);
 
   const stopScanning = useCallback(() => {
     controlsRef.current?.stop();
@@ -310,9 +253,13 @@ export const PDF417Scanner = ({ open, onOpenChange, onDataScanned }: PDF417Scann
       toggleTorch(false).catch(() => {});
     }
 
+    // Stop all media tracks properly
     const media = videoRef.current?.srcObject as MediaStream | null;
     if (media) {
-      media.getTracks().forEach((t) => t.stop());
+      media.getTracks().forEach((t) => {
+        t.stop();
+        console.log('Stopped track:', t.label);
+      });
     }
     if (videoRef.current) {
       videoRef.current.srcObject = null;
@@ -363,10 +310,10 @@ export const PDF417Scanner = ({ open, onOpenChange, onDataScanned }: PDF417Scann
             </Alert>
           )}
 
-          <div className="relative bg-black rounded-lg overflow-hidden" style={{ aspectRatio: "16/9" }}>
+          <div className="relative bg-black rounded-lg overflow-hidden" style={{ aspectRatio: "4/3" }}>
             <video
               ref={videoRef}
-              className="w-full h-full object-contain"
+              className="w-full h-full object-cover"
               playsInline
               muted
               autoPlay
