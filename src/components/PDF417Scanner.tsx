@@ -136,12 +136,24 @@ export const PDF417Scanner = ({ open, onOpenChange, onDataScanned }: PDF417Scann
   };
 
   const pickBackCamera = async (): Promise<string | undefined> => {
-    const devices = await BrowserMultiFormatReader.listVideoInputDevices();
-    // best-guess: labels are present on https / after permission
-    const back = devices.find(d =>
-      /back|rear|environment/i.test(d.label) || /facing back/i.test(d.label)
-    );
-    return (back ?? devices[0])?.deviceId;
+    try {
+      const devices = await BrowserMultiFormatReader.listVideoInputDevices();
+      console.log('Available camera devices:', devices);
+      
+      // On mobile, try to find back/environment camera
+      const back = devices.find(d =>
+        /back|rear|environment/i.test(d.label) || /facing back/i.test(d.label)
+      );
+      
+      // Return back camera or first available, or undefined if no devices
+      const selectedDevice = back ?? devices[0];
+      console.log('Selected camera device:', selectedDevice);
+      return selectedDevice?.deviceId;
+    } catch (error) {
+      console.error('Error listing camera devices:', error);
+      // On mobile, sometimes device enumeration fails, so return undefined to use default
+      return undefined;
+    }
   };
 
   const applyCameraTuning = async () => {
@@ -169,12 +181,29 @@ export const PDF417Scanner = ({ open, onOpenChange, onDataScanned }: PDF417Scann
     setIsScanning(true);
 
     try {
-      const deviceId = await pickBackCamera();
-      if (!deviceId) throw new Error("No camera found");
+      let deviceId = await pickBackCamera();
+      
+      // Fallback: if no device ID found, try to get camera permission first
+      if (!deviceId) {
+        try {
+          // Request camera permission first to enumerate devices properly on mobile
+          const stream = await navigator.mediaDevices.getUserMedia({ 
+            video: { facingMode: 'environment' } 
+          });
+          stream.getTracks().forEach(track => track.stop()); // Stop immediately
+          
+          // Try again to get devices after permission granted
+          deviceId = await pickBackCamera();
+        } catch (permError) {
+          console.error('Camera permission error:', permError);
+        }
+      }
+      
+      console.log('Final camera device ID:', deviceId);
 
       // Bind to <video> and run continuous decode
       controlsRef.current = await readerRef.current!.decodeFromVideoDevice(
-        deviceId,
+        deviceId, // Pass deviceId or undefined for default camera
         videoRef.current!,
         async (result, err, controls) => {
           if (result) {
@@ -197,8 +226,8 @@ export const PDF417Scanner = ({ open, onOpenChange, onDataScanned }: PDF417Scann
       setTimeout(applyCameraTuning, 300);
 
     } catch (e: any) {
-      console.error(e);
-      setError(e?.message || "Camera failed to start. Check HTTPS and permissions.");
+      console.error('Camera error:', e);
+      setError(e?.message || "Camera failed to start. Please ensure camera permissions are granted and you're using HTTPS.");
       setIsScanning(false);
     }
   };
