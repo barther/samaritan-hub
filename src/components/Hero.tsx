@@ -14,7 +14,7 @@ const Hero = () => {
               <Heart className="h-8 w-8 text-primary" />
             </div>
             <h1 className="text-4xl md:text-6xl font-bold text-foreground mb-6 leading-tight">
-              We help neighbors in real need
+              We help neighbors in their time of need
             </h1>
             <p className="text-lg md:text-xl text-muted-foreground max-w-3xl mx-auto leading-relaxed">
               Good Samaritan at Lithia Springs Methodist Church provides short-term, case-by-case assistance 
