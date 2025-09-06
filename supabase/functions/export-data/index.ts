@@ -33,8 +33,9 @@ serve(async (req) => {
       throw new Error("Invalid authorization");
     }
 
-    const { data: hasAdminRole } = await supabase.rpc('verify_user_role', {
-      required_role: 'admin'
+    const { data: hasAdminRole } = await supabase.rpc('has_role', {
+      _user_id: user.id,
+      _role: 'admin'
     });
 
     if (!hasAdminRole) {
