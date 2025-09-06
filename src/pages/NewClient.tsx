@@ -21,6 +21,7 @@ import {
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { handleError } from "@/utils/errorHandler";
 import { TriageForm } from "@/components/TriageForm";
 import { PDF417Scanner } from "@/components/PDF417Scanner";
 
@@ -120,12 +121,7 @@ const NewClient = () => {
         };
       }
     } catch (error) {
-      console.error('Error fetching interaction:', error);
-      toast({
-        title: "Error",
-        description: "Failed to load interaction details.",
-        variant: "destructive"
-      });
+      handleError(error, 'load', 'Error fetching interaction');
     }
   };
 

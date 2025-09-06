@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
+import { handleError } from "@/utils/errorHandler";
 import { supabase } from "@/integrations/supabase/client";
 import { DollarSign } from "lucide-react";
 
@@ -58,12 +59,7 @@ export const DonationModal = ({ open, onOpenChange }: DonationModalProps) => {
       });
       onOpenChange(false);
     } catch (error) {
-      console.error('Error recording donation:', error);
-      toast({
-        title: "Error recording donation",
-        description: "Please try again.",
-        variant: "destructive"
-      });
+      handleError(error, 'save', 'Error recording donation');
     } finally {
       setIsSubmitting(false);
     }

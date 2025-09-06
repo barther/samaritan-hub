@@ -6,6 +6,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AlertTriangle, Users, DollarSign, TrendingUp, Bell } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
+import { handleError } from "@/utils/errorHandler";
 
 interface ClientAlert {
   id: string;
@@ -96,12 +97,7 @@ export const AccountabilityDashboard = () => {
         repeatClientPercentage: repeatPercentage,
       });
     } catch (error) {
-      console.error('Error loading accountability data:', error);
-      toast({
-        title: "Error",
-        description: "Failed to load accountability data",
-        variant: "destructive",
-      });
+      handleError(error, 'load', 'Error loading accountability data');
     } finally {
       setLoading(false);
     }
@@ -127,12 +123,7 @@ export const AccountabilityDashboard = () => {
 
       loadAccountabilityData();
     } catch (error) {
-      console.error('Error resolving alert:', error);
-      toast({
-        title: "Error",
-        description: "Failed to resolve alert",
-        variant: "destructive",
-      });
+      handleError(error, 'save', 'Error resolving alert');
     }
   };
 
