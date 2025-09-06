@@ -105,10 +105,11 @@ const Portal = () => {
             </Button>
 
             <div className="bg-warning/10 rounded-lg p-3 border border-warning/20">
-              <div className="flex items-start gap-2">
-                <div>
-                  <p className="text-sm font-medium text-center text-rose-700">Access is Restricted.</p>
-                  <p className="text-xs text-muted-foreground mt-1 text-center">
+              <div className="flex items-center justify-center gap-2">
+                <AlertTriangle className="h-4 w-4 text-rose-700 flex-shrink-0" />
+                <div className="text-center">
+                  <p className="text-sm font-medium text-rose-700">Access is Restricted.</p>
+                  <p className="text-xs text-muted-foreground mt-1">
                     Only @lithiaspringsmethodist.org email addresses are permitted.
                   </p>
                 </div>
