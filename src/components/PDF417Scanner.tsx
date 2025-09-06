@@ -1,9 +1,13 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Camera, X, Scan, AlertCircle, CheckCircle } from "lucide-react";
-import { BrowserMultiFormatReader, BarcodeFormat, IScannerControls } from "@zxing/browser";
+import { Camera, X, Scan, AlertCircle, CheckCircle, Sun } from "lucide-react";
+import {
+  BrowserMultiFormatReader,
+  BarcodeFormat,
+  IScannerControls,
+} from "@zxing/browser";
 import { useToast } from "@/hooks/use-toast";
 
 interface ScannedData {
@@ -27,6 +31,7 @@ export const PDF417Scanner = ({ open, onOpenChange, onDataScanned }: PDF417Scann
   const [isScanning, setIsScanning] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+  const [torchOn, setTorchOn] = useState(false);
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const readerRef = useRef<BrowserMultiFormatReader | null>(null);
@@ -34,89 +39,130 @@ export const PDF417Scanner = ({ open, onOpenChange, onDataScanned }: PDF417Scann
 
   const { toast } = useToast();
 
-  useEffect(() => {
-    if (open && !readerRef.current) {
-      // Create reader optimized for PDF417
-      readerRef.current = new BrowserMultiFormatReader();
-    }
-  }, [open]);
+  // --- Utils -----------------------------------------------------------------
 
-  useEffect(() => {
-    if (!open) stopScanning();
-    return () => stopScanning();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open]);
+  const isIOS = () =>
+    /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+    (navigator.platform === "MacIntel" && (navigator as any).maxTouchPoints > 1);
+
+  const preflightPermission = useCallback(async () => {
+    // HTTPS required on iOS (localhost allowed)
+    if (!window.isSecureContext && location.hostname !== "localhost") {
+      throw new Error("Camera requires HTTPS (or localhost).");
+    }
+    const tmp = await navigator.mediaDevices.getUserMedia({ video: true });
+    tmp.getTracks().forEach((t) => t.stop());
+  }, []);
+
+  const pickBackCamera = useCallback(async (): Promise<string | undefined> => {
+    const devices = await BrowserMultiFormatReader.listVideoInputDevices();
+    // On iOS, labels only appear after preflight
+    const back = devices.find(
+      (d) => /back|rear|environment/i.test(d.label) || /facing back/i.test(d.label)
+    );
+    return (back ?? devices[0])?.deviceId;
+  }, []);
+
+  const applyCameraTuning = useCallback(async () => {
+    const stream = (videoRef.current?.srcObject as MediaStream) || null;
+    const track = stream?.getVideoTracks?.()[0];
+    const capabilities: any = track?.getCapabilities?.();
+    if (!track || !capabilities) return;
+
+    const advanced: any[] = [];
+
+    if (Array.isArray(capabilities.focusMode) && capabilities.focusMode.includes("continuous")) {
+      advanced.push({ focusMode: "continuous" });
+    }
+
+    if (typeof capabilities.zoom === "number") {
+      // Some implementations expose zoom as number; most expose {min,max,step}
+      // We'll skip this case because we can't set a numeric zoom without the range.
+    } else if (capabilities.zoom && typeof capabilities.zoom === "object") {
+      const { min, max } = capabilities.zoom as { min: number; max: number };
+      if (typeof min === "number" && typeof max === "number" && max > min) {
+        advanced.push({ zoom: (min + max) / 2 });
+      }
+    }
+
+    if (advanced.length) {
+      try {
+        await track.applyConstraints({ advanced });
+      } catch {
+        /* best effort only */
+      }
+    }
+  }, []);
+
+  const toggleTorch = useCallback(
+    async (on: boolean) => {
+      const stream = (videoRef.current?.srcObject as MediaStream) || null;
+      const track = stream?.getVideoTracks?.()[0];
+      const capabilities: any = track?.getCapabilities?.();
+      if (!track || !capabilities?.torch) {
+        setTorchOn(false);
+        return;
+      }
+      try {
+        await track.applyConstraints({ advanced: [{ torch: on }] as any });
+        setTorchOn(on);
+      } catch {
+        setTorchOn(false);
+      }
+    },
+    []
+  );
+
+  // --- AAMVA Parser ----------------------------------------------------------
+
+  const normalizeDob = (s?: string) => {
+    if (!s) return undefined;
+    const raw = s.replace(/\D/g, "");
+    if (/^\d{8}$/.test(raw)) {
+      // Prefer YYYYMMDD; else treat as MMDDYYYY
+      return +raw.slice(0, 4) > 1900
+        ? `${raw.slice(0, 4)}-${raw.slice(4, 6)}-${raw.slice(6, 8)}`
+        : `${raw.slice(4, 8)}-${raw.slice(0, 2)}-${raw.slice(2, 4)}`;
+    }
+    return s;
+  };
+
+  const normalizeZip = (s?: string) => (s?.replace(/[^\d-]/g, "").slice(0, 5) || "");
 
   const parsePDF417Data = (rawData: string): ScannedData => {
-    console.log('Raw PDF417 data:', rawData);
-    
-    // PDF417 on driver's licenses follows AAMVA standard
-    // Data is typically separated by line feeds (\n) or specific delimiters
-    const lines = rawData.split(/[\n\r]+/);
-    
-    let firstName = '';
-    let lastName = '';
-    let address = '';
-    let city = '';
-    let state = '';
-    let zipCode = '';
-    let dateOfBirth = '';
-    let licenseNumber = '';
+    const lines = rawData.split(/[\r\n]+/).map((l) => l.trim()).filter(Boolean);
 
-    // Common AAMVA field identifiers
-    for (const line of lines) {
-      const trimmedLine = line.trim();
-      
-      // Name parsing - different formats possible
-      if (trimmedLine.includes('DAC') || trimmedLine.includes('DCT')) {
-        // First name
-        firstName = trimmedLine.split(/DAC|DCT/)[1]?.trim() || '';
-      } else if (trimmedLine.includes('DCS')) {
-        // Last name  
-        lastName = trimmedLine.split('DCS')[1]?.trim() || '';
-      }
-      
-      // Address parsing
-      if (trimmedLine.includes('DAG')) {
-        address = trimmedLine.split('DAG')[1]?.trim() || '';
-      }
-      
-      // City
-      if (trimmedLine.includes('DAI')) {
-        city = trimmedLine.split('DAI')[1]?.trim() || '';
-      }
-      
-      // State
-      if (trimmedLine.includes('DAJ')) {
-        state = trimmedLine.split('DAJ')[1]?.trim() || '';
-      }
-      
-      // ZIP Code
-      if (trimmedLine.includes('DAK')) {
-        zipCode = trimmedLine.split('DAK')[1]?.trim() || '';
-      }
-      
-      // Date of Birth
-      if (trimmedLine.includes('DBB')) {
-        dateOfBirth = trimmedLine.split('DBB')[1]?.trim() || '';
-      }
-      
-      // License Number
-      if (trimmedLine.includes('DAQ')) {
-        licenseNumber = trimmedLine.split('DAQ')[1]?.trim() || '';
+    const get = (key: string) =>
+      lines.find((l) => l.startsWith(key))?.slice(key.length).trim() ?? "";
+
+    let lastName = get("DCS");
+    let firstName = get("DAC") || get("DCT"); // some states use DCT for first+middle
+    const fullName = get("DAA"); // optional "LAST,FIRST MIDDLE"
+
+    if (!firstName && !lastName && fullName) {
+      const [ln, rest] = fullName.split(",", 2);
+      if (ln && rest) {
+        lastName = ln.trim();
+        firstName = rest.trim().split(/\s+/).slice(0, 2).join(" ");
       }
     }
 
-    // Fallback parsing for simpler formats
-    if (!firstName && !lastName && lines.length > 0) {
-      // Try to parse name from first few lines
+    const address = get("DAG");
+    const city = get("DAI");
+    const state = get("DAJ");
+    const zipCode = normalizeZip(get("DAK"));
+    const dateOfBirth = normalizeDob(get("DBB"));
+    const licenseNumber = get("DAQ") || undefined;
+
+    // Fallback name if still empty (rare older cards)
+    if (!firstName && !lastName) {
       for (let i = 0; i < Math.min(lines.length, 5); i++) {
-        const line = lines[i].trim();
-        if (line.length > 2 && /^[A-Z\s]+$/.test(line)) {
-          const nameParts = line.split(/\s+/);
-          if (nameParts.length >= 2) {
-            lastName = nameParts[0];
-            firstName = nameParts.slice(1).join(' ');
+        const line = lines[i];
+        if (line.length > 2 && /^[A-Z\s,]+$/.test(line)) {
+          const parts = line.split(/\s+/);
+          if (parts.length >= 2) {
+            lastName = parts[0];
+            firstName = parts.slice(1).join(" ");
             break;
           }
         }
@@ -124,129 +170,166 @@ export const PDF417Scanner = ({ open, onOpenChange, onDataScanned }: PDF417Scann
     }
 
     return {
-      firstName: firstName || '',
-      lastName: lastName || '',
-      address: address || '',
-      city: city || '',
-      state: state || '',
-      zipCode: zipCode || '',
+      firstName: firstName || "",
+      lastName: lastName || "",
+      address: address || "",
+      city: city || "",
+      state: state || "",
+      zipCode,
       dateOfBirth,
-      licenseNumber
+      licenseNumber,
     };
   };
 
-  const pickBackCamera = async (): Promise<string | undefined> => {
+  // --- ZXing setup & lifecycle ----------------------------------------------
+
+  // Initialize the reader optimized for PDF417
+  useEffect(() => {
+    if (open && !readerRef.current) {
+      // Create reader optimized for PDF417 scanning
+      readerRef.current = new BrowserMultiFormatReader();
+    }
+  }, [open]);
+
+  // Stop scanning when dialog closes or component unmounts
+  useEffect(() => {
+    if (!open) stopScanning();
+    return () => stopScanning();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
+
+  // Pause if the tab/page becomes hidden (saves battery & avoids iOS quirks)
+  useEffect(() => {
+    const onVis = () => {
+      if (document.hidden) stopScanning();
+    };
+    document.addEventListener("visibilitychange", onVis);
+    return () => document.removeEventListener("visibilitychange", onVis);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const onDecode: Parameters<BrowserMultiFormatReader["decodeFromVideoDevice"]>[2] = (
+    result,
+    err,
+    controls
+  ) => {
+    if (result) {
+      const parsed = parsePDF417Data(result.getText());
+      setSuccess(true);
+      controls.stop(); // stop immediately to prevent double-fires
+      onDataScanned(parsed);
+      onOpenChange(false);
+      toast({
+        title: "License Scanned Successfully",
+        description: `Parsed info for ${parsed.firstName ?? ""} ${parsed.lastName ?? ""}`.trim(),
+      });
+    }
+    // Ignore err (NotFoundException etc.) while scanning
+  };
+
+  const startWithConstraintsFallback = useCallback(async () => {
+    // Try exact back camera first (may fail on some Safari builds)
     try {
-      const devices = await BrowserMultiFormatReader.listVideoInputDevices();
-      console.log('Available camera devices:', devices);
-      
-      // On mobile, try to find back/environment camera
-      const back = devices.find(d =>
-        /back|rear|environment/i.test(d.label) || /facing back/i.test(d.label)
+      controlsRef.current = await readerRef.current!.decodeFromConstraints(
+        { video: { facingMode: { exact: "environment" } } as any },
+        videoRef.current!,
+        onDecode
       );
-      
-      // Return back camera or first available, or undefined if no devices
-      const selectedDevice = back ?? devices[0];
-      console.log('Selected camera device:', selectedDevice);
-      return selectedDevice?.deviceId;
-    } catch (error) {
-      console.error('Error listing camera devices:', error);
-      // On mobile, sometimes device enumeration fails, so return undefined to use default
-      return undefined;
+      return;
+    } catch {
+      // fall through
     }
-  };
+    // Soft prefer back camera
+    try {
+      controlsRef.current = await readerRef.current!.decodeFromConstraints(
+        { video: { facingMode: "environment" } as any },
+        videoRef.current!,
+        onDecode
+      );
+      return;
+    } catch {
+      // fall through
+    }
+    // Generic fallback
+    controlsRef.current = await readerRef.current!.decodeFromConstraints(
+      { video: true },
+      videoRef.current!,
+      onDecode
+    );
+  }, [onDecode]);
 
-  const applyCameraTuning = async () => {
-    // Try enabling continuous focus if available
-    const stream = (videoRef.current?.srcObject as MediaStream) || null;
-    const track = stream?.getVideoTracks?.()[0];
-    const capabilities = track?.getCapabilities?.();
-    const constraints: MediaTrackConstraints = {};
-    if (capabilities) {
-      // continuous focus helps a lot for PDF417
-      // @ts-ignore — not in all TS libdoms
-      if (capabilities.focusMode?.includes?.("continuous")) {
-        // @ts-ignore
-        constraints.advanced = [{ focusMode: "continuous" }];
-      }
-    }
-    if (Object.keys(constraints).length) {
-      await track?.applyConstraints(constraints);
-    }
-  };
-
-  const startScanning = async () => {
+  const startScanning = useCallback(async () => {
     setError(null);
     setSuccess(false);
     setIsScanning(true);
+    setTorchOn(false);
 
     try {
-      let deviceId = await pickBackCamera();
-      
-      // Fallback: if no device ID found, try to get camera permission first
-      if (!deviceId) {
-        try {
-          // Request camera permission first to enumerate devices properly on mobile
-          const stream = await navigator.mediaDevices.getUserMedia({ 
-            video: { facingMode: 'environment' } 
-          });
-          stream.getTracks().forEach(track => track.stop()); // Stop immediately
-          
-          // Try again to get devices after permission granted
-          deviceId = await pickBackCamera();
-        } catch (permError) {
-          console.error('Camera permission error:', permError);
-        }
+      // Avoid starting during dialog mount animation (Safari quirk)
+      await new Promise((r) => setTimeout(r, 50));
+
+      if (isIOS()) {
+        await preflightPermission(); // unlock enumerateDevices on iOS
       }
-      
-      console.log('Final camera device ID:', deviceId);
 
-      // Bind to <video> and run continuous decode
-      controlsRef.current = await readerRef.current!.decodeFromVideoDevice(
-        deviceId, // Pass deviceId or undefined for default camera
-        videoRef.current!,
-        async (result, err, controls) => {
-          if (result) {
-            const text = result.getText();
-            const parsed = parsePDF417Data(text);
-            setSuccess(true);
-            controls.stop(); // prevent double fire
-            onDataScanned(parsed);
-            onOpenChange(false);
-            toast({
-              title: "License Scanned Successfully",
-              description: `Parsed info for ${parsed.firstName ?? ""} ${parsed.lastName ?? ""}`.trim(),
-            });
-          }
-          // ignore err (NotFoundException etc.)—this fires a lot while searching
+      const deviceId = await pickBackCamera();
+
+      if (deviceId) {
+        try {
+          controlsRef.current = await readerRef.current!.decodeFromVideoDevice(
+            deviceId,
+            videoRef.current!,
+            onDecode
+          );
+        } catch {
+          await startWithConstraintsFallback();
         }
-      );
+      } else {
+        await startWithConstraintsFallback();
+      }
 
-      // Optional: after stream is live, bump focus/zoom if available
+      // After stream is live, try focus/zoom tuning
       setTimeout(applyCameraTuning, 300);
-
     } catch (e: any) {
-      console.error('Camera error:', e);
-      setError(e?.message || "Camera failed to start. Please ensure camera permissions are granted and you're using HTTPS.");
+      console.error("Camera error:", e);
+      const msg =
+        e?.name === "NotAllowedError"
+          ? "Camera permission denied. Please allow camera access in browser settings."
+          : e?.message || "Camera failed to start.";
+      setError(msg);
       setIsScanning(false);
     }
-  };
+  }, [applyCameraTuning, onDecode, pickBackCamera, preflightPermission, startWithConstraintsFallback]);
 
-  const stopScanning = () => {
+  const stopScanning = useCallback(() => {
     controlsRef.current?.stop();
     controlsRef.current = null;
+
+    // Switch torch off if it was on
+    if (torchOn) {
+      toggleTorch(false).catch(() => {});
+    }
+
+    const media = videoRef.current?.srcObject as MediaStream | null;
+    if (media) {
+      media.getTracks().forEach((t) => t.stop());
+    }
     if (videoRef.current) {
       videoRef.current.srcObject = null;
     }
+
     setIsScanning(false);
     setSuccess(false);
     setError(null);
-  };
+    setTorchOn(false);
+  }, [toggleTorch, torchOn]);
 
   const handleClose = () => {
     stopScanning();
     onOpenChange(false);
   };
+
+  // --- Render ----------------------------------------------------------------
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
@@ -254,41 +337,41 @@ export const PDF417Scanner = ({ open, onOpenChange, onDataScanned }: PDF417Scann
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Scan className="h-5 w-5 text-primary" />
-            Scan Driver's License
+            Scan Driver&apos;s License
           </DialogTitle>
         </DialogHeader>
-        
+
         <div className="space-y-4">
-          <Alert>
+          <Alert role="status" aria-live="polite">
             <AlertCircle className="h-4 w-4" />
             <AlertDescription>
-              Hold your driver's license so the PDF417 barcode (on the back) is clearly visible to the camera.
+              Hold your driver&apos;s license so the PDF417 barcode (on the back) is clearly visible to the camera.
             </AlertDescription>
           </Alert>
 
           {error && (
-            <Alert variant="destructive">
+            <Alert variant="destructive" role="alert" aria-live="assertive">
               <AlertCircle className="h-4 w-4" />
               <AlertDescription>{error}</AlertDescription>
             </Alert>
           )}
 
           {success && (
-            <Alert>
+            <Alert role="status" aria-live="polite">
               <CheckCircle className="h-4 w-4" />
               <AlertDescription>Barcode scanned successfully! Processing data...</AlertDescription>
             </Alert>
           )}
 
-          <div className="relative bg-black rounded-lg overflow-hidden" style={{ aspectRatio: '16/9' }}>
+          <div className="relative bg-black rounded-lg overflow-hidden" style={{ aspectRatio: "16/9" }}>
             <video
               ref={videoRef}
-              className="w-full h-full object-contain"  // avoid cropping the barcode
+              className="w-full h-full object-contain"
               playsInline
               muted
               autoPlay
             />
-            
+
             {!isScanning && !success && (
               <div className="absolute inset-0 flex items-center justify-center bg-black/50">
                 <Button onClick={startScanning} size="lg" className="gap-2">
@@ -300,33 +383,42 @@ export const PDF417Scanner = ({ open, onOpenChange, onDataScanned }: PDF417Scann
 
             {isScanning && (
               <div className="absolute inset-0 pointer-events-none">
-                {/* Scanning overlay */}
-                <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
+                {/* Framing guide */}
+                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2">
                   <div className="w-64 h-40 border-2 border-white rounded-lg"></div>
-                  <p className="text-white text-center mt-2 text-sm">
-                    Position barcode within the frame
-                  </p>
+                  <p className="text-white text-center mt-2 text-sm">Position barcode within the frame</p>
                 </div>
-                
-                {/* Scanning animation */}
-                <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-64 h-40 overflow-hidden">
-                  <div 
+                {/* Scan line (requires @keyframes scanLine in global CSS) */}
+                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-64 h-40 overflow-hidden">
+                  <div
                     className="w-full h-0.5 bg-red-500 absolute"
-                    style={{
-                      animation: 'scanLine 2s ease-in-out infinite',
-                      animationDirection: 'alternate'
-                    }}
-                  ></div>
+                    style={{ animation: "scanLine 2s ease-in-out infinite alternate" }}
+                  />
                 </div>
               </div>
             )}
           </div>
 
-          <div className="flex justify-end gap-2">
-            <Button variant="outline" onClick={stopScanning}>
-              <X className="h-4 w-4 mr-2" />
-              {isScanning ? "Cancel" : "Close"}
-            </Button>
+          <div className="flex justify-between gap-2">
+            <div>
+              {isScanning && (
+                <Button
+                  type="button"
+                  variant="secondary"
+                  className="gap-2"
+                  onClick={() => toggleTorch(!torchOn)}
+                >
+                  <Sun className="h-4 w-4" />
+                  {torchOn ? "Torch Off" : "Torch On"}
+                </Button>
+              )}
+            </div>
+            <div className="flex gap-2 ml-auto">
+              <Button variant="outline" onClick={handleClose}>
+                <X className="h-4 w-4 mr-2" />
+                {isScanning ? "Cancel" : "Close"}
+              </Button>
+            </div>
           </div>
         </div>
       </DialogContent>
