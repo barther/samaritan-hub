@@ -3,7 +3,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Camera, X, Scan, AlertCircle, CheckCircle } from "lucide-react";
-import { BrowserPDF417Reader } from "@zxing/browser";
+import { BrowserMultiFormatReader, BarcodeFormat, IScannerControls } from "@zxing/browser";
 import { useToast } from "@/hooks/use-toast";
 
 interface ScannedData {
@@ -27,23 +27,24 @@ export const PDF417Scanner = ({ open, onOpenChange, onDataScanned }: PDF417Scann
   const [isScanning, setIsScanning] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+
   const videoRef = useRef<HTMLVideoElement>(null);
-  const streamRef = useRef<MediaStream | null>(null);
-  const readerRef = useRef<BrowserPDF417Reader | null>(null);
-  const scanningIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const readerRef = useRef<BrowserMultiFormatReader | null>(null);
+  const controlsRef = useRef<IScannerControls | null>(null);
+
   const { toast } = useToast();
 
   useEffect(() => {
     if (open && !readerRef.current) {
-      readerRef.current = new BrowserPDF417Reader();
+      // Create reader optimized for PDF417
+      readerRef.current = new BrowserMultiFormatReader();
     }
-    
-    // Cleanup when component unmounts or dialog closes
-    return () => {
-      if (!open) {
-        stopScanning();
-      }
-    };
+  }, [open]);
+
+  useEffect(() => {
+    if (!open) stopScanning();
+    return () => stopScanning();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
   const parsePDF417Data = (rawData: string): ScannedData => {
@@ -134,114 +135,83 @@ export const PDF417Scanner = ({ open, onOpenChange, onDataScanned }: PDF417Scann
     };
   };
 
-  const startScanningLoop = async () => {
-    if (!readerRef.current || !videoRef.current || !isScanning) {
-      return;
-    }
+  const pickBackCamera = async (): Promise<string | undefined> => {
+    const devices = await BrowserMultiFormatReader.listVideoInputDevices();
+    // best-guess: labels are present on https / after permission
+    const back = devices.find(d =>
+      /back|rear|environment/i.test(d.label) || /facing back/i.test(d.label)
+    );
+    return (back ?? devices[0])?.deviceId;
+  };
 
-    try {
-      // Use decodeOnceFromVideoDevice which is designed for continuous scanning
-      const result = await readerRef.current.decodeOnceFromVideoDevice();
-      
-      if (result) {
-        console.log('Barcode scan result:', result.getText());
-        
-        // Parse the scanned data
-        const parsedData = parsePDF417Data(result.getText());
-        
-        // Verify we got some useful data
-        if (parsedData.firstName || parsedData.lastName || parsedData.address) {
-          setSuccess(true);
-          
-          // Clear scanning interval
-          if (scanningIntervalRef.current) {
-            clearInterval(scanningIntervalRef.current);
-            scanningIntervalRef.current = null;
-          }
-          
-          setTimeout(() => {
-            onDataScanned(parsedData);
-            stopScanning();
-            onOpenChange(false);
-            
-            toast({
-              title: "License Scanned Successfully",
-              description: `Parsed information for ${parsedData.firstName} ${parsedData.lastName}`,
-            });
-          }, 1000);
-          
-          return;
-        }
+  const applyCameraTuning = async () => {
+    // Try enabling continuous focus if available
+    const stream = (videoRef.current?.srcObject as MediaStream) || null;
+    const track = stream?.getVideoTracks?.()[0];
+    const capabilities = track?.getCapabilities?.();
+    const constraints: MediaTrackConstraints = {};
+    if (capabilities) {
+      // continuous focus helps a lot for PDF417
+      // @ts-ignore — not in all TS libdoms
+      if (capabilities.focusMode?.includes?.("continuous")) {
+        // @ts-ignore
+        constraints.advanced = [{ focusMode: "continuous" }];
       }
-    } catch (scanError) {
-      // Continue scanning silently - PDF417 detection can be finicky
-      console.log('Scan attempt, continuing...', scanError);
     }
-    
-    // Continue scanning if we're still in scanning mode
-    if (isScanning) {
-      scanningIntervalRef.current = setTimeout(startScanningLoop, 300);
+    if (Object.keys(constraints).length) {
+      await track?.applyConstraints(constraints);
     }
   };
 
   const startScanning = async () => {
-    console.log('Starting PDF417 scanner...');
-    try {
-      setError(null);
-      setSuccess(false);
-      setIsScanning(true);
+    setError(null);
+    setSuccess(false);
+    setIsScanning(true);
 
-      // Request camera access
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { 
-          facingMode: 'environment', // Use back camera if available
-          width: { ideal: 1280 },
-          height: { ideal: 720 }
+    try {
+      const deviceId = await pickBackCamera();
+      if (!deviceId) throw new Error("No camera found");
+
+      // Bind to <video> and run continuous decode
+      controlsRef.current = await readerRef.current!.decodeFromVideoDevice(
+        deviceId,
+        videoRef.current!,
+        async (result, err, controls) => {
+          if (result) {
+            const text = result.getText();
+            const parsed = parsePDF417Data(text);
+            setSuccess(true);
+            controls.stop(); // prevent double fire
+            onDataScanned(parsed);
+            onOpenChange(false);
+            toast({
+              title: "License Scanned Successfully",
+              description: `Parsed info for ${parsed.firstName ?? ""} ${parsed.lastName ?? ""}`.trim(),
+            });
+          }
+          // ignore err (NotFoundException etc.)—this fires a lot while searching
         }
-      });
-      
-      streamRef.current = stream;
-      
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-        await videoRef.current.play();
-        console.log('Camera started, beginning scan loop...');
-        
-        // Start scanning loop
-        startScanningLoop();
-      }
-    } catch (err) {
-      console.error('Camera error:', err);
-      setError("Could not access camera. Please ensure camera permissions are granted.");
+      );
+
+      // Optional: after stream is live, bump focus/zoom if available
+      setTimeout(applyCameraTuning, 300);
+
+    } catch (e: any) {
+      console.error(e);
+      setError(e?.message || "Camera failed to start. Check HTTPS and permissions.");
       setIsScanning(false);
     }
   };
 
   const stopScanning = () => {
-    // Clear scanning interval
-    if (scanningIntervalRef.current) {
-      clearInterval(scanningIntervalRef.current);
-      scanningIntervalRef.current = null;
-    }
-    
-    // Stop all media tracks
-    if (streamRef.current) {
-      streamRef.current.getTracks().forEach(track => {
-        track.stop();
-        console.log('Stopped track:', track.label);
-      });
-      streamRef.current = null;
-    }
-    
-    // Clear video source
+    controlsRef.current?.stop();
+    controlsRef.current = null;
     if (videoRef.current) {
       videoRef.current.srcObject = null;
-      videoRef.current.load(); // Force video element to reset
     }
-    
     setIsScanning(false);
-    setError(null);
     setSuccess(false);
+    setError(null);
   };
 
   const handleClose = () => {
@@ -284,9 +254,10 @@ export const PDF417Scanner = ({ open, onOpenChange, onDataScanned }: PDF417Scann
           <div className="relative bg-black rounded-lg overflow-hidden" style={{ aspectRatio: '16/9' }}>
             <video
               ref={videoRef}
-              className="w-full h-full object-cover"
+              className="w-full h-full object-contain"  // avoid cropping the barcode
               playsInline
               muted
+              autoPlay
             />
             
             {!isScanning && !success && (
@@ -323,15 +294,10 @@ export const PDF417Scanner = ({ open, onOpenChange, onDataScanned }: PDF417Scann
           </div>
 
           <div className="flex justify-end gap-2">
-            <Button variant="outline" onClick={handleClose}>
+            <Button variant="outline" onClick={stopScanning}>
               <X className="h-4 w-4 mr-2" />
-              Cancel
+              {isScanning ? "Cancel" : "Close"}
             </Button>
-            {isScanning && (
-              <Button variant="destructive" onClick={stopScanning}>
-                Stop Scanning
-              </Button>
-            )}
           </div>
         </div>
       </DialogContent>
