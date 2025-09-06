@@ -26,29 +26,49 @@ const MonthlyStats = () => {
         
         const monthName = lastMonth.toLocaleString('default', { month: 'long' });
         
-        // Fetch disbursements (families helped) from last month
+        // Fetch disbursements (count of assistance given) from last month
+        const startDateStr = startOfLastMonth.toISOString().split('T')[0];
+        const endDateStr = endOfLastMonth.toISOString().split('T')[0];
+        const startTs = startOfLastMonth.toISOString();
+        const endTs = endOfLastMonth.toISOString();
+
         const { data: disbursements, error: disbursementError } = await supabase
           .from('disbursements')
-          .select('client_id')
-          .gte('disbursement_date', startOfLastMonth.toISOString().split('T')[0])
-          .lte('disbursement_date', endOfLastMonth.toISOString().split('T')[0]);
+          .select('id, interaction_id')
+          .gte('disbursement_date', startDateStr)
+          .lte('disbursement_date', endDateStr);
 
         if (disbursementError) throw disbursementError;
 
-        // Count unique families helped
-        const uniqueFamilies = new Set(disbursements?.map(d => d.client_id) || []).size;
-
-        // Fetch interactions (people contacted) from last month
+        // Fetch interactions from last month
         const { data: interactions, error: interactionError } = await supabase
           .from('interactions')
-          .select('id')
-          .gte('occurred_at', startOfLastMonth.toISOString())
-          .lte('occurred_at', endOfLastMonth.toISOString());
+          .select('id, summary, details')
+          .gte('occurred_at', startTs)
+          .lte('occurred_at', endTs);
 
         if (interactionError) throw interactionError;
 
+        // Build a set of interaction IDs that resulted in a disbursement this month
+        const disbursedInteractionIds = new Set(
+          (disbursements || [])
+            .map((d: any) => d.interaction_id)
+            .filter((id: string | null) => Boolean(id))
+        );
+
+        // Count referrals-only interactions (contain 'referral' and have no disbursement)
+        const referralOnlyCount = (interactions || []).filter((i: any) => {
+          const hasReferralKeyword =
+            (i.summary && i.summary.toLowerCase().includes('referral')) ||
+            (i.details && i.details.toLowerCase().includes('refer'));
+          const hasDisbursement = disbursedInteractionIds.has(i.id);
+          return hasReferralKeyword && !hasDisbursement;
+        }).length;
+
+        const familiesCount = (disbursements?.length || 0) + referralOnlyCount;
+
         setStats({
-          familiesHelped: uniqueFamilies,
+          familiesHelped: familiesCount,
           peopleContacted: interactions?.length || 0,
           monthName,
           loading: false,
