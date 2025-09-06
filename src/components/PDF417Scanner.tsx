@@ -134,45 +134,53 @@ export const PDF417Scanner = ({ open, onOpenChange, onDataScanned }: PDF417Scann
     };
   };
 
-  const continuouslyScanning = async () => {
+  const startScanningLoop = async () => {
     if (!readerRef.current || !videoRef.current || !isScanning) {
       return;
     }
 
     try {
-      const result = await readerRef.current.decodeOnceFromVideoDevice(undefined, videoRef.current);
+      // Use decodeOnceFromVideoDevice which is designed for continuous scanning
+      const result = await readerRef.current.decodeOnceFromVideoDevice();
       
-      console.log('Barcode scan result:', result.getText());
-      
-      // Parse the scanned data
-      const parsedData = parsePDF417Data(result.getText());
-      
-      // Verify we got some useful data
-      if (parsedData.firstName || parsedData.lastName || parsedData.address) {
-        setSuccess(true);
+      if (result) {
+        console.log('Barcode scan result:', result.getText());
         
-        // Clear scanning interval
-        if (scanningIntervalRef.current) {
-          clearInterval(scanningIntervalRef.current);
-          scanningIntervalRef.current = null;
-        }
+        // Parse the scanned data
+        const parsedData = parsePDF417Data(result.getText());
         
-        setTimeout(() => {
-          onDataScanned(parsedData);
-          stopScanning();
-          onOpenChange(false);
+        // Verify we got some useful data
+        if (parsedData.firstName || parsedData.lastName || parsedData.address) {
+          setSuccess(true);
           
-          toast({
-            title: "License Scanned Successfully",
-            description: `Parsed information for ${parsedData.firstName} ${parsedData.lastName}`,
-          });
-        }, 1000);
-        
-        return;
+          // Clear scanning interval
+          if (scanningIntervalRef.current) {
+            clearInterval(scanningIntervalRef.current);
+            scanningIntervalRef.current = null;
+          }
+          
+          setTimeout(() => {
+            onDataScanned(parsedData);
+            stopScanning();
+            onOpenChange(false);
+            
+            toast({
+              title: "License Scanned Successfully",
+              description: `Parsed information for ${parsedData.firstName} ${parsedData.lastName}`,
+            });
+          }, 1000);
+          
+          return;
+        }
       }
     } catch (scanError) {
-      // Continue scanning - PDF417 detection can be finicky
-      console.log('Scan attempt failed, continuing...', scanError);
+      // Continue scanning silently - PDF417 detection can be finicky
+      console.log('Scan attempt, continuing...', scanError);
+    }
+    
+    // Continue scanning if we're still in scanning mode
+    if (isScanning) {
+      scanningIntervalRef.current = setTimeout(startScanningLoop, 300);
     }
   };
 
@@ -197,8 +205,8 @@ export const PDF417Scanner = ({ open, onOpenChange, onDataScanned }: PDF417Scann
         videoRef.current.srcObject = stream;
         await videoRef.current.play();
         
-        // Start continuous scanning
-        scanningIntervalRef.current = setInterval(continuouslyScanning, 500);
+        // Start scanning loop
+        startScanningLoop();
       }
     } catch (err) {
       console.error('Camera error:', err);
