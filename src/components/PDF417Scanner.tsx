@@ -39,65 +39,12 @@ export const PDF417Scanner = ({ open, onOpenChange, onDataScanned }: PDF417Scann
 
   const { toast } = useToast();
 
-  // --- Utils -----------------------------------------------------------------
-
-  const applyCameraTuning = useCallback(async () => {
-    const stream = (videoRef.current?.srcObject as MediaStream) || null;
-    const track = stream?.getVideoTracks?.()[0];
-    const capabilities: any = track?.getCapabilities?.();
-    if (!track || !capabilities) return;
-
-    const advanced: any[] = [];
-
-    if (Array.isArray(capabilities.focusMode) && capabilities.focusMode.includes("continuous")) {
-      advanced.push({ focusMode: "continuous" });
-    }
-
-    if (typeof capabilities.zoom === "number") {
-      // Some implementations expose zoom as number; most expose {min,max,step}
-      // We'll skip this case because we can't set a numeric zoom without the range.
-    } else if (capabilities.zoom && typeof capabilities.zoom === "object") {
-      const { min, max } = capabilities.zoom as { min: number; max: number };
-      if (typeof min === "number" && typeof max === "number" && max > min) {
-        advanced.push({ zoom: (min + max) / 2 });
-      }
-    }
-
-    if (advanced.length) {
-      try {
-        await track.applyConstraints({ advanced });
-      } catch {
-        /* best effort only */
-      }
-    }
-  }, []);
-
-  const toggleTorch = useCallback(
-    async (on: boolean) => {
-      const stream = (videoRef.current?.srcObject as MediaStream) || null;
-      const track = stream?.getVideoTracks?.()[0];
-      const capabilities: any = track?.getCapabilities?.();
-      if (!track || !capabilities?.torch) {
-        setTorchOn(false);
-        return;
-      }
-      try {
-        await track.applyConstraints({ advanced: [{ torch: on }] as any });
-        setTorchOn(on);
-      } catch {
-        setTorchOn(false);
-      }
-    },
-    []
-  );
-
-  // --- AAMVA Parser ----------------------------------------------------------
+  // ─── AAMVA Parsing Helpers ────────────────────────────────────────────────
 
   const normalizeDob = (s?: string) => {
     if (!s) return undefined;
     const raw = s.replace(/\D/g, "");
     if (/^\d{8}$/.test(raw)) {
-      // Prefer YYYYMMDD; else treat as MMDDYYYY
       return +raw.slice(0, 4) > 1900
         ? `${raw.slice(0, 4)}-${raw.slice(4, 6)}-${raw.slice(6, 8)}`
         : `${raw.slice(4, 8)}-${raw.slice(0, 2)}-${raw.slice(2, 4)}`;
@@ -105,17 +52,16 @@ export const PDF417Scanner = ({ open, onOpenChange, onDataScanned }: PDF417Scann
     return s;
   };
 
-  const normalizeZip = (s?: string) => (s?.replace(/[^\d-]/g, "").slice(0, 5) || "");
+  const normalizeZip = (s?: string) => s?.replace(/[^\d]/g, "").slice(0, 5) || "";
 
   const parsePDF417Data = (rawData: string): ScannedData => {
     const lines = rawData.split(/[\r\n]+/).map((l) => l.trim()).filter(Boolean);
-
     const get = (key: string) =>
       lines.find((l) => l.startsWith(key))?.slice(key.length).trim() ?? "";
 
     let lastName = get("DCS");
-    let firstName = get("DAC") || get("DCT"); // some states use DCT for first+middle
-    const fullName = get("DAA"); // optional "LAST,FIRST MIDDLE"
+    let firstName = get("DAC") || get("DCT");
+    const fullName = get("DAA"); // fallback
 
     if (!firstName && !lastName && fullName) {
       const [ln, rest] = fullName.split(",", 2);
@@ -132,56 +78,90 @@ export const PDF417Scanner = ({ open, onOpenChange, onDataScanned }: PDF417Scann
     const dateOfBirth = normalizeDob(get("DBB"));
     const licenseNumber = get("DAQ") || undefined;
 
-    // Fallback name if still empty (rare older cards)
     if (!firstName && !lastName) {
-      for (let i = 0; i < Math.min(lines.length, 5); i++) {
-        const line = lines[i];
-        if (line.length > 2 && /^[A-Z\s,]+$/.test(line)) {
-          const parts = line.split(/\s+/);
-          if (parts.length >= 2) {
-            lastName = parts[0];
-            firstName = parts.slice(1).join(" ");
-            break;
-          }
+      for (let i = 0; i < Math.min(5, lines.length); i++) {
+        const parts = lines[i].split(/\s+/);
+        if (parts.length >= 2 && /^[A-Z]+$/.test(parts[0])) {
+          lastName = parts[0];
+          firstName = parts.slice(1).join(" ");
+          break;
         }
       }
     }
 
-    return {
-      firstName: firstName || "",
-      lastName: lastName || "",
-      address: address || "",
-      city: city || "",
-      state: state || "",
-      zipCode,
-      dateOfBirth,
-      licenseNumber,
-    };
+    return { firstName, lastName, address, city, state, zipCode, dateOfBirth, licenseNumber };
   };
 
-  // --- ZXing setup & lifecycle ----------------------------------------------
+  // ─── Torch Control ─────────────────────────────────────────────────────────
 
-  // Initialize the reader with optimizations for PDF417 detection
+  const toggleTorch = useCallback(async (on: boolean) => {
+    const stream = videoRef.current?.srcObject as MediaStream | null;
+    const track = stream?.getVideoTracks?.()?.[0];
+    const capabilities: any = track?.getCapabilities?.();
+    if (!track || !capabilities?.torch) {
+      setTorchOn(false);
+      return;
+    }
+    try {
+      await track.applyConstraints({ advanced: [{ torch: on }] as any });
+      setTorchOn(on);
+    } catch {
+      setTorchOn(false);
+    }
+  }, []);
+
+  // ─── ZXing Reader Init ────────────────────────────────────────────────────
+
   useEffect(() => {
     if (open && !readerRef.current) {
       // Create reader optimized for PDF417 scanning
-      readerRef.current = new BrowserMultiFormatReader();
-      // make it more eager for faster detection
-      try {
-        (readerRef.current as any).timeBetweenDecodingAttempts = 0;
-      } catch (e) {
-        // Fallback if property doesn't exist
-        console.log('Unable to set timeBetweenDecodingAttempts');
-      }
+      const reader = new BrowserMultiFormatReader();
+      // zero delay between decode attempts for faster detection
+      try { (reader as any).timeBetweenDecodingAttempts = 0; } catch {}
+      readerRef.current = reader;
     }
   }, [open]);
 
-  // Stop scanning when dialog closes or component unmounts
+  // ─── Lifecycle Cleanup ─────────────────────────────────────────────────────
+
+  // stop when dialog closes or unmounts
   useEffect(() => {
     if (!open) stopScanning();
     return () => stopScanning();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
+
+  // pause if tab hidden
+  useEffect(() => {
+    const onVis = () => document.hidden && stopScanning();
+    document.addEventListener("visibilitychange", onVis);
+    return () => document.removeEventListener("visibilitychange", onVis);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // ─── Core Decode Callback ─────────────────────────────────────────────────
+
+  const onDecode = useCallback(
+    (_result: any, _err: any, controls: IScannerControls) => {
+      if (_result) {
+        const text = _result.getText();
+        console.log("Barcode detected:", text);
+        const parsed = parsePDF417Data(text);
+        setSuccess(true);
+        controls.stop();
+        onDataScanned(parsed);
+        onOpenChange(false);
+        toast({
+          title: "License Scanned Successfully",
+          description: `Parsed info for ${parsed.firstName} ${parsed.lastName}`.trim(),
+        });
+      }
+      // Ignore errors - they're normal during scanning
+    },
+    [onDataScanned, onOpenChange, toast]
+  );
+
+  // ─── Start / Stop Scanning ─────────────────────────────────────────────────
 
   const startScanning = useCallback(async () => {
     setError(null);
@@ -190,101 +170,85 @@ export const PDF417Scanner = ({ open, onOpenChange, onDataScanned }: PDF417Scann
     setTorchOn(false);
 
     try {
-      // tiny delay avoids Safari dialog animation glitch
-      await new Promise(r => setTimeout(r, 50));
+      // iOS/Safari needs this tiny delay so the video element is fully visible
+      await new Promise((r) => setTimeout(r, 50));
 
-      const constraints: MediaStreamConstraints = {
+      // Preferred back camera + HD
+      const constraints = {
         video: {
-          facingMode: { ideal: "environment" }, // prefer back camera
+          facingMode: { ideal: "environment" },
           width:  { ideal: 1920 },
           height: { ideal: 1080 },
         },
-      } as any;
+      } as MediaStreamConstraints;
 
       controlsRef.current = await readerRef.current!.decodeFromConstraints(
         constraints,
         videoRef.current!,
-        (result, err, controls) => {
-          if (result) {
-            console.log("Barcode detected:", result.getText());
-            const parsed = parsePDF417Data(result.getText());
-            setSuccess(true);
-            controls.stop();         // stop the reader immediately
-            onDataScanned(parsed);
-            onOpenChange(false);
-            toast({
-              title: "License Scanned Successfully",
-              description: `Parsed info for ${parsed.firstName ?? ""} ${parsed.lastName ?? ""}`.trim(),
-            });
-            return;
-          }
-          // noisy 'NotFoundException's are normal; ignore
-        }
+        onDecode
       );
 
-      // optional: nudge focus/zoom after stream is live
-      setTimeout(applyCameraTuning, 300);
-
+      // optional: quick focus/zoom tweak after camera live
+      setTimeout(() => {
+        const stream = videoRef.current!.srcObject as MediaStream;
+        const track = stream?.getVideoTracks?.()?.[0];
+        const caps: any = track?.getCapabilities?.();
+        if (caps?.focusMode?.includes?.("continuous")) {
+          track.applyConstraints({ advanced: [{ focusMode: "continuous" } as any] }).catch(() => {});
+        }
+      }, 300);
     } catch (e: any) {
       console.error("Camera error:", e);
-      const msg =
-        e?.name === "NotAllowedError"
-          ? "Camera permission denied. Please allow camera access in browser settings."
-          : e?.message || "Camera failed to start.";
-      setError(msg);
+      setError(
+        e.name === "NotAllowedError"
+          ? "Camera permission denied."
+          : e.message || "Failed to start camera."
+      );
       setIsScanning(false);
     }
-  }, [applyCameraTuning, onDataScanned, onOpenChange, toast]);
+  }, [onDecode]);
 
   const stopScanning = useCallback(() => {
     controlsRef.current?.stop();
     controlsRef.current = null;
-
-    // Switch torch off if it was on
+    
+    // Stop torch if it was on
     if (torchOn) {
       toggleTorch(false).catch(() => {});
     }
-
-    // Stop all media tracks properly
-    const media = videoRef.current?.srcObject as MediaStream | null;
-    if (media) {
-      media.getTracks().forEach((t) => {
-        t.stop();
-        console.log('Stopped track:', t.label);
-      });
+    
+    // Clean up media streams
+    if (videoRef.current?.srcObject) {
+      (videoRef.current!.srcObject as MediaStream).getTracks().forEach(t => t.stop());
+      videoRef.current!.srcObject = null;
     }
-    if (videoRef.current) {
-      videoRef.current.srcObject = null;
-    }
-
+    
     setIsScanning(false);
     setSuccess(false);
     setError(null);
     setTorchOn(false);
-  }, [toggleTorch, torchOn]);
+  }, [torchOn, toggleTorch]);
 
   const handleClose = () => {
     stopScanning();
     onOpenChange(false);
   };
 
-  // --- Render ----------------------------------------------------------------
+  // ─── Render ────────────────────────────────────────────────────────────────
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Scan className="h-5 w-5 text-primary" />
-            Scan Driver&apos;s License
+            <Scan className="h-5 w-5 text-primary" /> Scan Driver's License
           </DialogTitle>
         </DialogHeader>
-
         <div className="space-y-4">
           <Alert role="status" aria-live="polite">
             <AlertCircle className="h-4 w-4" />
             <AlertDescription>
-              Hold your driver&apos;s license so the PDF417 barcode (on the back) is clearly visible to the camera.
+              Hold your driver's license so the PDF417 barcode (on the back) is clearly visible.
             </AlertDescription>
           </Alert>
 
@@ -294,40 +258,35 @@ export const PDF417Scanner = ({ open, onOpenChange, onDataScanned }: PDF417Scann
               <AlertDescription>{error}</AlertDescription>
             </Alert>
           )}
-
           {success && (
             <Alert role="status" aria-live="polite">
               <CheckCircle className="h-4 w-4" />
-              <AlertDescription>Barcode scanned successfully! Processing data...</AlertDescription>
+              <AlertDescription>
+                Barcode scanned! Processing…
+              </AlertDescription>
             </Alert>
           )}
 
           <div className="relative bg-black rounded-lg overflow-hidden" style={{ aspectRatio: "16/9" }}>
             <video
               ref={videoRef}
-              className="w-full h-full object-contain"   // avoid cropping the barcode
+              className="w-full h-full object-contain"
               playsInline
               muted
               autoPlay
             />
-
             {!isScanning && !success && (
               <div className="absolute inset-0 flex items-center justify-center bg-black/50">
                 <Button onClick={startScanning} size="lg" className="gap-2">
-                  <Camera className="h-5 w-5" />
-                  Start Camera
+                  <Camera className="h-5 w-5" /> Start Camera
                 </Button>
               </div>
             )}
-
             {isScanning && (
               <div className="absolute inset-0 pointer-events-none">
-                {/* Framing guide */}
-                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2">
+                <div className="absolute inset-0 flex items-center justify-center">
                   <div className="w-64 h-40 border-2 border-white rounded-lg"></div>
-                  <p className="text-white text-center mt-2 text-sm">Position barcode within the frame</p>
                 </div>
-                {/* Scan line (requires @keyframes scanLine in global CSS) */}
                 <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-64 h-40 overflow-hidden">
                   <div
                     className="w-full h-0.5 bg-red-500 absolute"
@@ -338,26 +297,15 @@ export const PDF417Scanner = ({ open, onOpenChange, onDataScanned }: PDF417Scann
             )}
           </div>
 
-          <div className="flex justify-between gap-2">
-            <div>
-              {isScanning && (
-                <Button
-                  type="button"
-                  variant="secondary"
-                  className="gap-2"
-                  onClick={() => toggleTorch(!torchOn)}
-                >
-                  <Sun className="h-4 w-4" />
-                  {torchOn ? "Torch Off" : "Torch On"}
-                </Button>
-              )}
-            </div>
-            <div className="flex gap-2 ml-auto">
-              <Button variant="outline" onClick={handleClose}>
-                <X className="h-4 w-4 mr-2" />
-                {isScanning ? "Cancel" : "Close"}
+          <div className="flex justify-between items-center">
+            {isScanning && (
+              <Button variant="secondary" onClick={() => toggleTorch(!torchOn)} className="gap-2">
+                <Sun className="h-4 w-4" /> {torchOn ? "Torch Off" : "Torch On"}
               </Button>
-            </div>
+            )}
+            <Button variant="outline" onClick={handleClose} className="ml-auto">
+              <X className="h-4 w-4 mr-2" /> {isScanning ? "Cancel" : "Close"}
+            </Button>
           </div>
         </div>
       </DialogContent>
