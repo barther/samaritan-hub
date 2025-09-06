@@ -30,12 +30,20 @@ export const PDF417Scanner = ({ open, onOpenChange, onDataScanned }: PDF417Scann
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const readerRef = useRef<BrowserPDF417Reader | null>(null);
+  const scanningIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const { toast } = useToast();
 
   useEffect(() => {
     if (open && !readerRef.current) {
       readerRef.current = new BrowserPDF417Reader();
     }
+    
+    // Cleanup when component unmounts or dialog closes
+    return () => {
+      if (!open) {
+        stopScanning();
+      }
+    };
   }, [open]);
 
   const parsePDF417Data = (rawData: string): ScannedData => {
@@ -126,6 +134,48 @@ export const PDF417Scanner = ({ open, onOpenChange, onDataScanned }: PDF417Scann
     };
   };
 
+  const continuouslyScanning = async () => {
+    if (!readerRef.current || !videoRef.current || !isScanning) {
+      return;
+    }
+
+    try {
+      const result = await readerRef.current.decodeOnceFromVideoDevice(undefined, videoRef.current);
+      
+      console.log('Barcode scan result:', result.getText());
+      
+      // Parse the scanned data
+      const parsedData = parsePDF417Data(result.getText());
+      
+      // Verify we got some useful data
+      if (parsedData.firstName || parsedData.lastName || parsedData.address) {
+        setSuccess(true);
+        
+        // Clear scanning interval
+        if (scanningIntervalRef.current) {
+          clearInterval(scanningIntervalRef.current);
+          scanningIntervalRef.current = null;
+        }
+        
+        setTimeout(() => {
+          onDataScanned(parsedData);
+          stopScanning();
+          onOpenChange(false);
+          
+          toast({
+            title: "License Scanned Successfully",
+            description: `Parsed information for ${parsedData.firstName} ${parsedData.lastName}`,
+          });
+        }, 1000);
+        
+        return;
+      }
+    } catch (scanError) {
+      // Continue scanning - PDF417 detection can be finicky
+      console.log('Scan attempt failed, continuing...', scanError);
+    }
+  };
+
   const startScanning = async () => {
     try {
       setError(null);
@@ -147,55 +197,36 @@ export const PDF417Scanner = ({ open, onOpenChange, onDataScanned }: PDF417Scann
         videoRef.current.srcObject = stream;
         await videoRef.current.play();
         
-        // Start scanning
-        if (readerRef.current) {
-          try {
-            const result = await readerRef.current.decodeOnceFromVideoDevice(undefined, videoRef.current);
-            
-            console.log('Barcode scan result:', result.getText());
-            
-            // Parse the scanned data
-            const parsedData = parsePDF417Data(result.getText());
-            
-            // Verify we got some useful data
-            if (parsedData.firstName || parsedData.lastName || parsedData.address) {
-              setSuccess(true);
-              setTimeout(() => {
-                onDataScanned(parsedData);
-                stopScanning();
-                onOpenChange(false);
-                
-                toast({
-                  title: "License Scanned Successfully",
-                  description: `Parsed information for ${parsedData.firstName} ${parsedData.lastName}`,
-                });
-              }, 1000);
-            } else {
-              throw new Error("Could not extract valid information from barcode");
-            }
-            
-          } catch (scanError) {
-            console.error('Scanning error:', scanError);
-            setError("Could not read barcode. Please ensure the PDF417 barcode is clearly visible and try again.");
-          }
-        }
+        // Start continuous scanning
+        scanningIntervalRef.current = setInterval(continuouslyScanning, 500);
       }
     } catch (err) {
       console.error('Camera error:', err);
       setError("Could not access camera. Please ensure camera permissions are granted.");
-    } finally {
       setIsScanning(false);
     }
   };
 
   const stopScanning = () => {
+    // Clear scanning interval
+    if (scanningIntervalRef.current) {
+      clearInterval(scanningIntervalRef.current);
+      scanningIntervalRef.current = null;
+    }
+    
+    // Stop all media tracks
     if (streamRef.current) {
-      streamRef.current.getTracks().forEach(track => track.stop());
+      streamRef.current.getTracks().forEach(track => {
+        track.stop();
+        console.log('Stopped track:', track.label);
+      });
       streamRef.current = null;
     }
     
+    // Clear video source
     if (videoRef.current) {
       videoRef.current.srcObject = null;
+      videoRef.current.load(); // Force video element to reset
     }
     
     setIsScanning(false);
