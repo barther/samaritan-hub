@@ -97,23 +97,17 @@ const MonthlyStats = () => {
   // Always show the component, even with zero stats for previous month
   return (
     <div className="bg-primary/5 rounded-lg p-6 mb-8 border border-primary/10">
-      <div className="flex items-center justify-center gap-8 flex-wrap">
-        <div className="flex items-center gap-2 text-primary">
-          <HandHeart className="h-5 w-5" />
-          <span className="font-semibold text-lg">
-            We helped {stats.familiesHelped} {stats.familiesHelped === 1 ? 'family' : 'families'}
-          </span>
-        </div>
-        <div className="text-muted-foreground">•</div>
-        <div className="flex items-center gap-2 text-primary">
-          <Users className="h-5 w-5" />
-          <span className="font-semibold text-lg">
-            Spoke with {stats.peopleContacted} {stats.peopleContacted === 1 ? 'person' : 'people'}
-          </span>
-        </div>
-        <div className="text-sm text-muted-foreground">
-          in {stats.monthName}
-        </div>
+      <div className="text-center">
+        <p className="text-lg text-foreground">
+          In <span className="font-semibold text-primary">{stats.monthName}</span>, we helped{' '}
+          <span className="font-semibold text-primary">
+            {stats.familiesHelped} {stats.familiesHelped === 1 ? 'family' : 'families'}
+          </span>{' '}
+          and spoke with{' '}
+          <span className="font-semibold text-primary">
+            {stats.peopleContacted} {stats.peopleContacted === 1 ? 'person' : 'people'}
+          </span>.
+        </p>
       </div>
     </div>
   );
