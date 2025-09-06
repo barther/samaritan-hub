@@ -168,6 +168,7 @@ const realResources: Resource[] = [
 const categories = ["All", "Housing", "Food", "Emergency", "Utilities", "General"];
 
 const ResourcesSidebar = () => {
+  console.log("ResourcesSidebar rendering, realResources:", realResources);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("All");
 
@@ -177,6 +178,7 @@ const ResourcesSidebar = () => {
     const matchesCategory = selectedCategory === "All" || resource.category === selectedCategory;
     return matchesSearch && matchesCategory;
   });
+  console.log("Filtered resources:", filteredResources);
 
   return (
     <div className="w-full lg:w-80 space-y-6">
