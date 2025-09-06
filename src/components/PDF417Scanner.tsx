@@ -267,10 +267,10 @@ export const PDF417Scanner = ({ open, onOpenChange, onDataScanned }: PDF417Scann
             </Alert>
           )}
 
-          <div className="relative bg-black rounded-lg overflow-hidden" style={{ aspectRatio: "16/9" }}>
+          <div className="relative bg-black rounded-lg overflow-hidden h-80">
             <video
               ref={videoRef}
-              className="w-full h-full object-contain"
+              className="w-full h-full object-cover"
               playsInline
               muted
               autoPlay
