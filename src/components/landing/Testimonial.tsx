@@ -25,6 +25,7 @@ const testimonials = [
 
 const Testimonial = () => {
   const [currentTestimonial, setCurrentTestimonial] = useState(testimonials[0]);
+  const [isVisible, setIsVisible] = useState(true);
 
   useEffect(() => {
     // Select a random testimonial on component mount
@@ -33,8 +34,15 @@ const Testimonial = () => {
 
     // Rotate testimonials every 8 seconds
     const interval = setInterval(() => {
-      const randomIndex = Math.floor(Math.random() * testimonials.length);
-      setCurrentTestimonial(testimonials[randomIndex]);
+      // Start fade out and lift animation
+      setIsVisible(false);
+      
+      // After animation, change testimonial and fade back in
+      setTimeout(() => {
+        const randomIndex = Math.floor(Math.random() * testimonials.length);
+        setCurrentTestimonial(testimonials[randomIndex]);
+        setIsVisible(true);
+      }, 300);
     }, 8000);
 
     return () => clearInterval(interval);
@@ -44,7 +52,9 @@ const Testimonial = () => {
     <section className="py-10">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
         <div className="max-w-2xl mx-auto text-center">
-          <div className="rounded-2xl border border-slate-200 bg-white/70 backdrop-blur p-6 transition-all duration-500">
+          <div className={`rounded-2xl border border-slate-200 bg-white/70 backdrop-blur p-6 transition-all duration-300 ${
+            isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-2'
+          }`}>
             <div className="flex items-center justify-center mb-4">
               <div className="h-12 w-12 rounded-full bg-slate-100 flex items-center justify-center">
                 <span className="text-slate-600 font-medium text-lg">{currentTestimonial.initial}</span>
