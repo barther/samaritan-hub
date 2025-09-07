@@ -1,6 +1,6 @@
 const Testimonial = () => {
-  // Check environment variable, default to true
-  const showTestimonial = process.env.NEXT_PUBLIC_SHOW_TESTIMONIAL !== 'false';
+  // Show by default (can be feature-flagged later if needed)
+  const showTestimonial = true;
   
   if (!showTestimonial) return null;
 

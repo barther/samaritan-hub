@@ -1,8 +1,8 @@
 import { Ear, ShieldCheck, Link as LinkIcon } from "lucide-react";
 
 const HowItWorks = () => {
-  // Check environment variable, default to true
-  const showHowItWorks = process.env.NEXT_PUBLIC_SHOW_HOW_IT_WORKS !== 'false';
+  // Show by default (can be feature-flagged later if needed)
+  const showHowItWorks = true;
   
   if (!showHowItWorks) return null;
 
