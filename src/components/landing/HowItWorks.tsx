@@ -1,11 +1,7 @@
 import { Ear, ShieldCheck, Link as LinkIcon } from "lucide-react";
 
 const HowItWorks = () => {
-  // Show by default (can be feature-flagged later if needed)
-  const showHowItWorks = true;
-  
-  if (!showHowItWorks) return null;
-
+  // Component always shows - no environment variables needed
   return (
     <section className="py-12 bg-slate-50">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
