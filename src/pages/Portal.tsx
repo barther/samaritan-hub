@@ -77,7 +77,7 @@ const Portal = () => {
     <>
       <Header />
       <section 
-        className="relative isolate min-h-screen bg-[radial-gradient(ellipse_at_top_left,hsl(var(--emerald-50)),transparent),radial-gradient(ellipse_at_bottom_right,hsl(var(--indigo-50)),transparent)] flex items-center justify-center p-4"
+        className="relative isolate h-screen bg-[radial-gradient(ellipse_at_top_left,hsl(var(--emerald-50)),transparent),radial-gradient(ellipse_at_bottom_right,hsl(var(--indigo-50)),transparent)] flex items-center justify-center p-4"
         role="region"
         aria-labelledby="portal-headline"
       >
@@ -87,44 +87,44 @@ const Portal = () => {
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center max-w-md mx-auto">
             {/* Icon Badge */}
-            <div className="mx-auto mb-6 flex h-12 w-12 items-center justify-center rounded-full bg-white shadow ring-1 ring-slate-200">
-              <Shield className="h-6 w-6 text-primary" />
+            <div className="mx-auto mb-4 flex h-10 w-10 items-center justify-center rounded-full bg-white shadow ring-1 ring-slate-200">
+              <Shield className="h-5 w-5 text-primary" />
             </div>
 
             {/* Headlines */}
             <h1 
               id="portal-headline"
-              className="text-3xl font-extrabold tracking-tight text-foreground sm:text-4xl mb-2"
+              className="text-2xl font-extrabold tracking-tight text-foreground sm:text-3xl mb-2"
             >
               Staff Portal
             </h1>
             
-            <p className="text-base text-muted-foreground mb-8">
+            <p className="text-sm text-muted-foreground mb-6">
               Access restricted to authorized Good Samaritan staff
             </p>
 
             {/* Authentication Card */}
             <Card className="shadow-card bg-white/80 backdrop-blur-sm">
-              <CardHeader>
-                <CardTitle className="flex items-center justify-center gap-2">
-                  <Users className="h-5 w-5 text-primary" />
+              <CardHeader className="pb-4">
+                <CardTitle className="flex items-center justify-center gap-2 text-lg">
+                  <Users className="h-4 w-4 text-primary" />
                   Organization Access
                 </CardTitle>
-                <CardDescription>
+                <CardDescription className="text-sm">
                   Sign in with your organization Microsoft account
                 </CardDescription>
               </CardHeader>
-              <CardContent className="space-y-4">
-                <Button onClick={handleMicrosoftLogin} className="w-full" variant="default" size="lg">
+              <CardContent className="space-y-3 pt-0">
+                <Button onClick={handleMicrosoftLogin} className="w-full" variant="default" size="default">
                   Sign in with Microsoft
                 </Button>
 
-                <div className="bg-warning/10 rounded-lg p-3 border border-warning/20">
+                <div className="bg-warning/10 rounded-lg p-2.5 border border-warning/20">
                   <div className="flex items-center justify-center gap-2">
-                    <AlertTriangle className="h-4 w-4 text-rose-700 flex-shrink-0" />
+                    <AlertTriangle className="h-3.5 w-3.5 text-rose-700 flex-shrink-0" />
                     <div className="text-center">
-                      <p className="text-sm font-medium text-rose-700">Access is Restricted.</p>
-                      <p className="text-xs text-muted-foreground mt-1">
+                      <p className="text-xs font-medium text-rose-700">Access is Restricted.</p>
+                      <p className="text-xs text-muted-foreground mt-0.5">
                         Only @lithiaspringsmethodist.org email addresses are permitted.
                       </p>
                     </div>
