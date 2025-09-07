@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import Header from "@/components/Header";
 import ResourcesSidebar from "@/components/ResourcesSidebar";
+import FooterTrust from "@/components/landing/FooterTrust";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -210,60 +211,67 @@ const RequestAssistance = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-white text-slate-900">
       <Header />
+      
+      {/* Hero Section with Gradient Background */}
+      <section className="relative isolate py-16 bg-[radial-gradient(ellipse_at_top_left,hsl(var(--emerald-50)),transparent),radial-gradient(ellipse_at_bottom_right,hsl(var(--indigo-50)),transparent)]">
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center max-w-2xl mx-auto">
+            <div className="mx-auto mb-6 flex h-12 w-12 items-center justify-center rounded-full bg-white shadow ring-1 ring-slate-200">
+              <HandHeart className="h-6 w-6 text-indigo-600" />
+            </div>
+            <h1 className="text-4xl font-extrabold tracking-tight text-foreground sm:text-5xl mb-4">
+              Request Assistance
+            </h1>
+            <p className="text-lg text-slate-600 leading-relaxed">
+              We're here to help. Please provide your basic information and we'll get back to you soon.
+            </p>
+          </div>
+        </div>
+      </section>
       
       <main className="container mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <div className="flex flex-col lg:flex-row gap-8">
           {/* Main Form */}
           <div className="flex-1 max-w-2xl mx-auto">
-            <div className="text-center mb-8">
-              <div className="inline-flex items-center justify-center p-3 bg-accent/10 rounded-full mb-4">
-                <HandHeart className="h-8 w-8 text-accent" />
-              </div>
-              <h1 className="text-3xl md:text-4xl font-bold text-foreground mb-4">
-                Request Assistance
-              </h1>
-              <p className="text-lg text-muted-foreground">
-                We're here to help. Please provide your basic information and we'll get back to you soon.
-              </p>
-            </div>
-
             <form onSubmit={handleSubmit} className="space-y-6">
               {/* Contact Information */}
-              <Card className="shadow-card">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <User className="h-5 w-5 text-primary" />
+              <div className="rounded-2xl border border-slate-200 bg-white/70 backdrop-blur p-6 shadow-sm">
+                <div className="mb-6">
+                  <h2 className="text-xl font-semibold text-foreground flex items-center gap-2 mb-2">
+                    <User className="h-5 w-5 text-indigo-600" />
                     Contact Information
-                  </CardTitle>
-                  <CardDescription>Your basic contact details</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
+                  </h2>
+                  <p className="text-slate-600">Your basic contact details</p>
+                </div>
+                <div className="space-y-4">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                      <Label htmlFor="firstName">First Name *</Label>
+                      <Label htmlFor="firstName" className="text-sm font-medium text-slate-700">First Name *</Label>
                       <Input
                         id="firstName"
                         value={formData.firstName}
                         onChange={(e) => handleInputChange('firstName', e.target.value)}
                         required
+                        className="mt-1 bg-white border-slate-200"
                       />
                     </div>
                     <div>
-                      <Label htmlFor="lastName">Last Name *</Label>
+                      <Label htmlFor="lastName" className="text-sm font-medium text-slate-700">Last Name *</Label>
                       <Input
                         id="lastName"
                         value={formData.lastName}
                         onChange={(e) => handleInputChange('lastName', e.target.value)}
                         required
+                        className="mt-1 bg-white border-slate-200"
                       />
                     </div>
                   </div>
                   
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                      <Label htmlFor="phone">Phone Number *</Label>
+                      <Label htmlFor="phone" className="text-sm font-medium text-slate-700">Phone Number *</Label>
                       <Input
                         id="phone"
                         type="tel"
@@ -271,54 +279,58 @@ const RequestAssistance = () => {
                         value={formData.phone}
                         onChange={(e) => handlePhoneChange(e.target.value)}
                         required
+                        className="mt-1 bg-white border-slate-200"
                       />
                     </div>
                     <div>
-                      <Label htmlFor="email">Email Address *</Label>
+                      <Label htmlFor="email" className="text-sm font-medium text-slate-700">Email Address *</Label>
                       <Input
                         id="email"
                         type="email"
                         value={formData.email}
                         onChange={(e) => handleInputChange('email', e.target.value.toLowerCase().trim())}
                         required
+                        className="mt-1 bg-white border-slate-200"
                       />
                     </div>
                   </div>
-                </CardContent>
-              </Card>
+                </div>
+              </div>
 
               {/* Address Information */}
-              <Card className="shadow-card">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Home className="h-5 w-5 text-primary" />
+              <div className="rounded-2xl border border-slate-200 bg-white/70 backdrop-blur p-6 shadow-sm">
+                <div className="mb-6">
+                  <h2 className="text-xl font-semibold text-foreground flex items-center gap-2 mb-2">
+                    <Home className="h-5 w-5 text-indigo-600" />
                     Address Information
-                  </CardTitle>
-                  <CardDescription>Your current residence</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
+                  </h2>
+                  <p className="text-slate-600">Your current residence</p>
+                </div>
+                <div className="space-y-4">
                   <div>
-                    <Label htmlFor="address">Street Address *</Label>
+                    <Label htmlFor="address" className="text-sm font-medium text-slate-700">Street Address *</Label>
                     <Input
                       id="address"
                       value={formData.address}
                       onChange={(e) => handleInputChange('address', e.target.value)}
                       required
+                      className="mt-1 bg-white border-slate-200"
                     />
                   </div>
                   
                   <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                     <div className="md:col-span-2">
-                      <Label htmlFor="city">City *</Label>
+                      <Label htmlFor="city" className="text-sm font-medium text-slate-700">City *</Label>
                       <Input
                         id="city"
                         value={formData.city}
                         onChange={(e) => handleInputChange('city', e.target.value)}
                         required
+                        className="mt-1 bg-white border-slate-200"
                       />
                     </div>
                     <div>
-                      <Label htmlFor="state">State *</Label>
+                      <Label htmlFor="state" className="text-sm font-medium text-slate-700">State *</Label>
                       <Input
                         id="state"
                         maxLength={2}
@@ -326,93 +338,90 @@ const RequestAssistance = () => {
                         value={formData.state}
                         onChange={(e) => handleInputChange('state', e.target.value.toUpperCase())}
                         required
+                        className="mt-1 bg-white border-slate-200"
                       />
                     </div>
                     <div>
-                      <Label htmlFor="zipCode">ZIP Code *</Label>
+                      <Label htmlFor="zipCode" className="text-sm font-medium text-slate-700">ZIP Code *</Label>
                       <Input
                         id="zipCode"
                         placeholder="12345"
                         value={formData.zipCode}
                         onChange={(e) => handleZipChange(e.target.value)}
                         required
+                        className="mt-1 bg-white border-slate-200"
                       />
                     </div>
                   </div>
 
                   <div>
-                    <Label htmlFor="county">County</Label>
+                    <Label htmlFor="county" className="text-sm font-medium text-slate-700">County</Label>
                     <Input
                       id="county"
                       value={formData.county}
                       onChange={(e) => handleInputChange('county', e.target.value)}
                       placeholder="e.g., Fulton County"
+                      className="mt-1 bg-white border-slate-200"
                     />
                   </div>
-                </CardContent>
-              </Card>
+                </div>
+              </div>
 
               {/* Help Needed */}
-              <Card className="shadow-card">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <FileText className="h-5 w-5 text-primary" />
+              <div className="rounded-2xl border border-slate-200 bg-white/70 backdrop-blur p-6 shadow-sm">
+                <div className="mb-6">
+                  <h2 className="text-xl font-semibold text-foreground flex items-center gap-2 mb-2">
+                    <FileText className="h-5 w-5 text-indigo-600" />
                     What help do you need?
-                  </CardTitle>
-                  <CardDescription>Brief description of your assistance request</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div>
-                    <Label htmlFor="helpNeeded">Please describe what type of assistance you need *</Label>
-                    <Textarea
-                      id="helpNeeded"
-                      placeholder="e.g., help with rent, utility bills, food assistance, transportation..."
-                      value={formData.helpNeeded}
-                      onChange={(e) => handleInputChange('helpNeeded', e.target.value)}
-                      required
-                      rows={4}
-                      className="mt-2"
-                    />
-                  </div>
-                </CardContent>
-              </Card>
+                  </h2>
+                  <p className="text-slate-600">Brief description of your assistance request</p>
+                </div>
+                <div>
+                  <Label htmlFor="helpNeeded" className="text-sm font-medium text-slate-700">Please describe what type of assistance you need *</Label>
+                  <Textarea
+                    id="helpNeeded"
+                    placeholder="e.g., help with rent, utility bills, food assistance, transportation..."
+                    value={formData.helpNeeded}
+                    onChange={(e) => handleInputChange('helpNeeded', e.target.value)}
+                    required
+                    rows={4}
+                    className="mt-2 bg-white border-slate-200"
+                  />
+                </div>
+              </div>
 
               {/* Disclaimer */}
-              <Card className="shadow-card border-destructive/20">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2 text-destructive">
+              <div className="rounded-2xl border border-orange-200 bg-orange-50/70 backdrop-blur p-6 shadow-sm">
+                <div className="mb-4">
+                  <h2 className="text-xl font-semibold text-orange-800 flex items-center gap-2">
                     <AlertTriangle className="h-5 w-5" />
                     Important Notice
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="flex items-start space-x-3">
-                    <Checkbox
-                      id="disclaimerAccepted"
-                      checked={formData.disclaimerAccepted}
-                      onCheckedChange={(checked) => handleInputChange('disclaimerAccepted', checked)}
-                      required
-                    />
-                    <Label htmlFor="disclaimerAccepted" className="text-sm leading-relaxed">
-                      <strong>I understand that assistance is not guaranteed and depends on available funds and program guidelines.</strong>
-                      <br />
-                      I acknowledge that Good Samaritan will review my request and contact me if additional information is needed.
-                    </Label>
-                  </div>
-                </CardContent>
-              </Card>
+                  </h2>
+                </div>
+                <div className="flex items-start space-x-3">
+                  <Checkbox
+                    id="disclaimerAccepted"
+                    checked={formData.disclaimerAccepted}
+                    onCheckedChange={(checked) => handleInputChange('disclaimerAccepted', checked)}
+                    required
+                  />
+                  <Label htmlFor="disclaimerAccepted" className="text-sm leading-relaxed text-slate-700">
+                    <strong>I understand that assistance is not guaranteed and depends on available funds and program guidelines.</strong>
+                    <br />
+                    I acknowledge that Good Samaritan will review my request and contact me if additional information is needed.
+                  </Label>
+                </div>
+              </div>
 
               {/* Submit Button */}
               <div className="flex justify-center pt-4">
-                <Button 
+                <button
                   type="submit" 
-                  variant="assistance" 
-                  size="lg" 
                   disabled={isSubmitting || !formData.disclaimerAccepted}
-                  className="min-w-[200px]"
+                  className="inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-8 py-3 text-white shadow hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 transition-colors disabled:opacity-50 min-w-[200px] justify-center"
                 >
                   {isSubmitting ? "Submitting..." : "Submit Request"}
-                </Button>
+                </button>
               </div>
             </form>
           </div>
@@ -423,6 +432,8 @@ const RequestAssistance = () => {
           </div>
         </div>
       </main>
+      
+      <FooterTrust />
     </div>
   );
 };
