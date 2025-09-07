@@ -76,59 +76,71 @@ const Portal = () => {
   return (
     <>
       <Header />
-      <div className="min-h-screen bg-background flex items-center justify-center p-4">
+      <section 
+        className="relative isolate min-h-screen bg-[radial-gradient(ellipse_at_top_left,hsl(var(--emerald-50)),transparent),radial-gradient(ellipse_at_bottom_right,hsl(var(--indigo-50)),transparent)] flex items-center justify-center p-4"
+        role="region"
+        aria-labelledby="portal-headline"
+      >
         {/* SEO Meta - No Index */}
         <meta name="robots" content="noindex" />
         
-        {/* Secure authentication - no bypass available */}
-        
-        <div className="w-full max-w-md">
-          <div className="text-center mb-8">
-            <div className="inline-flex items-center justify-center p-3 bg-primary/10 rounded-full mb-4">
-              <Shield className="h-8 w-8 text-primary" />
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center max-w-md mx-auto">
+            {/* Icon Badge */}
+            <div className="mx-auto mb-6 flex h-12 w-12 items-center justify-center rounded-full bg-white shadow ring-1 ring-slate-200">
+              <Shield className="h-6 w-6 text-primary" />
             </div>
-            <h1 className="text-3xl font-bold text-foreground mb-2">Staff Portal</h1>
-            <p className="text-muted-foreground">
+
+            {/* Headlines */}
+            <h1 
+              id="portal-headline"
+              className="text-3xl font-extrabold tracking-tight text-foreground sm:text-4xl mb-2"
+            >
+              Staff Portal
+            </h1>
+            
+            <p className="text-base text-muted-foreground mb-8">
               Access restricted to authorized Good Samaritan staff
             </p>
-          </div>
 
-          <Card className="shadow-card">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Users className="h-5 w-5 text-primary" />
-                Organization Access
-              </CardTitle>
-              <CardDescription>
-                Sign in with your organization Microsoft account
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <Button onClick={handleMicrosoftLogin} className="w-full" variant="default" size="lg">
-                Sign in with Microsoft
-              </Button>
+            {/* Authentication Card */}
+            <Card className="shadow-card bg-white/80 backdrop-blur-sm">
+              <CardHeader>
+                <CardTitle className="flex items-center justify-center gap-2">
+                  <Users className="h-5 w-5 text-primary" />
+                  Organization Access
+                </CardTitle>
+                <CardDescription>
+                  Sign in with your organization Microsoft account
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <Button onClick={handleMicrosoftLogin} className="w-full" variant="default" size="lg">
+                  Sign in with Microsoft
+                </Button>
 
-              <div className="bg-warning/10 rounded-lg p-3 border border-warning/20">
-                <div className="flex items-center justify-center gap-2">
-                  <AlertTriangle className="h-4 w-4 text-rose-700 flex-shrink-0" />
-                  <div className="text-center">
-                    <p className="text-sm font-medium text-rose-700">Access is Restricted.</p>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Only @lithiaspringsmethodist.org email addresses are permitted.
-                    </p>
+                <div className="bg-warning/10 rounded-lg p-3 border border-warning/20">
+                  <div className="flex items-center justify-center gap-2">
+                    <AlertTriangle className="h-4 w-4 text-rose-700 flex-shrink-0" />
+                    <div className="text-center">
+                      <p className="text-sm font-medium text-rose-700">Access is Restricted.</p>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Only @lithiaspringsmethodist.org email addresses are permitted.
+                      </p>
+                    </div>
                   </div>
                 </div>
-              </div>
 
-              <div className="text-center">
-                <p className="text-xs text-muted-foreground">
-                  Need access? Contact your administrator for assistance.
-                </p>
-              </div>
-            </CardContent>
-          </Card>
+                <div className="text-center">
+                  <p className="text-xs text-muted-foreground">
+                    Need access? Contact your administrator for assistance.
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
         </div>
-      </div>
+      </section>
       <FooterTrust />
     </>
   );
