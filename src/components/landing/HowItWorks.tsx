@@ -1,4 +1,4 @@
-import { Ear, ShieldCheck, Link as LinkIcon } from "lucide-react";
+import { Ear, ShieldCheck, Link as LinkIcon, ArrowRight } from "lucide-react";
 
 const HowItWorks = () => {
   // Component always shows - no environment variables needed
@@ -9,9 +9,10 @@ const HowItWorks = () => {
           <h2 className="text-3xl font-bold text-foreground">How It Works</h2>
         </div>
         
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-4xl mx-auto">
-          <div className="text-center">
-            <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-white shadow ring-1 ring-slate-200">
+        <div className="flex flex-col md:flex-row items-center justify-center gap-6 max-w-4xl mx-auto">
+          {/* Listen Card */}
+          <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm text-center flex-1 max-w-xs">
+            <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 ring-1 ring-primary/20">
               <Ear className="h-6 w-6 text-primary" />
             </div>
             <h3 className="text-lg font-semibold text-foreground mb-2">Listen</h3>
@@ -20,8 +21,17 @@ const HowItWorks = () => {
             </p>
           </div>
 
-          <div className="text-center">
-            <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-white shadow ring-1 ring-slate-200">
+          {/* Arrow 1 */}
+          <div className="hidden md:block text-slate-400">
+            <ArrowRight className="h-6 w-6" />
+          </div>
+          <div className="md:hidden text-slate-400 rotate-90">
+            <ArrowRight className="h-6 w-6" />
+          </div>
+
+          {/* Verify Card */}
+          <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm text-center flex-1 max-w-xs">
+            <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 ring-1 ring-primary/20">
               <ShieldCheck className="h-6 w-6 text-primary" />
             </div>
             <h3 className="text-lg font-semibold text-foreground mb-2">Verify</h3>
@@ -30,8 +40,17 @@ const HowItWorks = () => {
             </p>
           </div>
 
-          <div className="text-center">
-            <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-white shadow ring-1 ring-slate-200">
+          {/* Arrow 2 */}
+          <div className="hidden md:block text-slate-400">
+            <ArrowRight className="h-6 w-6" />
+          </div>
+          <div className="md:hidden text-slate-400 rotate-90">
+            <ArrowRight className="h-6 w-6" />
+          </div>
+
+          {/* Connect Card */}
+          <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm text-center flex-1 max-w-xs">
+            <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 ring-1 ring-primary/20">
               <LinkIcon className="h-6 w-6 text-primary" />
             </div>
             <h3 className="text-lg font-semibold text-foreground mb-2">Connect</h3>
