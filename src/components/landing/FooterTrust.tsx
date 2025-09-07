@@ -12,9 +12,9 @@ const FooterTrust = () => {
           <div className="mt-4">
             <a 
               href="mailto:office@lithiaspringsmethodist.org"
-              className="text-sm text-primary hover:text-primary-hover underline"
+              className="text-sm text-primary hover:text-primary-hover"
             >
-              Contact: office@lithiaspringsmethodist.org
+              Contact
             </a>
           </div>
         </div>
