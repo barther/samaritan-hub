@@ -1,10 +1,11 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
-import { Shield, Users, AlertTriangle, Home } from "lucide-react";
+import { Shield, Users, AlertTriangle } from "lucide-react";
+import Header from "@/components/Header";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useEffect } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 
 const Portal = () => {
   const { toast } = useToast();
@@ -72,70 +73,62 @@ const Portal = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background flex items-center justify-center p-4">
-      {/* SEO Meta - No Index */}
-      <meta name="robots" content="noindex" />
-      
-      {/* Home Link */}
-      <div className="absolute top-4 left-4">
-        <Link 
-          to="/"
-          className="inline-flex items-center gap-2 text-muted-foreground hover:text-primary transition-colors"
-        >
-          <Home className="h-4 w-4" />
-          <span className="text-sm">Home</span>
-        </Link>
-      </div>
-      
-      {/* Secure authentication - no bypass available */}
-      
-      <div className="w-full max-w-md">
-        <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center p-3 bg-primary/10 rounded-full mb-4">
-            <Shield className="h-8 w-8 text-primary" />
+    <>
+      <Header />
+      <div className="min-h-screen bg-background flex items-center justify-center p-4">
+        {/* SEO Meta - No Index */}
+        <meta name="robots" content="noindex" />
+        
+        {/* Secure authentication - no bypass available */}
+        
+        <div className="w-full max-w-md">
+          <div className="text-center mb-8">
+            <div className="inline-flex items-center justify-center p-3 bg-primary/10 rounded-full mb-4">
+              <Shield className="h-8 w-8 text-primary" />
+            </div>
+            <h1 className="text-3xl font-bold text-foreground mb-2">Staff Portal</h1>
+            <p className="text-muted-foreground">
+              Access restricted to authorized Good Samaritan staff
+            </p>
           </div>
-          <h1 className="text-3xl font-bold text-foreground mb-2">Staff Portal</h1>
-          <p className="text-muted-foreground">
-            Access restricted to authorized Good Samaritan staff
-          </p>
-        </div>
 
-        <Card className="shadow-card">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Users className="h-5 w-5 text-primary" />
-              Organization Access
-            </CardTitle>
-            <CardDescription>
-              Sign in with your organization Microsoft account
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <Button onClick={handleMicrosoftLogin} className="w-full" variant="default" size="lg">
-              Sign in with Microsoft
-            </Button>
+          <Card className="shadow-card">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Users className="h-5 w-5 text-primary" />
+                Organization Access
+              </CardTitle>
+              <CardDescription>
+                Sign in with your organization Microsoft account
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <Button onClick={handleMicrosoftLogin} className="w-full" variant="default" size="lg">
+                Sign in with Microsoft
+              </Button>
 
-            <div className="bg-warning/10 rounded-lg p-3 border border-warning/20">
-              <div className="flex items-center justify-center gap-2">
-                <AlertTriangle className="h-4 w-4 text-rose-700 flex-shrink-0" />
-                <div className="text-center">
-                  <p className="text-sm font-medium text-rose-700">Access is Restricted.</p>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Only @lithiaspringsmethodist.org email addresses are permitted.
-                  </p>
+              <div className="bg-warning/10 rounded-lg p-3 border border-warning/20">
+                <div className="flex items-center justify-center gap-2">
+                  <AlertTriangle className="h-4 w-4 text-rose-700 flex-shrink-0" />
+                  <div className="text-center">
+                    <p className="text-sm font-medium text-rose-700">Access is Restricted.</p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Only @lithiaspringsmethodist.org email addresses are permitted.
+                    </p>
+                  </div>
                 </div>
               </div>
-            </div>
 
-            <div className="text-center">
-              <p className="text-xs text-muted-foreground">
-                Need access? Contact your administrator for assistance.
-              </p>
-            </div>
-          </CardContent>
-        </Card>
+              <div className="text-center">
+                <p className="text-xs text-muted-foreground">
+                  Need access? Contact your administrator for assistance.
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
       </div>
-    </div>
+    </>
   );
 };
 
