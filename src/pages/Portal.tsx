@@ -56,7 +56,7 @@ const Portal = () => {
   }, [navigate, toast]);
 
   const handleMicrosoftLogin = async () => {
-    const redirectTo = `${window.location.origin}/portal/dashboard`;
+    const redirectTo = `${window.location.origin}/portal`;
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "azure",
       options: { redirectTo }

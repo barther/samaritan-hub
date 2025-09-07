@@ -29,8 +29,12 @@ file_size_limit = "50MiB"
 [auth]
 enabled = true
 port = 54328
-site_url = "http://localhost:3000"
-additional_redirect_urls = ["https://localhost:3000"]
+site_url = "https://samaritan-hub.lovable.app"
+additional_redirect_urls = [
+  "https://samaritan-hub.lovable.app",
+  "https://id-preview--5c2c5d0a-3ca3-46cb-9dc3-634b2e2303e2.lovable.app",
+  "https://5c2c5d0a-3ca3-46cb-9dc3-634b2e2303e2.sandbox.lovable.dev"
+]
 jwt_expiry = 3600
 refresh_token_rotation_enabled = true
 refresh_token_reuse_interval = 10
