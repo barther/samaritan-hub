@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Heart, CreditCard, DollarSign } from "lucide-react";
 import Header from "@/components/Header";
+import FooterTrust from "@/components/landing/FooterTrust";
 import { useToast } from "@/hooks/use-toast";
 
 const Give = () => {
@@ -156,6 +157,8 @@ const Give = () => {
           </div>
         </div>
       </main>
+      
+      <FooterTrust />
     </div>
   );
 };
