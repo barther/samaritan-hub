@@ -2,6 +2,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Shield, Users, AlertTriangle } from "lucide-react";
 import Header from "@/components/Header";
+import FooterTrust from "@/components/landing/FooterTrust";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useEffect } from "react";
@@ -128,6 +129,7 @@ const Portal = () => {
           </Card>
         </div>
       </div>
+      <FooterTrust />
     </>
   );
 };
