@@ -50,6 +50,17 @@ All colors MUST be HSL.
 
     --radius: 0.75rem;
 
+    /* Landing page specific colors */
+    --emerald-600: 158 64% 52%;
+    --emerald-700: 158 64% 45%;
+    --emerald-500: 158 64% 59%;
+    --emerald-50: 158 64% 95%;
+    
+    --indigo-600: 239 84% 67%;
+    --indigo-700: 239 84% 60%;
+    --indigo-500: 239 84% 74%;
+    --indigo-50: 239 84% 95%;
+
     /* Custom design tokens */
     --gradient-primary: linear-gradient(135deg, hsl(174 84% 26%), hsl(174 84% 32%));
     --gradient-hero: linear-gradient(135deg, hsl(174 84% 26%) 0%, hsl(217 91% 60%) 100%);
@@ -112,6 +123,17 @@ All colors MUST be HSL.
     --border: 220 27% 15%;
     --input: 220 27% 15%;
     --ring: 174 84% 32%;
+
+    /* Landing page specific colors - dark mode */
+    --emerald-600: 158 64% 48%;
+    --emerald-700: 158 64% 42%;
+    --emerald-500: 158 64% 54%;
+    --emerald-50: 158 64% 10%;
+    
+    --indigo-600: 239 84% 62%;
+    --indigo-700: 239 84% 55%;
+    --indigo-500: 239 84% 69%;
+    --indigo-50: 239 84% 10%;
 
     /* Custom design tokens for dark mode */
     --gradient-primary: linear-gradient(135deg, hsl(174 84% 32%), hsl(174 84% 38%));
