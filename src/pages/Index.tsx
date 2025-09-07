@@ -13,7 +13,7 @@ const Index = () => {
       <Header />
       <Hero />
       
-      <div className="container mx-auto px-4 space-y-6 py-8">
+      <div className="container mx-auto px-4 space-y-6 py-8 max-w-2xl">
         <EnhancedMonthlyStats />
         <FinancialHealthIndicator />
         
