@@ -952,6 +952,60 @@ export type Database = {
         }
         Relationships: []
       }
+      stripe_payments: {
+        Row: {
+          amount_cents: number
+          created_at: string
+          currency: string
+          donor_email: string | null
+          donor_name: string | null
+          fees_cents: number
+          fees_covered: boolean
+          id: string
+          ip_address: string | null
+          status: string
+          stripe_payment_intent_id: string | null
+          stripe_session_id: string | null
+          total_cents: number | null
+          updated_at: string
+          user_agent: string | null
+        }
+        Insert: {
+          amount_cents: number
+          created_at?: string
+          currency?: string
+          donor_email?: string | null
+          donor_name?: string | null
+          fees_cents?: number
+          fees_covered?: boolean
+          id?: string
+          ip_address?: string | null
+          status?: string
+          stripe_payment_intent_id?: string | null
+          stripe_session_id?: string | null
+          total_cents?: number | null
+          updated_at?: string
+          user_agent?: string | null
+        }
+        Update: {
+          amount_cents?: number
+          created_at?: string
+          currency?: string
+          donor_email?: string | null
+          donor_name?: string | null
+          fees_cents?: number
+          fees_covered?: boolean
+          id?: string
+          ip_address?: string | null
+          status?: string
+          stripe_payment_intent_id?: string | null
+          stripe_session_id?: string | null
+          total_cents?: number | null
+          updated_at?: string
+          user_agent?: string | null
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           created_at: string
