@@ -379,6 +379,10 @@ Good Samaritan Assistance Team`,
               <Users className="h-4 w-4 mr-2" />
               Accountability
             </TabsTrigger>
+            <TabsTrigger value="payments">
+              <DollarSign className="h-4 w-4 mr-2" />
+              Payments
+            </TabsTrigger>
             <TabsTrigger value="security">
               <Shield className="h-4 w-4 mr-2" />
               Security & Data
@@ -570,6 +574,149 @@ Good Samaritan Assistance Team`,
                   <p className="text-xs text-muted-foreground mt-2">
                     Use {"{client_name}"} and {"{reason}"} as placeholders
                   </p>
+                </CardContent>
+              </Card>
+            </div>
+          </TabsContent>
+
+          <TabsContent value="payments">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <DollarSign className="h-5 w-5" />
+                    Stripe Payment Settings
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="p-4 bg-muted/50 rounded-lg">
+                    <h4 className="text-sm font-medium mb-2">Stripe Configuration</h4>
+                    <p className="text-xs text-muted-foreground mb-4">
+                      Configure your Stripe payment processing. Secrets are stored securely in Supabase.
+                    </p>
+                    <div className="space-y-3">
+                      <div>
+                        <Label className="text-xs">Stripe Secret Key</Label>
+                        <div className="flex items-center gap-2 mt-1">
+                          <Input
+                            type="password"
+                            placeholder="sk_live_... or sk_test_..."
+                            className="font-mono text-xs"
+                            disabled
+                          />
+                          <Button size="sm" variant="outline" disabled>
+                            Update
+                          </Button>
+                        </div>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          Your Stripe secret key (will be implemented)
+                        </p>
+                      </div>
+                      <div>
+                        <Label className="text-xs">Stripe Publishable Key</Label>
+                        <div className="flex items-center gap-2 mt-1">
+                          <Input
+                            type="text"
+                            placeholder="pk_live_... or pk_test_..."
+                            className="font-mono text-xs"
+                            disabled
+                          />
+                          <Button size="sm" variant="outline" disabled>
+                            Update
+                          </Button>
+                        </div>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          Your Stripe publishable key (will be implemented)
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div className="p-4 border border-border rounded-lg">
+                    <h4 className="text-sm font-medium mb-2">Payment Options</h4>
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <Label className="text-sm">Allow fee coverage</Label>
+                          <p className="text-xs text-muted-foreground">
+                            Let donors cover Stripe processing fees
+                          </p>
+                        </div>
+                        <Switch disabled />
+                      </div>
+                      <div>
+                        <Label className="text-sm">Fee calculation method</Label>
+                        <Select disabled>
+                          <SelectTrigger className="mt-1">
+                            <SelectValue placeholder="Select method" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="percentage">Percentage + Fixed</SelectItem>
+                            <SelectItem value="flat">Flat Rate</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          How to calculate processing fees
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Settings className="h-5 w-5" />
+                    Donation Settings
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div>
+                    <Label>Minimum donation amount ($)</Label>
+                    <Input
+                      type="number"
+                      placeholder="5"
+                      disabled
+                    />
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Minimum amount allowed for donations
+                    </p>
+                  </div>
+                  
+                  <div>
+                    <Label>Default donation amounts ($)</Label>
+                    <Input
+                      placeholder="25,50,100,250"
+                      disabled
+                    />
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Comma-separated list of preset amounts
+                    </p>
+                  </div>
+
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <Label>Enable recurring donations</Label>
+                      <p className="text-xs text-muted-foreground">
+                        Allow donors to set up monthly giving
+                      </p>
+                    </div>
+                    <Switch disabled />
+                  </div>
+
+                  <div className="p-4 bg-muted/30 rounded-lg">
+                    <h4 className="text-sm font-medium mb-2">Status</h4>
+                    <div className="flex items-center gap-2">
+                      <div className="h-2 w-2 bg-amber-500 rounded-full" />
+                      <span className="text-sm text-muted-foreground">
+                        Payments configured but not connected
+                      </span>
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-2">
+                      Add your Stripe keys to enable payment processing
+                    </p>
+                  </div>
                 </CardContent>
               </Card>
             </div>
