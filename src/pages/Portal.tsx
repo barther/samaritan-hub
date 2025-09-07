@@ -1,10 +1,10 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
-import { Shield, Users, AlertTriangle } from "lucide-react";
+import { Shield, Users, AlertTriangle, Home } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 
 const Portal = () => {
   const { toast } = useToast();
@@ -75,6 +75,17 @@ const Portal = () => {
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
       {/* SEO Meta - No Index */}
       <meta name="robots" content="noindex" />
+      
+      {/* Home Link */}
+      <div className="absolute top-4 left-4">
+        <Link 
+          to="/"
+          className="inline-flex items-center gap-2 text-muted-foreground hover:text-primary transition-colors"
+        >
+          <Home className="h-4 w-4" />
+          <span className="text-sm">Home</span>
+        </Link>
+      </div>
       
       {/* Secure authentication - no bypass available */}
       
