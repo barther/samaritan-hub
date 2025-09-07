@@ -49,50 +49,54 @@ const Give = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-white text-slate-900">
       <Header />
       
-      <main className="container mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <div className="max-w-2xl mx-auto">
-          {/* Header */}
-          <div className="text-center mb-8">
-            <div className="inline-flex items-center justify-center p-3 bg-success/10 rounded-full mb-4">
-              <Heart className="h-8 w-8 text-success" />
+      {/* Hero Section with Gradient Background */}
+      <section className="relative isolate py-16 bg-[radial-gradient(ellipse_at_top_left,hsl(var(--emerald-50)),transparent),radial-gradient(ellipse_at_bottom_right,hsl(var(--indigo-50)),transparent)]">
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center max-w-2xl mx-auto">
+            <div className="mx-auto mb-6 flex h-12 w-12 items-center justify-center rounded-full bg-white shadow ring-1 ring-slate-200">
+              <Heart className="h-6 w-6 text-emerald-600" />
             </div>
-            <h1 className="text-3xl md:text-4xl font-bold text-foreground mb-4">
+            <h1 className="text-4xl font-extrabold tracking-tight text-foreground sm:text-5xl mb-4">
               Make a Donation
             </h1>
-            <p className="text-lg text-muted-foreground">
+            <p className="text-lg text-slate-600 leading-relaxed">
               Your generosity helps us provide essential assistance to neighbors in need. 
               Every donation makes a difference in our community.
             </p>
           </div>
-
-          <Card className="shadow-card">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <DollarSign className="h-5 w-5 text-success" />
+        </div>
+      </section>
+      
+      <main className="container mx-auto px-4 sm:px-6 lg:px-8 py-12">
+        <div className="max-w-2xl mx-auto">
+          <div className="rounded-2xl border border-slate-200 bg-white/70 backdrop-blur p-6 shadow-sm">
+            <div className="mb-6">
+              <h2 className="text-xl font-semibold text-foreground flex items-center gap-2 mb-2">
+                <DollarSign className="h-5 w-5 text-emerald-600" />
                 Choose Your Donation Amount
-              </CardTitle>
-              <CardDescription>
+              </h2>
+              <p className="text-muted-foreground">
                 Select a preset amount or enter a custom donation amount.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
+              </p>
+            </div>
+            
+            <div className="space-y-6">
               {/* Preset Amounts */}
               <div>
-                <Label className="text-sm font-medium mb-3">Quick Select</Label>
+                <Label className="text-sm font-medium mb-3 block">Quick Select</Label>
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                   {presetAmounts.map((amount) => (
-                    <Button
+                    <button
                       key={amount}
-                      variant="outline"
                       onClick={() => handleDonation(amount)}
                       disabled={isProcessing}
-                      className="h-16 text-lg font-semibold hover:bg-success/10 hover:border-success hover:text-success"
+                      className="h-16 text-lg font-semibold rounded-xl border border-slate-200 bg-white hover:bg-emerald-50 hover:border-emerald-300 hover:text-emerald-700 transition-colors disabled:opacity-50"
                     >
                       ${amount}
-                    </Button>
+                    </button>
                   ))}
                 </div>
               </div>
@@ -113,26 +117,26 @@ const Give = () => {
                       placeholder="0.00"
                       value={customAmount}
                       onChange={(e) => setCustomAmount(e.target.value)}
-                      className="pl-10"
+                      className="pl-10 bg-white border-slate-200"
                     />
                   </div>
-                  <Button 
+                  <button 
                     onClick={handleCustomDonation}
                     disabled={!customAmount || isProcessing}
-                    variant="donation"
+                    className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-5 py-3 text-white shadow hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 transition-colors disabled:opacity-50"
                   >
                     Donate
-                  </Button>
+                  </button>
                 </div>
               </div>
 
               {/* Payment Info */}
-              <div className="bg-muted/50 rounded-lg p-4 border border-border">
+              <div className="bg-slate-50 rounded-lg p-4 border border-slate-200">
                 <div className="flex items-start gap-3">
-                  <CreditCard className="h-5 w-5 text-muted-foreground mt-0.5" />
+                  <CreditCard className="h-5 w-5 text-slate-500 mt-0.5" />
                   <div>
                     <h4 className="font-medium text-foreground mb-1">Secure Payment</h4>
-                    <p className="text-sm text-muted-foreground">
+                    <p className="text-sm text-slate-600">
                       All donations are processed securely through Stripe. Your payment information 
                       is encrypted and never stored on our servers.
                     </p>
@@ -141,15 +145,15 @@ const Give = () => {
               </div>
 
               {/* Tax Deductible Notice */}
-              <div className="bg-primary/5 rounded-lg p-4 border border-primary/20">
+              <div className="bg-emerald-50 rounded-lg p-4 border border-emerald-200">
                 <h4 className="font-medium text-foreground mb-1">Tax Deductible</h4>
-                <p className="text-sm text-muted-foreground">
+                <p className="text-sm text-slate-600">
                   Good Samaritan at Lithia Springs Methodist Church is a registered 501(c)(3) 
                   organization. Your donation is tax-deductible to the full extent allowed by law.
                 </p>
               </div>
-            </CardContent>
-          </Card>
+            </div>
+          </div>
         </div>
       </main>
     </div>
