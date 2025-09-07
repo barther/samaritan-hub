@@ -45,7 +45,7 @@ Please contact us at your earliest convenience to arrange disbursement.
 
 Best regards,
 Good Samaritan Assistance Team`,
-    denialEmailTemplate: `Dear {client_name},
+     denialEmailTemplate: `Dear {client_name},
 
 Thank you for your assistance request. Unfortunately, we are unable to approve your request at this time due to {reason}.
 
@@ -53,10 +53,15 @@ Please feel free to contact us if your circumstances change.
 
 Best regards,
 Good Samaritan Assistance Team`,
-    // System settings
-    requireClientLink: false,
-    enableAuditLog: true,
-    dataRetentionMonths: 36
+     // Payment settings
+     stripeSecretKey: '',
+     stripePublishableKey: '',
+     minimumDonationAmount: 5,
+     enableRecurringDonations: true,
+     // System settings
+     requireClientLink: false,
+     enableAuditLog: true,
+     dataRetentionMonths: 36
   });
   const [sendingTestEmail, setSendingTestEmail] = useState(false);
   const [testEmailAddress, setTestEmailAddress] = useState('');
@@ -595,40 +600,62 @@ Good Samaritan Assistance Team`,
                       Configure your Stripe payment processing. Secrets are stored securely in Supabase.
                     </p>
                     <div className="space-y-3">
-                      <div>
-                        <Label className="text-xs">Stripe Secret Key</Label>
-                        <div className="flex items-center gap-2 mt-1">
-                          <Input
-                            type="password"
-                            placeholder="sk_live_... or sk_test_..."
-                            className="font-mono text-xs"
-                            disabled
-                          />
-                          <Button size="sm" variant="outline" disabled>
-                            Update
-                          </Button>
-                        </div>
-                        <p className="text-xs text-muted-foreground mt-1">
-                          Your Stripe secret key (will be implemented)
-                        </p>
-                      </div>
-                      <div>
-                        <Label className="text-xs">Stripe Publishable Key</Label>
-                        <div className="flex items-center gap-2 mt-1">
-                          <Input
-                            type="text"
-                            placeholder="pk_live_... or pk_test_..."
-                            className="font-mono text-xs"
-                            disabled
-                          />
-                          <Button size="sm" variant="outline" disabled>
-                            Update
-                          </Button>
-                        </div>
-                        <p className="text-xs text-muted-foreground mt-1">
-                          Your Stripe publishable key (will be implemented)
-                        </p>
-                      </div>
+                  <div>
+                    <Label className="text-xs">Stripe Secret Key</Label>
+                    <div className="flex items-center gap-2 mt-1">
+                      <Input
+                        type="password"
+                        placeholder="sk_live_... or sk_test_..."
+                        className="font-mono text-xs"
+                        value={settings.stripeSecretKey || ''}
+                        onChange={e => setSettings(prev => ({
+                          ...prev,
+                          stripeSecretKey: e.target.value
+                        }))}
+                      />
+                      <Button size="sm" variant="outline" onClick={() => {
+                        handleAutoSave('payments', {
+                          stripeSecretKey: settings.stripeSecretKey,
+                          stripePublishableKey: settings.stripePublishableKey,
+                          minimumDonationAmount: settings.minimumDonationAmount,
+                          enableRecurringDonations: settings.enableRecurringDonations
+                        });
+                      }}>
+                        Save
+                      </Button>
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Your Stripe secret key for payment processing
+                    </p>
+                  </div>
+                  <div>
+                    <Label className="text-xs">Stripe Publishable Key</Label>
+                    <div className="flex items-center gap-2 mt-1">
+                      <Input
+                        type="text"
+                        placeholder="pk_live_... or pk_test_..."
+                        className="font-mono text-xs"
+                        value={settings.stripePublishableKey || ''}
+                        onChange={e => setSettings(prev => ({
+                          ...prev,
+                          stripePublishableKey: e.target.value
+                        }))}
+                      />
+                      <Button size="sm" variant="outline" onClick={() => {
+                        handleAutoSave('payments', {
+                          stripeSecretKey: settings.stripeSecretKey,
+                          stripePublishableKey: settings.stripePublishableKey,
+                          minimumDonationAmount: settings.minimumDonationAmount,
+                          enableRecurringDonations: settings.enableRecurringDonations
+                        });
+                      }}>
+                        Save
+                      </Button>
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Your Stripe publishable key for frontend integration
+                    </p>
+                  </div>
                     </div>
                   </div>
                   
