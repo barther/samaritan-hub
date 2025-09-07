@@ -65,6 +65,72 @@ Good Samaritan Assistance Team`,
   });
   const [sendingTestEmail, setSendingTestEmail] = useState(false);
   const [testEmailAddress, setTestEmailAddress] = useState('');
+  
+  // Microsoft Graph configuration state
+  const [msGraphConfig, setMsGraphConfig] = useState({
+    tenantId: '',
+    clientId: '',
+    clientSecret: ''
+  });
+  const [isUpdatingSecrets, setIsUpdatingSecrets] = useState(false);
+  
+  // Handle Microsoft Graph secrets update
+  const handleUpdateMsGraphSecrets = async () => {
+    if (!msGraphConfig.tenantId || !msGraphConfig.clientId || !msGraphConfig.clientSecret) {
+      toast({
+        title: "Validation Error",
+        description: "Please fill in all Microsoft Graph fields",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    try {
+      setIsUpdatingSecrets(true);
+      
+      // Update all three secrets
+      const results = await Promise.allSettled([
+        supabase.functions.invoke('secrets-update_secret', {
+          body: { secret_name: 'MS_GRAPH_TENANT_ID', secret_value: msGraphConfig.tenantId }
+        }),
+        supabase.functions.invoke('secrets-update_secret', {
+          body: { secret_name: 'MS_GRAPH_CLIENT_ID', secret_value: msGraphConfig.clientId }
+        }),
+        supabase.functions.invoke('secrets-update_secret', {
+          body: { secret_name: 'MS_GRAPH_CLIENT_SECRET', secret_value: msGraphConfig.clientSecret }
+        })
+      ]);
+      
+      const failedUpdates = results.filter(result => result.status === 'rejected');
+      
+      if (failedUpdates.length > 0) {
+        throw new Error(`Failed to update ${failedUpdates.length} secret(s)`);
+      }
+      
+      toast({
+        title: "Success",
+        description: "Microsoft Graph secrets updated successfully",
+      });
+      
+      // Clear the form
+      setMsGraphConfig({
+        tenantId: '',
+        clientId: '',
+        clientSecret: ''
+      });
+      
+    } catch (error) {
+      console.error('Error updating Microsoft Graph secrets:', error);
+      toast({
+        title: "Error",
+        description: "Failed to update Microsoft Graph secrets",
+        variant: "destructive"
+      });
+    } finally {
+      setIsUpdatingSecrets(false);
+    }
+  };
+  
   const loadSettings = async () => {
     try {
       setLoading(true);
@@ -537,6 +603,49 @@ Good Samaritan Assistance Team`,
                     <p className="text-sm text-muted-foreground">
                       <strong>Reminder:</strong> Microsoft Graph API credentials renewal due September 1, 2027. Contact Microsoft Global Administrator when needed.
                     </p>
+                  </div>
+                  
+                  <div className="space-y-4">
+                    <div>
+                      <Label htmlFor="ms-tenant-id">Microsoft Tenant ID</Label>
+                      <Input
+                        id="ms-tenant-id"
+                        type="password"
+                        placeholder="Enter Microsoft Tenant ID"
+                        value={msGraphConfig.tenantId}
+                        onChange={(e) => setMsGraphConfig(prev => ({ ...prev, tenantId: e.target.value }))}
+                      />
+                    </div>
+                    
+                    <div>
+                      <Label htmlFor="ms-client-id">Microsoft Client ID</Label>
+                      <Input
+                        id="ms-client-id"
+                        type="password"
+                        placeholder="Enter Microsoft Client ID"
+                        value={msGraphConfig.clientId}
+                        onChange={(e) => setMsGraphConfig(prev => ({ ...prev, clientId: e.target.value }))}
+                      />
+                    </div>
+                    
+                    <div>
+                      <Label htmlFor="ms-client-secret">Microsoft Client Secret</Label>
+                      <Input
+                        id="ms-client-secret"
+                        type="password"
+                        placeholder="Enter Microsoft Client Secret"
+                        value={msGraphConfig.clientSecret}
+                        onChange={(e) => setMsGraphConfig(prev => ({ ...prev, clientSecret: e.target.value }))}
+                      />
+                    </div>
+                    
+                    <Button 
+                      onClick={handleUpdateMsGraphSecrets} 
+                      disabled={isUpdatingSecrets}
+                      className="w-full"
+                    >
+                      {isUpdatingSecrets ? "Updating..." : "Update Microsoft Graph Secrets"}
+                    </Button>
                   </div>
                 </CardContent>
               </Card>
