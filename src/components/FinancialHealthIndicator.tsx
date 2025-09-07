@@ -138,6 +138,14 @@ const FinancialHealthIndicator = () => {
 
   return (
     <div className={`rounded-lg p-4 mb-8 border ${getStatusStyles(healthData.status)}`}>
+      <div className="text-center mb-3">
+        <p className="text-sm font-medium text-muted-foreground">
+          Financial Health Status
+        </p>
+        <p className="text-xs text-muted-foreground">
+          Based on donations received vs. assistance provided
+        </p>
+      </div>
       <div className="flex items-center justify-center gap-3">
         {getStatusIcon(healthData.status)}
         <div className="text-center">
