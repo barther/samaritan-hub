@@ -641,7 +641,7 @@ Good Samaritan Assistance Team`,
                     
                     <Button 
                       onClick={handleUpdateMsGraphSecrets} 
-                      disabled={isUpdatingSecrets}
+                      disabled={isUpdatingSecrets || !msGraphConfig.tenantId || !msGraphConfig.clientId || !msGraphConfig.clientSecret}
                       className="w-full"
                     >
                       {isUpdatingSecrets ? "Updating..." : "Update Microsoft Graph Secrets"}
