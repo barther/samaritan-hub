@@ -2,7 +2,9 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Camera, X, Scan, AlertCircle, CheckCircle, Sun } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Camera, X, Scan, AlertCircle, CheckCircle, Sun, Keyboard } from "lucide-react";
 import {
   BrowserMultiFormatReader,
   BarcodeFormat,
@@ -32,10 +34,13 @@ export const PDF417Scanner = ({ open, onOpenChange, onDataScanned }: PDF417Scann
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
   const [torchOn, setTorchOn] = useState(false);
+  const [scanMode, setScanMode] = useState<"camera" | "usb">("camera");
+  const [usbScanData, setUsbScanData] = useState("");
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const readerRef = useRef<BrowserMultiFormatReader | null>(null);
   const controlsRef = useRef<IScannerControls | null>(null);
+  const usbInputRef = useRef<HTMLInputElement>(null);
 
   const { toast } = useToast();
 
@@ -229,8 +234,40 @@ export const PDF417Scanner = ({ open, onOpenChange, onDataScanned }: PDF417Scann
     setTorchOn(false);
   }, [torchOn, toggleTorch]);
 
+  // ─── USB Scanner Handlers ─────────────────────────────────────────────────
+
+  const handleUsbScanInput = useCallback((value: string) => {
+    setUsbScanData(value);
+  }, []);
+
+  const handleUsbScanKeyDown = useCallback((e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && usbScanData.trim()) {
+      e.preventDefault();
+      try {
+        const parsed = parsePDF417Data(usbScanData.trim());
+        setSuccess(true);
+        onDataScanned(parsed);
+        onOpenChange(false);
+        toast({
+          title: "Barcode Scanned Successfully",
+          description: `Parsed info for ${parsed.firstName} ${parsed.lastName}`.trim(),
+        });
+      } catch (error) {
+        setError("Failed to parse barcode data. Please try again.");
+        console.error("USB scan parse error:", error);
+      }
+    }
+  }, [usbScanData, onDataScanned, onOpenChange, toast]);
+
+  const clearUsbInput = useCallback(() => {
+    setUsbScanData("");
+    setError(null);
+    setSuccess(false);
+  }, []);
+
   const handleClose = () => {
     stopScanning();
+    clearUsbInput();
     onOpenChange(false);
   };
 
@@ -245,68 +282,139 @@ export const PDF417Scanner = ({ open, onOpenChange, onDataScanned }: PDF417Scann
           </DialogTitle>
         </DialogHeader>
         <div className="space-y-4">
-          <Alert role="status" aria-live="polite">
-            <AlertCircle className="h-4 w-4" />
-            <AlertDescription>
-              Hold your driver's license so the PDF417 barcode (on the back) is clearly visible.
-            </AlertDescription>
-          </Alert>
+          <Tabs value={scanMode} onValueChange={(value) => setScanMode(value as "camera" | "usb")}>
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="camera" className="flex items-center gap-2">
+                <Camera className="h-4 w-4" /> Camera
+              </TabsTrigger>
+              <TabsTrigger value="usb" className="flex items-center gap-2">
+                <Keyboard className="h-4 w-4" /> USB Scanner
+              </TabsTrigger>
+            </TabsList>
+            
+            <TabsContent value="camera" className="space-y-4">
+              <Alert role="status" aria-live="polite">
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription>
+                  Hold your driver's license so the PDF417 barcode (on the back) is clearly visible.
+                </AlertDescription>
+              </Alert>
 
-          {error && (
-            <Alert variant="destructive" role="alert" aria-live="assertive">
-              <AlertCircle className="h-4 w-4" />
-              <AlertDescription>{error}</AlertDescription>
-            </Alert>
-          )}
-          {success && (
-            <Alert role="status" aria-live="polite">
-              <CheckCircle className="h-4 w-4" />
-              <AlertDescription>
-                Barcode scanned! Processing…
-              </AlertDescription>
-            </Alert>
-          )}
+              {error && (
+                <Alert variant="destructive" role="alert" aria-live="assertive">
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertDescription>{error}</AlertDescription>
+                </Alert>
+              )}
+              {success && (
+                <Alert role="status" aria-live="polite">
+                  <CheckCircle className="h-4 w-4" />
+                  <AlertDescription>
+                    Barcode scanned! Processing…
+                  </AlertDescription>
+                </Alert>
+              )}
 
-          <div className="relative bg-black rounded-lg overflow-hidden h-80">
-            <video
-              ref={videoRef}
-              className="w-full h-full object-cover"
-              playsInline
-              muted
-              autoPlay
-            />
-            {!isScanning && !success && (
-              <div className="absolute inset-0 flex items-center justify-center bg-black/50">
-                <Button onClick={startScanning} size="lg" className="gap-2">
-                  <Camera className="h-5 w-5" /> Start Camera
+              <div className="relative bg-black rounded-lg overflow-hidden h-80">
+                <video
+                  ref={videoRef}
+                  className="w-full h-full object-cover"
+                  playsInline
+                  muted
+                  autoPlay
+                />
+                {!isScanning && !success && (
+                  <div className="absolute inset-0 flex items-center justify-center bg-black/50">
+                    <Button onClick={startScanning} size="lg" className="gap-2">
+                      <Camera className="h-5 w-5" /> Start Camera
+                    </Button>
+                  </div>
+                )}
+                {isScanning && (
+                  <div className="absolute inset-0 pointer-events-none">
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <div className="w-64 h-40 border-2 border-white rounded-lg"></div>
+                    </div>
+                    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-64 h-40 overflow-hidden">
+                      <div
+                        className="w-full h-0.5 bg-red-500 absolute"
+                        style={{ animation: "scanLine 2s ease-in-out infinite alternate" }}
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <div className="flex justify-between items-center">
+                {isScanning && (
+                  <Button variant="secondary" onClick={() => toggleTorch(!torchOn)} className="gap-2">
+                    <Sun className="h-4 w-4" /> {torchOn ? "Torch Off" : "Torch On"}
+                  </Button>
+                )}
+                <Button variant="outline" onClick={handleClose} className="ml-auto">
+                  <X className="h-4 w-4 mr-2" /> {isScanning ? "Cancel" : "Close"}
                 </Button>
               </div>
-            )}
-            {isScanning && (
-              <div className="absolute inset-0 pointer-events-none">
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <div className="w-64 h-40 border-2 border-white rounded-lg"></div>
-                </div>
-                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-64 h-40 overflow-hidden">
-                  <div
-                    className="w-full h-0.5 bg-red-500 absolute"
-                    style={{ animation: "scanLine 2s ease-in-out infinite alternate" }}
-                  />
-                </div>
-              </div>
-            )}
-          </div>
+            </TabsContent>
 
-          <div className="flex justify-between items-center">
-            {isScanning && (
-              <Button variant="secondary" onClick={() => toggleTorch(!torchOn)} className="gap-2">
-                <Sun className="h-4 w-4" /> {torchOn ? "Torch Off" : "Torch On"}
-              </Button>
-            )}
-            <Button variant="outline" onClick={handleClose} className="ml-auto">
-              <X className="h-4 w-4 mr-2" /> {isScanning ? "Cancel" : "Close"}
-            </Button>
-          </div>
+            <TabsContent value="usb" className="space-y-4">
+              <Alert role="status" aria-live="polite">
+                <Keyboard className="h-4 w-4" />
+                <AlertDescription>
+                  Click in the field below and scan the PDF417 barcode with your USB scanner.
+                </AlertDescription>
+              </Alert>
+
+              {error && (
+                <Alert variant="destructive" role="alert" aria-live="assertive">
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertDescription>{error}</AlertDescription>
+                </Alert>
+              )}
+              {success && (
+                <Alert role="status" aria-live="polite">
+                  <CheckCircle className="h-4 w-4" />
+                  <AlertDescription>
+                    Barcode scanned! Processing…
+                  </AlertDescription>
+                </Alert>
+              )}
+
+              <div className="space-y-2">
+                <label htmlFor="usb-scanner-input" className="text-sm font-medium">
+                  Barcode Data
+                </label>
+                <Input
+                  id="usb-scanner-input"
+                  ref={usbInputRef}
+                  value={usbScanData}
+                  onChange={(e) => handleUsbScanInput(e.target.value)}
+                  onKeyDown={handleUsbScanKeyDown}
+                  placeholder="Scan barcode here... (Press Enter after scanning)"
+                  className="font-mono text-sm"
+                  autoFocus={scanMode === "usb"}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Position cursor in the field above and use your USB barcode scanner. 
+                  The scanner will automatically input the data and you can press Enter to process it.
+                </p>
+              </div>
+
+              <div className="flex justify-between items-center">
+                <Button 
+                  variant="secondary" 
+                  onClick={clearUsbInput}
+                  disabled={!usbScanData}
+                  className="gap-2"
+                >
+                  <X className="h-4 w-4" /> Clear
+                </Button>
+                <Button variant="outline" onClick={handleClose}>
+                  <X className="h-4 w-4 mr-2" /> Close
+                </Button>
+              </div>
+            </TabsContent>
+          </Tabs>
         </div>
       </DialogContent>
     </Dialog>
