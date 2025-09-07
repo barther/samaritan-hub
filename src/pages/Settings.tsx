@@ -530,6 +530,55 @@ Good Samaritan Assistance Team`,
             <div className="space-y-6">
               <Card>
                 <CardHeader>
+                  <CardTitle>Microsoft Graph API Configuration</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="p-4 bg-orange-50 dark:bg-orange-950/30 rounded-lg border border-orange-200 dark:border-orange-800">
+                    <div className="flex items-start gap-3">
+                      <div className="rounded-full bg-orange-100 dark:bg-orange-900 p-2">
+                        <Mail className="h-4 w-4 text-orange-600 dark:text-orange-400" />
+                      </div>
+                      <div className="flex-1">
+                        <h4 className="text-sm font-medium text-orange-800 dark:text-orange-200 mb-1">
+                          API Credentials Expiration Notice
+                        </h4>
+                        <p className="text-sm text-orange-700 dark:text-orange-300 mb-3">
+                          Microsoft Graph API credentials expire every 2 years and must be renewed to maintain email functionality.
+                        </p>
+                        <div className="space-y-2">
+                          <p className="text-xs text-orange-600 dark:text-orange-400">
+                            <strong>Next renewal required:</strong> Contact your Microsoft Global Administrator before credentials expire
+                          </p>
+                          <p className="text-xs text-orange-600 dark:text-orange-400">
+                            <strong>Administrator contact:</strong> Your organization's Microsoft Global Administrator will need to:
+                          </p>
+                          <ul className="text-xs text-orange-600 dark:text-orange-400 ml-4 space-y-1">
+                            <li>• Regenerate the client secret in Azure Active Directory</li>
+                            <li>• Update the credentials in Supabase Edge Function secrets</li>
+                            <li>• Verify email functionality with a test send</li>
+                          </ul>
+                        </div>
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          className="mt-3 border-orange-300 text-orange-700 hover:bg-orange-100 dark:border-orange-600 dark:text-orange-300 dark:hover:bg-orange-900"
+                          onClick={() => {
+                            toast({
+                              title: "Administrator Contact Required",
+                              description: "Please contact your Microsoft Global Administrator to renew Graph API credentials before they expire.",
+                            });
+                          }}
+                        >
+                          Contact Administrator
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
                   <CardTitle>Email Provider Settings</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
