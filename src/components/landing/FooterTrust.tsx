@@ -9,6 +9,14 @@ const FooterTrust = () => {
           <p className="text-xs text-slate-400 mt-2">
             Good Samaritan at Lithia Springs Methodist Church
           </p>
+          <div className="mt-4">
+            <a 
+              href="mailto:office@lithiaspringsmethodist.org"
+              className="text-sm text-primary hover:text-primary-hover underline"
+            >
+              Contact: office@lithiaspringsmethodist.org
+            </a>
+          </div>
         </div>
       </div>
     </footer>
