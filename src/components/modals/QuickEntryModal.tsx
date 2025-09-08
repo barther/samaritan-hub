@@ -85,7 +85,6 @@ const quickScenarios: QuickScenario[] = [
     title: "Phone/Internet Bill",
     description: "Monthly phone or internet payment",
     assistanceType: "other",
-    defaultAmount: 58,
     paymentMethod: "direct_payment",
     requiresClient: true
   },
