@@ -595,6 +595,7 @@ const ClientDetail = () => {
             <TabsTrigger value="interactions">Interactions</TabsTrigger>
             <TabsTrigger value="assistance">Assistance Requests</TabsTrigger>
             <TabsTrigger value="disbursements">Disbursements</TabsTrigger>
+            <TabsTrigger value="triage">Triage</TabsTrigger>
             <TabsTrigger value="relationships">Relationships</TabsTrigger>
           </TabsList>
 
@@ -689,6 +690,192 @@ const ClientDetail = () => {
                         </div>
                       </div>
                     ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="triage">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Activity className="h-5 w-5" />
+                    Triage Records
+                  </div>
+                  <Button
+                    onClick={() => {
+                      // Find the most recent incomplete assistance request or create new
+                      const incompleteRequest = assistanceRequests.find(req => !req.triage_completed_at);
+                      if (incompleteRequest) {
+                        setSelectedAssistanceRequest(incompleteRequest);
+                      } else {
+                        // Create new assistance request for triage
+                        const createNewTriageRequest = async () => {
+                          try {
+                            const { data, error } = await supabase
+                              .from('assistance_requests')
+                              .insert({
+                                client_id: clientId,
+                                help_requested: 'New triage assessment'
+                              })
+                              .select('id')
+                              .single();
+                            
+                            if (error) throw error;
+                            
+                            const newRequest = {
+                              id: data.id,
+                              client_id: clientId,
+                              help_requested: 'New triage assessment'
+                            };
+                            setSelectedAssistanceRequest(newRequest);
+                          } catch (error) {
+                            console.error('Error creating triage request:', error);
+                            toast({
+                              title: "Error",
+                              description: "Failed to create triage request",
+                              variant: "destructive"
+                            });
+                          }
+                        };
+                        createNewTriageRequest();
+                      }
+                      setShowTriage(true);
+                    }}
+                    className="gap-2"
+                  >
+                    <Plus className="h-4 w-4" />
+                    Start New Triage
+                  </Button>
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {assistanceRequests.length === 0 ? (
+                  <div className="text-center py-8">
+                    <Activity className="h-12 w-12 mx-auto mb-4 text-muted-foreground opacity-50" />
+                    <p className="text-muted-foreground mb-4">No triage records found</p>
+                    <p className="text-sm text-muted-foreground">Start a triage assessment to begin documenting this client's needs</p>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {/* Incomplete Triage Records */}
+                    {assistanceRequests.filter(req => !req.triage_completed_at).length > 0 && (
+                      <div>
+                        <h4 className="font-medium text-warning mb-3 flex items-center gap-2">
+                          <Activity className="h-4 w-4" />
+                          In Progress ({assistanceRequests.filter(req => !req.triage_completed_at).length})
+                        </h4>
+                        {assistanceRequests.filter(req => !req.triage_completed_at).map((request) => (
+                          <div key={request.id} className="border border-warning/20 bg-warning/5 rounded-lg p-4">
+                            <div className="flex justify-between items-start">
+                              <div className="flex-1">
+                                <h5 className="font-medium text-foreground">{request.help_requested}</h5>
+                                <p className="text-sm text-muted-foreground mt-1">
+                                  Started: {formatDistanceToNow(new Date(request.created_at))} ago
+                                </p>
+                                {request.requested_amount && (
+                                  <p className="text-sm text-muted-foreground">
+                                    Requested: ${request.requested_amount}
+                                  </p>
+                                )}
+                              </div>
+                              <div className="flex gap-2">
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => {
+                                    setSelectedAssistanceRequest(request);
+                                    setShowTriage(true);
+                                  }}
+                                >
+                                  Continue Triage
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={async () => {
+                                    if (confirm("Are you sure you want to start over? This will reset all triage progress.")) {
+                                      try {
+                                        const { error } = await supabase
+                                          .from('assistance_requests')
+                                          .update({ 
+                                            help_requested: 'New triage assessment',
+                                            requested_amount: null,
+                                            circumstances: null,
+                                            outcome_category: null
+                                          })
+                                          .eq('id', request.id);
+                                        
+                                        if (error) throw error;
+                                        
+                                        toast({
+                                          title: "Triage Reset",
+                                          description: "Triage progress has been reset"
+                                        });
+                                        
+                                        fetchClientDetails();
+                                      } catch (error) {
+                                        console.error('Error resetting triage:', error);
+                                        toast({
+                                          title: "Error",
+                                          description: "Failed to reset triage",
+                                          variant: "destructive"
+                                        });
+                                      }
+                                    }
+                                  }}
+                                >
+                                  Start Over
+                                </Button>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Completed Triage Records */}
+                    {assistanceRequests.filter(req => req.triage_completed_at).length > 0 && (
+                      <div>
+                        <h4 className="font-medium text-success mb-3 flex items-center gap-2">
+                          <Activity className="h-4 w-4" />
+                          Completed ({assistanceRequests.filter(req => req.triage_completed_at).length})
+                        </h4>
+                        {assistanceRequests.filter(req => req.triage_completed_at).map((request) => (
+                          <div key={request.id} className="border border-success/20 bg-success/5 rounded-lg p-4">
+                            <div className="flex justify-between items-start">
+                              <div className="flex-1">
+                                <h5 className="font-medium text-foreground">{request.help_requested}</h5>
+                                <div className="text-sm text-muted-foreground mt-1 space-y-1">
+                                  <p>Completed: {formatDistanceToNow(new Date(request.triage_completed_at))} ago</p>
+                                  {request.requested_amount && (
+                                    <p>Requested: ${request.requested_amount}</p>
+                                  )}
+                                  {request.approved_amount && (
+                                    <p>Approved: ${request.approved_amount}</p>
+                                  )}
+                                  {request.outcome_category && (
+                                    <p>Outcome: {request.outcome_category}</p>
+                                  )}
+                                </div>
+                              </div>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => {
+                                  setSelectedAssistanceRequest(request);
+                                  setShowTriage(true);
+                                }}
+                              >
+                                View Details
+                              </Button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 )}
               </CardContent>
