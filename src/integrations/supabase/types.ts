@@ -283,6 +283,39 @@ export type Database = {
         }
         Relationships: []
       }
+      client_relationships: {
+        Row: {
+          client_id: string
+          created_at: string
+          created_by: string | null
+          id: string
+          related_client_id: string
+          relationship_notes: string | null
+          relationship_type: string
+          updated_at: string
+        }
+        Insert: {
+          client_id: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          related_client_id: string
+          relationship_notes?: string | null
+          relationship_type?: string
+          updated_at?: string
+        }
+        Update: {
+          client_id?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          related_client_id?: string
+          relationship_notes?: string | null
+          relationship_type?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       clients: {
         Row: {
           address: string | null
@@ -1074,6 +1107,20 @@ export type Database = {
       cleanup_expired_sessions: {
         Args: Record<PropertyKey, never>
         Returns: undefined
+      }
+      get_related_clients: {
+        Args: { p_client_id: string }
+        Returns: {
+          client_id: string
+          email: string
+          first_name: string
+          last_interaction_date: string
+          last_interaction_summary: string
+          last_name: string
+          phone: string
+          relationship_notes: string
+          relationship_type: string
+        }[]
       }
       has_role: {
         Args: {

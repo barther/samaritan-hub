@@ -315,9 +315,27 @@ const ClientSearch = () => {
                                </p>
                              </div>
                              
-                             <Button variant="outline" size="sm" onClick={() => navigate(`/portal/clients/${client.id}`)} className="text-xs sm:text-sm">
-                               View Details
-                             </Button>
+                              <div className="flex gap-2">
+                                <Button 
+                                  variant="outline" 
+                                  size="sm" 
+                                  onClick={() => navigate(`/portal/clients/${client.id}`)} 
+                                  className="text-xs sm:text-sm"
+                                >
+                                  View Details
+                                </Button>
+                                {selectedClients.length > 0 && !selectedClients.includes(client.id) && (
+                                  <Button
+                                    variant="secondary"
+                                    size="sm"
+                                    onClick={() => navigate(`/portal/clients/${client.id}?tab=relationships`)}
+                                    className="text-xs sm:text-sm"
+                                  >
+                                    <Users className="h-3 w-3 mr-1" />
+                                    Link
+                                  </Button>
+                                )}
+                              </div>
                            </div>
                          </div>
                        </div>

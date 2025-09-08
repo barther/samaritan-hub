@@ -32,6 +32,7 @@ import { formatDistanceToNow } from "date-fns";
 import { NewInteractionModal } from "@/components/modals/NewInteractionModal";
 import { DisbursementModal } from "@/components/modals/DisbursementModal";
 import { TriageForm } from "@/components/TriageForm";
+import { ClientRelationships } from "@/components/ClientRelationships";
 
 const ClientDetail = () => {
   const { clientId } = useParams<{ clientId: string }>();
@@ -48,6 +49,7 @@ const ClientDetail = () => {
   const [showTriage, setShowTriage] = useState(false);
   const [selectedAssistanceRequest, setSelectedAssistanceRequest] = useState<any>(null);
   const [isEditing, setIsEditing] = useState(false);
+  const [activeTab, setActiveTab] = useState(searchParams.get('tab') || 'interactions');
   const [isUpdating, setIsUpdating] = useState(false);
   const [editForm, setEditForm] = useState({
     first_name: '',
@@ -532,11 +534,12 @@ const ClientDetail = () => {
         </div>
 
         {/* Main Content */}
-        <Tabs defaultValue="interactions" className="space-y-4">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
           <TabsList>
             <TabsTrigger value="interactions">Interactions</TabsTrigger>
             <TabsTrigger value="assistance">Assistance Requests</TabsTrigger>
             <TabsTrigger value="disbursements">Disbursements</TabsTrigger>
+            <TabsTrigger value="relationships">Relationships</TabsTrigger>
           </TabsList>
 
           <TabsContent value="interactions">
@@ -634,6 +637,13 @@ const ClientDetail = () => {
                 )}
               </CardContent>
             </Card>
+          </TabsContent>
+
+          <TabsContent value="relationships">
+            <ClientRelationships 
+              clientId={clientId!} 
+              onClientSelect={(selectedClientId) => navigate(`/portal/clients/${selectedClientId}`)}
+            />
           </TabsContent>
         </Tabs>
       </main>
