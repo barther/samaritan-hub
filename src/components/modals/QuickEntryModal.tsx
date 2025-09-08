@@ -498,7 +498,7 @@ export const QuickEntryModal = ({ open, onOpenChange, onSuccess }: QuickEntryMod
                   <CardHeader className="pb-3">
                     <CardTitle className="text-sm font-medium flex items-center gap-2">
                       {scenario.title}
-                      {scenario.defaultAmount && (
+                      {scenario.defaultAmount && scenario.defaultAmount > 0 && (
                         <Badge variant="secondary" className="text-xs">
                           ${scenario.defaultAmount}
                         </Badge>
