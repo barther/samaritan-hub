@@ -391,6 +391,7 @@ export type Database = {
       disbursements: {
         Row: {
           amount: number
+          assistance_request_id: string | null
           assistance_type: Database["public"]["Enums"]["assistance_type"]
           check_number: string | null
           client_id: string | null
@@ -405,6 +406,7 @@ export type Database = {
         }
         Insert: {
           amount: number
+          assistance_request_id?: string | null
           assistance_type: Database["public"]["Enums"]["assistance_type"]
           check_number?: string | null
           client_id?: string | null
@@ -419,6 +421,7 @@ export type Database = {
         }
         Update: {
           amount?: number
+          assistance_request_id?: string | null
           assistance_type?: Database["public"]["Enums"]["assistance_type"]
           check_number?: string | null
           client_id?: string | null
@@ -432,6 +435,13 @@ export type Database = {
           recipient_name?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "disbursements_assistance_request_id_fkey"
+            columns: ["assistance_request_id"]
+            isOneToOne: false
+            referencedRelation: "assistance_requests"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "disbursements_client_id_fkey"
             columns: ["client_id"]

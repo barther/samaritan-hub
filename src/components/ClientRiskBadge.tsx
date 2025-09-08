@@ -5,13 +5,16 @@ interface ClientRiskBadgeProps {
   riskLevel: string;
   assistanceCount?: number;
   totalReceived?: number;
+  totalRequested?: number;
   className?: string;
 }
+
 
 export const ClientRiskBadge = ({ 
   riskLevel, 
   assistanceCount = 0, 
   totalReceived = 0, 
+  totalRequested = 0,
   className 
 }: ClientRiskBadgeProps) => {
   const getRiskConfig = (level: string) => {
@@ -46,7 +49,7 @@ export const ClientRiskBadge = ({
       {config.label}
       {assistanceCount > 0 && (
         <span className="ml-1">
-          ({assistanceCount}x, ${totalReceived.toFixed(0)})
+          ({assistanceCount} payments, ${totalReceived.toFixed(0)} disbursed{typeof totalRequested === 'number' ? `, net $${(totalReceived - totalRequested).toFixed(0)}` : ''})
         </span>
       )}
     </Badge>

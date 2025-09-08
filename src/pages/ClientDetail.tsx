@@ -375,8 +375,9 @@ const ClientDetail = () => {
           {client.risk_level && (
             <ClientRiskBadge 
               riskLevel={client.risk_level}
-              assistanceCount={client.assistance_count}
-              totalReceived={client.total_assistance_received}
+              assistanceCount={disbursements.length}
+              totalReceived={disbursements.reduce((sum, d) => sum + (Number(d.amount) || 0), 0)}
+              totalRequested={assistanceRequests.reduce((sum, r) => sum + (Number(r.approved_amount) || 0), 0)}
               className="mt-2"
             />
           )}
@@ -896,7 +897,7 @@ const ClientDetail = () => {
                                 {request.approved_amount && request.approved_amount > 0 && isAdmin && (
                                   <Button
                                     size="sm"
-                                    onClick={() => setShowDisbursement(true)}
+                                    onClick={() => { setSelectedAssistanceRequest(request); setShowDisbursement(true); }}
                                     className="bg-success text-success-foreground hover:bg-success/90"
                                   >
                                     <DollarSign className="h-4 w-4 mr-1" />
@@ -945,6 +946,9 @@ const ClientDetail = () => {
             setShowDisbursement(false);
             fetchClientDetails();
           }}
+          defaultClientId={clientId}
+          linkedAssistanceRequestId={selectedAssistanceRequest?.id}
+          defaultAmount={selectedAssistanceRequest?.approved_amount ?? undefined}
         />
       )}
 

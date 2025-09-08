@@ -14,14 +14,18 @@ interface DisbursementModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSuccess?: () => void;
+  defaultClientId?: string;
+  linkedAssistanceRequestId?: string;
+  defaultAmount?: number;
 }
 
-export const DisbursementModal = ({ open, onOpenChange, onSuccess }: DisbursementModalProps) => {
+
+export const DisbursementModal = ({ open, onOpenChange, onSuccess, defaultClientId, linkedAssistanceRequestId, defaultAmount }: DisbursementModalProps) => {
   const [formData, setFormData] = useState({
-    amount: "",
+    amount: defaultAmount ? String(defaultAmount) : "",
     assistanceType: "",
     recipientName: "",
-    clientId: "",
+    clientId: defaultClientId || "",
     disbursementDate: new Date().toISOString().split('T')[0],
     paymentMethod: "direct_payment",
     checkNumber: "",
