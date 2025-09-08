@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -115,6 +116,7 @@ const quickScenarios: QuickScenario[] = [
 ];
 
 export const QuickEntryModal = ({ open, onOpenChange, onSuccess }: QuickEntryModalProps) => {
+  const navigate = useNavigate();
   const [selectedScenario, setSelectedScenario] = useState<QuickScenario | null>(null);
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
   const [clientSearch, setClientSearch] = useState("");
@@ -198,20 +200,11 @@ export const QuickEntryModal = ({ open, onOpenChange, onSuccess }: QuickEntryMod
   };
 
   const handleNewClient = () => {
-    setSelectedClient(null);
-    setClientSearch("");
-    setSearchResults([]);
-    setAssistanceHistory([]);
-    setShowHistory(false);
-    setFormData({
-      firstName: "",
-      lastName: "",
-      phone: "",
-      amount: "",
-      recipientName: "",
-      notes: "",
-      referralAgencies: ""
-    });
+    // Close the modal
+    onOpenChange(false);
+    
+    // Navigate to new client page
+    navigate('/portal/clients/new');
   };
 
   const handleScenarioSelect = (scenario: QuickScenario) => {
