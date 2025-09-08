@@ -172,37 +172,70 @@ const PortalDashboard = () => {
   };
   const loadUserProfile = async (email: string) => {
     try {
-      const {
-        data,
-        error
-      } = await supabase.functions.invoke('get-user-profile', {
-        body: {
-          userEmail: email
-        }
-      });
-      if (error) {
-        console.error('Error loading user profile:', error);
-        // Set fallback profile
+      // First, try to get the user's display name from their auth metadata
+      const { data: session } = await supabase.auth.getSession();
+      const userMetadata = session.session?.user?.user_metadata;
+      
+      // Check for display name in various places where Azure might store it
+      let displayName = null;
+      if (userMetadata) {
+        // Check common places where Azure/Microsoft stores display names
+        displayName = userMetadata.full_name || 
+                     userMetadata.name || 
+                     userMetadata.displayName ||
+                     userMetadata.given_name && userMetadata.family_name ? 
+                       `${userMetadata.given_name} ${userMetadata.family_name}` : null;
+      }
+
+      if (displayName) {
         setUserProfile({
-          displayName: email.split('@')[0]
+          displayName: displayName
         });
         return;
       }
-      if (data?.profile) {
-        setUserProfile({
-          displayName: data.profile.displayName
+
+      // Fallback: try the edge function (though it's currently failing)
+      try {
+        const {
+          data,
+          error
+        } = await supabase.functions.invoke('get-user-profile', {
+          body: {
+            userEmail: email
+          }
         });
-      } else {
-        // Set fallback profile
-        setUserProfile({
-          displayName: email.split('@')[0]
-        });
+        if (!error && data?.profile?.displayName) {
+          setUserProfile({
+            displayName: data.profile.displayName
+          });
+          return;
+        }
+      } catch (edgeFunctionError) {
+        console.log('Edge function failed, using fallback:', edgeFunctionError);
       }
+
+      // Final fallback: format the email part nicely
+      const emailPart = email.split('@')[0];
+      const formattedName = emailPart
+        .split('.')
+        .map(part => part.charAt(0).toUpperCase() + part.slice(1))
+        .join(' ');
+      
+      setUserProfile({
+        displayName: formattedName
+      });
+
     } catch (error) {
       console.error('Error loading user profile:', error);
       // Set fallback profile
+      const emailPart = email.split('@')[0];
+      const formattedName = emailPart
+        .split('.')
+        .map(part => part.charAt(0).toUpperCase() + part.slice(1))
+        .join(' ');
+      
       setUserProfile({
-        displayName: email.split('@')[0]
+        displayName: formattedName
       });
     }
   };
