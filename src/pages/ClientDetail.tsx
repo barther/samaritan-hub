@@ -299,6 +299,14 @@ const ClientDetail = () => {
                 <ArrowLeft className="h-4 w-4 mr-2" />
                 Back to Dashboard
               </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => navigate('/portal/clients/search')}
+              >
+                <ArrowLeft className="h-4 w-4 mr-2" />
+                Back to Search
+              </Button>
             </div>
             <div className="flex items-center space-x-2">
               {isEditing ? (
