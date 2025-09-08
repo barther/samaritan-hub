@@ -52,6 +52,7 @@ const ClientDetail = () => {
   const [editForm, setEditForm] = useState({
     first_name: '',
     last_name: '',
+    preferred_name: '',
     email: '',
     phone: '',
     address: '',
@@ -99,6 +100,7 @@ const ClientDetail = () => {
       setEditForm({
         first_name: clientData.first_name || '',
         last_name: clientData.last_name || '',
+        preferred_name: clientData.preferred_name || '',
         email: clientData.email || '',
         phone: clientData.phone || '',
         address: clientData.address || '',
@@ -184,6 +186,7 @@ const ClientDetail = () => {
       setEditForm({
         first_name: client.first_name || '',
         last_name: client.last_name || '',
+        preferred_name: client.preferred_name || '',
         email: client.email || '',
         phone: client.phone || '',
         address: client.address || '',
@@ -207,6 +210,7 @@ const ClientDetail = () => {
         .update({
           first_name: editForm.first_name,
           last_name: editForm.last_name,
+          preferred_name: editForm.preferred_name || null,
           email: editForm.email || null,
           phone: editForm.phone || null,
           address: editForm.address || null,
@@ -362,6 +366,16 @@ const ClientDetail = () => {
                       required
                     />
                   </div>
+                </div>
+                
+                <div>
+                  <Label htmlFor="preferred_name">Preferred Name</Label>
+                  <Input
+                    id="preferred_name"
+                    value={editForm.preferred_name}
+                    onChange={(e) => setEditForm(prev => ({ ...prev, preferred_name: e.target.value }))}
+                    placeholder="Enter preferred name (optional)"
+                  />
                 </div>
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
