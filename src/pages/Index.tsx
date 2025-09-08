@@ -1,7 +1,6 @@
 import Header from "@/components/Header";
 import Hero from "@/components/landing/Hero";
 import EnhancedMonthlyStats from "@/components/landing/EnhancedMonthlyStats";
-import FinancialHealthIndicator from "@/components/FinancialHealthIndicator";
 import PrimaryCTAs from "@/components/landing/PrimaryCTAs";
 import HowItWorks from "@/components/landing/HowItWorks";
 import Testimonial from "@/components/landing/Testimonial";
@@ -15,7 +14,6 @@ const Index = () => {
       
       <div className="container mx-auto px-4 space-y-6 py-8 max-w-2xl">
         <EnhancedMonthlyStats />
-        <FinancialHealthIndicator />
         
         {/* Disclaimer */}
         <div className="bg-slate-50 rounded-lg p-4 border border-slate-200">
