@@ -882,16 +882,28 @@ const ClientDetail = () => {
                                   )}
                                 </div>
                               </div>
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => {
-                                  setSelectedAssistanceRequest(request);
-                                  setShowTriage(true);
-                                }}
-                              >
-                                View Details
-                              </Button>
+                              <div className="flex gap-2">
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => {
+                                    setSelectedAssistanceRequest(request);
+                                    setShowTriage(true);
+                                  }}
+                                >
+                                  View Details
+                                </Button>
+                                {request.approved_amount && request.approved_amount > 0 && isAdmin && (
+                                  <Button
+                                    size="sm"
+                                    onClick={() => setShowDisbursement(true)}
+                                    className="bg-success text-success-foreground hover:bg-success/90"
+                                  >
+                                    <DollarSign className="h-4 w-4 mr-1" />
+                                    Record Disbursement
+                                  </Button>
+                                )}
+                              </div>
                             </div>
                           </div>
                         ))}
@@ -922,6 +934,17 @@ const ClientDetail = () => {
             fetchClientDetails();
           }}
           clientId={clientId}
+        />
+      )}
+
+      {showDisbursement && (
+        <DisbursementModal
+          open={showDisbursement}
+          onOpenChange={setShowDisbursement}
+          onSuccess={() => {
+            setShowDisbursement(false);
+            fetchClientDetails();
+          }}
         />
       )}
 
