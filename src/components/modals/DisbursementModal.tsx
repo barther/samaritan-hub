@@ -13,9 +13,10 @@ import { Minus } from "lucide-react";
 interface DisbursementModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  onSuccess?: () => void;
 }
 
-export const DisbursementModal = ({ open, onOpenChange }: DisbursementModalProps) => {
+export const DisbursementModal = ({ open, onOpenChange, onSuccess }: DisbursementModalProps) => {
   const [formData, setFormData] = useState({
     amount: "",
     assistanceType: "",
@@ -147,6 +148,7 @@ export const DisbursementModal = ({ open, onOpenChange }: DisbursementModalProps
         notes: ""
       });
       onOpenChange(false);
+      onSuccess?.();
     } catch (error) {
       console.error('Error recording disbursement:', error);
       toast({

@@ -850,8 +850,22 @@ const PortalDashboard = () => {
 
         {/* Modals */}
         {canViewFinancials && <>
-            <DonationModal open={showDonationModal} onOpenChange={setShowDonationModal} />
-            <DisbursementModal open={showDisbursementModal} onOpenChange={setShowDisbursementModal} />
+            <DonationModal 
+              open={showDonationModal} 
+              onOpenChange={setShowDonationModal} 
+              onSuccess={() => {
+                loadBalance();
+                loadMonthlyTrends();
+              }}
+            />
+            <DisbursementModal 
+              open={showDisbursementModal} 
+              onOpenChange={setShowDisbursementModal} 
+              onSuccess={() => {
+                loadBalance();
+                loadMonthlyTrends();
+              }}
+            />
           </>}
         {canEditData && <>
             <NewInteractionModal open={showInteractionModal} onOpenChange={setShowInteractionModal} onSuccess={() => loadInteractions(0, true)} />

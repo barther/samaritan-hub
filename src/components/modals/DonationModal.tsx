@@ -12,9 +12,10 @@ import { DollarSign } from "lucide-react";
 interface DonationModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  onSuccess?: () => void;
 }
 
-export const DonationModal = ({ open, onOpenChange }: DonationModalProps) => {
+export const DonationModal = ({ open, onOpenChange, onSuccess }: DonationModalProps) => {
   const [formData, setFormData] = useState({
     amount: "",
     source: "",
@@ -58,6 +59,7 @@ export const DonationModal = ({ open, onOpenChange }: DonationModalProps) => {
         notes: ""
       });
       onOpenChange(false);
+      onSuccess?.();
     } catch (error) {
       handleError(error, 'save', 'Error recording donation');
     } finally {
