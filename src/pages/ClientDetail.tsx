@@ -539,11 +539,6 @@ const ClientDetail = () => {
                     <Calendar className="h-4 w-4 text-muted-foreground" />
                     <span className="text-sm">
                       Client since {formatDistanceToNow(new Date(client.created_at))} ago
-                      {isAdmin && client.created_at !== client.updated_at && (
-                        <Badge variant="outline" className="ml-2 text-xs">
-                          Backdated by Admin
-                        </Badge>
-                      )}
                     </span>
                   </div>
                 </div>
