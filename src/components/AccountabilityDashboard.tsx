@@ -44,6 +44,11 @@ export const AccountabilityDashboard = () => {
 
   useEffect(() => {
     loadAccountabilityData();
+    
+    // Auto-refresh every 30 seconds to pick up new data
+    const interval = setInterval(loadAccountabilityData, 30000);
+    
+    return () => clearInterval(interval);
   }, []);
 
   const loadAccountabilityData = async () => {

@@ -17,76 +17,55 @@ const FinancialHealthIndicator = () => {
   useEffect(() => {
     const fetchFinancialHealth = async () => {
       try {
-        // Calculate 12-month rolling window
-        const endDate = new Date();
-        const startDate = new Date();
-        startDate.setFullYear(endDate.getFullYear() - 1);
+        const twelveMonthsAgo = new Date();
+        twelveMonthsAgo.setFullYear(twelveMonthsAgo.getFullYear() - 1);
+        
+        const [donationsResult, disbursementsResult] = await Promise.all([
+          supabase
+            .from('donations')
+            .select('amount')
+            .gte('donation_date', twelveMonthsAgo.toISOString().split('T')[0]),
+          supabase
+            .from('disbursements')
+            .select('amount')
+            .gte('disbursement_date', twelveMonthsAgo.toISOString().split('T')[0])
+        ]);
 
-        const startDateStr = startDate.toISOString().split('T')[0];
-        const endDateStr = endDate.toISOString().split('T')[0];
-
-        // Fetch donations for the past 12 months
-        const { data: donations, error: donationError } = await supabase
-          .from('donations')
-          .select('amount')
-          .gte('donation_date', startDateStr)
-          .lte('donation_date', endDateStr);
-
-        if (donationError) throw donationError;
-
-        // Fetch disbursements for the past 12 months
-        const { data: disbursements, error: disbursementError } = await supabase
-          .from('disbursements')
-          .select('amount')
-          .gte('disbursement_date', startDateStr)
-          .lte('disbursement_date', endDateStr);
-
-        if (disbursementError) throw disbursementError;
-
-        // Calculate totals
-        const totalDonations = donations?.reduce((sum, d) => sum + Number(d.amount), 0) || 0;
-        const totalDisbursements = disbursements?.reduce((sum, d) => sum + Number(d.amount), 0) || 0;
-
-        // Calculate health status
+        const totalDonations = donationsResult.data?.reduce((sum, d) => sum + d.amount, 0) || 0;
+        const totalDisbursements = disbursementsResult.data?.reduce((sum, d) => sum + d.amount, 0) || 0;
+        
+        const ratio = totalDonations > 0 ? totalDonations / totalDisbursements : 0;
+        
         let status: HealthStatus;
         let message: string;
         let description: string;
-
-        if (totalDisbursements === 0) {
-          // No disbursements yet
+        
+        if (ratio >= 2.0) {
           status = 'healthy';
-          message = 'Building reserves';
-          description = 'We\'re preparing to help families in need';
+          message = 'Financial Health: Excellent';
+          description = 'Building strong reserves';
+        } else if (ratio >= 1.2) {
+          status = 'stable';
+          message = 'Financial Health: Stable'; 
+          description = 'Maintaining balance';
+        } else if (ratio >= 0.8) {
+          status = 'concerning';
+          message = 'Financial Health: Concerning';
+          description = 'Monitor funding closely';
         } else {
-          const ratio = totalDonations / totalDisbursements;
-          
-          if (ratio >= 1.2) {
-            status = 'healthy';
-            message = 'Strong financial position';
-            description = 'We\'re well-funded and ready to help families in need';
-          } else if (ratio >= 1.0) {
-            status = 'stable';
-            message = 'Stable funding levels';
-            description = 'We\'re maintaining a balanced approach to helping families';
-          } else if (ratio >= 0.7) {
-            status = 'concerning';
-            message = 'Funding needs attention';
-            description = 'Your donations help us continue serving our community';
-          } else {
-            status = 'critical';
-            message = 'Urgent funding needed';
-            description = 'Community support is essential to continue our mission';
-          }
+          status = 'critical';
+          message = 'Financial Health: Critical';
+          description = 'Urgent funding needed';
         }
 
         setHealthData({ status, message, description });
       } catch (error) {
         console.error('Error fetching financial health:', error);
-        // Default to healthy if we can't fetch data
+        // Default to healthy state on error
         setHealthData({
           status: 'healthy',
-          message: 'Ready to serve',
-          description: 'We\'re prepared to help families in their time of need'
+          message: 'Financial Health: Available',
+          description: 'Based on donations received vs. assistance provided'
         });
       } finally {
         setLoading(false);
@@ -94,6 +73,11 @@ const FinancialHealthIndicator = () => {
     };
 
     fetchFinancialHealth();
+    
+    // Auto-refresh every 30 seconds to pick up new data
+    const interval = setInterval(fetchFinancialHealth, 30000);
+    
+    return () => clearInterval(interval);
   }, []);
 
   if (loading) {

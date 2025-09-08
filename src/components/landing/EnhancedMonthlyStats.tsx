@@ -112,6 +112,11 @@ const EnhancedMonthlyStats = () => {
     };
 
     fetchStats();
+    
+    // Auto-refresh every 30 seconds to pick up new data
+    const interval = setInterval(fetchStats, 30000);
+    
+    return () => clearInterval(interval);
   }, []);
 
   if (stats.loading) {
