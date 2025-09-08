@@ -254,17 +254,19 @@ const ClientSearch = () => {
                   {clients.map((client) => (
                     <div
                       key={client.id}
-                      className={`border border-border rounded-lg p-3 sm:p-4 hover:bg-muted/50 transition-colors ${
+                      onClick={() => navigate(`/portal/clients/${client.id}`)}
+                      className={`border border-border rounded-lg p-3 sm:p-4 hover:bg-muted/50 transition-colors cursor-pointer ${
                         selectedClients.includes(client.id) ? 'bg-muted/30 border-primary' : ''
                       }`}
                     >
                        <div className="flex items-start gap-3">
-                         <Checkbox
-                           id={`client-${client.id}`}
-                           checked={selectedClients.includes(client.id)}
-                           onCheckedChange={(checked) => handleClientSelect(client.id, checked as boolean)}
-                           className="mt-1 shrink-0"
-                         />
+                          <Checkbox
+                            id={`client-${client.id}`}
+                            checked={selectedClients.includes(client.id)}
+                            onCheckedChange={(checked) => handleClientSelect(client.id, checked as boolean)}
+                            onClick={(e) => e.stopPropagation()}
+                            className="mt-1 shrink-0"
+                          />
                          <div className="flex-1 min-w-0">
                            <div className="flex flex-col sm:flex-row items-start justify-between gap-3">
                              <div className="flex-1 min-w-0">
@@ -319,7 +321,10 @@ const ClientSearch = () => {
                                 <Button 
                                   variant="outline" 
                                   size="sm" 
-                                  onClick={() => navigate(`/portal/clients/${client.id}`)} 
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    navigate(`/portal/clients/${client.id}`);
+                                  }}
                                   className="text-xs sm:text-sm"
                                 >
                                   View Details
@@ -328,7 +333,10 @@ const ClientSearch = () => {
                                   <Button
                                     variant="secondary"
                                     size="sm"
-                                    onClick={() => navigate(`/portal/clients/${client.id}?tab=relationships`)}
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      navigate(`/portal/clients/${client.id}?tab=relationships`);
+                                    }}
                                     className="text-xs sm:text-sm"
                                   >
                                     <Users className="h-3 w-3 mr-1" />
