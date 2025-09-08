@@ -282,20 +282,6 @@ const ClientDetail = () => {
                 <ArrowLeft className="h-4 w-4 mr-2" />
                 Back to Dashboard
               </Button>
-              <div>
-                <h1 className="text-2xl font-bold text-foreground">
-                  {client.first_name} {client.last_name}
-                </h1>
-                <p className="text-sm text-muted-foreground">Client Details</p>
-                {client.risk_level && (
-                  <ClientRiskBadge 
-                    riskLevel={client.risk_level}
-                    assistanceCount={client.assistance_count}
-                    totalReceived={client.total_assistance_received}
-                    className="mt-2"
-                  />
-                )}
-              </div>
             </div>
             <div className="flex items-center space-x-2">
               {isEditing ? (
@@ -342,6 +328,21 @@ const ClientDetail = () => {
       </header>
 
       <main className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Client Header */}
+        <div className="mb-6">
+          <h1 className="text-2xl font-bold text-foreground">
+            {client.first_name} {client.last_name}
+          </h1>
+          <p className="text-sm text-muted-foreground">Client Details</p>
+          {client.risk_level && (
+            <ClientRiskBadge 
+              riskLevel={client.risk_level}
+              assistanceCount={client.assistance_count}
+              totalReceived={client.total_assistance_received}
+              className="mt-2"
+            />
+          )}
+        </div>
         {/* Client Info Card */}
         <Card className="mb-6">
           <CardContent className="p-6">
