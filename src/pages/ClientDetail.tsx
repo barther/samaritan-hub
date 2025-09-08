@@ -28,11 +28,15 @@ import {
   X
 } from "lucide-react";
 import { ClientRiskBadge } from "@/components/ClientRiskBadge";
-import { formatDistanceToNow } from "date-fns";
+import { formatDistanceToNow, format } from "date-fns";
 import { NewInteractionModal } from "@/components/modals/NewInteractionModal";
 import { DisbursementModal } from "@/components/modals/DisbursementModal";
 import { TriageForm } from "@/components/TriageForm";
 import { ClientRelationships } from "@/components/ClientRelationships";
+import { useUserRole } from "@/hooks/useUserRole";
+import { Calendar as CalendarComponent } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { cn } from "@/lib/utils";
 
 const ClientDetail = () => {
   const { clientId } = useParams<{ clientId: string }>();
@@ -50,6 +54,7 @@ const ClientDetail = () => {
   const [selectedAssistanceRequest, setSelectedAssistanceRequest] = useState<any>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [activeTab, setActiveTab] = useState(searchParams.get('tab') || 'interactions');
+  const { isAdmin } = useUserRole();
   const [isUpdating, setIsUpdating] = useState(false);
   const [editForm, setEditForm] = useState({
     first_name: '',
@@ -62,7 +67,8 @@ const ClientDetail = () => {
     state: '',
     zip_code: '',
     county: '',
-    notes: ''
+    notes: '',
+    created_at: null as Date | null
   });
 
   const fetchClientDetails = async () => {
@@ -110,7 +116,8 @@ const ClientDetail = () => {
         state: clientData.state || 'GA',
         zip_code: clientData.zip_code || '',
         county: clientData.county || '',
-        notes: clientData.notes || ''
+        notes: clientData.notes || '',
+        created_at: clientData.created_at ? new Date(clientData.created_at) : null
       });
 
       // Fetch interactions
@@ -196,7 +203,8 @@ const ClientDetail = () => {
         state: client.state || 'GA',
         zip_code: client.zip_code || '',
         county: client.county || '',
-        notes: client.notes || ''
+        notes: client.notes || '',
+        created_at: client.created_at ? new Date(client.created_at) : null
       });
     }
     setIsEditing(!isEditing);
@@ -207,22 +215,29 @@ const ClientDetail = () => {
     
     setIsUpdating(true);
     try {
+      const updateData: any = {
+        first_name: editForm.first_name,
+        last_name: editForm.last_name,
+        preferred_name: editForm.preferred_name || null,
+        email: editForm.email || null,
+        phone: editForm.phone || null,
+        address: editForm.address || null,
+        city: editForm.city || null,
+        state: editForm.state,
+        zip_code: editForm.zip_code || null,
+        county: editForm.county || null,
+        notes: editForm.notes || null,
+        updated_at: new Date().toISOString()
+      };
+
+      // Only admins can backdate records
+      if (isAdmin && editForm.created_at) {
+        updateData.created_at = editForm.created_at.toISOString();
+      }
+
       const { error } = await supabase
         .from('clients')
-        .update({
-          first_name: editForm.first_name,
-          last_name: editForm.last_name,
-          preferred_name: editForm.preferred_name || null,
-          email: editForm.email || null,
-          phone: editForm.phone || null,
-          address: editForm.address || null,
-          city: editForm.city || null,
-          state: editForm.state,
-          zip_code: editForm.zip_code || null,
-          county: editForm.county || null,
-          notes: editForm.notes || null,
-          updated_at: new Date().toISOString()
-        })
+        .update(updateData)
         .eq('id', client.id);
 
       if (error) throw error;
@@ -465,6 +480,45 @@ const ClientDetail = () => {
                     rows={3}
                   />
                 </div>
+                
+                {/* Admin-only: Custom creation date */}
+                {isAdmin && (
+                  <div>
+                    <Label htmlFor="created_at">Creation Date (Admin Only)</Label>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant="outline"
+                          className={cn(
+                            "w-full justify-start text-left font-normal",
+                            !editForm.created_at && "text-muted-foreground"
+                          )}
+                        >
+                          <Calendar className="mr-2 h-4 w-4" />
+                          {editForm.created_at ? 
+                            format(editForm.created_at, "PPP") : 
+                            <span>Pick creation date</span>
+                          }
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="start">
+                        <CalendarComponent
+                          mode="single"
+                          selected={editForm.created_at || undefined}
+                          onSelect={(date) => setEditForm(prev => ({ ...prev, created_at: date || null }))}
+                          disabled={(date) =>
+                            date > new Date() || date < new Date("2000-01-01")
+                          }
+                          initialFocus
+                          className={cn("p-3 pointer-events-auto")}
+                        />
+                      </PopoverContent>
+                    </Popover>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Leave blank to use current date. Only admins can backdate records.
+                    </p>
+                  </div>
+                )}
               </div>
             ) : (
               <div className="space-y-4">
@@ -483,7 +537,14 @@ const ClientDetail = () => {
                   </div>
                   <div className="flex items-center space-x-2">
                     <Calendar className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-sm">Client since {formatDistanceToNow(new Date(client.created_at))} ago</span>
+                    <span className="text-sm">
+                      Client since {formatDistanceToNow(new Date(client.created_at))} ago
+                      {isAdmin && client.created_at !== client.updated_at && (
+                        <Badge variant="outline" className="ml-2 text-xs">
+                          Backdated by Admin
+                        </Badge>
+                      )}
+                    </span>
                   </div>
                 </div>
                 

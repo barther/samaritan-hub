@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
+import { useUserRole } from "@/hooks/useUserRole";
 import { supabase } from "@/integrations/supabase/client";
 import { Minus } from "lucide-react";
 
@@ -28,6 +29,7 @@ export const DisbursementModal = ({ open, onOpenChange }: DisbursementModalProps
   const [clients, setClients] = useState<Array<{id: string, first_name: string, last_name: string}>>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
+  const { isAdmin } = useUserRole();
 
   const assistanceTypes = [
     { value: "rent", label: "Rent Assistance" },
@@ -216,6 +218,22 @@ export const DisbursementModal = ({ open, onOpenChange }: DisbursementModalProps
               onChange={(e) => setFormData(prev => ({ ...prev, recipientName: e.target.value }))}
               required
             />
+          </div>
+
+          <div>
+            <Label htmlFor="disbursementDate">Disbursement Date</Label>
+            <Input
+              id="disbursementDate"
+              type="date"
+              value={formData.disbursementDate}
+              onChange={(e) => setFormData(prev => ({ ...prev, disbursementDate: e.target.value }))}
+              required
+            />
+            {isAdmin && (
+              <p className="text-xs text-muted-foreground mt-1">
+                Admin: You can backdate this disbursement if needed
+              </p>
+            )}
           </div>
 
           <div>

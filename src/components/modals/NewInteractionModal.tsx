@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
+import { useUserRole } from "@/hooks/useUserRole";
 import { supabase } from "@/integrations/supabase/client";
 import { Plus } from "lucide-react";
 
@@ -28,6 +29,8 @@ export const NewInteractionModal = ({ open, onOpenChange, onSuccess, clientId }:
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
+  const { isAdmin } = useUserRole();
+  const [customDate, setCustomDate] = useState<Date | null>(null);
 
   const channels = [
     { value: "web_form", label: "Web Form" },
@@ -192,6 +195,11 @@ export const NewInteractionModal = ({ open, onOpenChange, onSuccess, clientId }:
               onChange={(e) => setFormData(prev => ({ ...prev, occurredAt: e.target.value }))}
               required
             />
+            {isAdmin && (
+              <p className="text-xs text-muted-foreground mt-1">
+                Admin: You can backdate this interaction if needed
+              </p>
+            )}
           </div>
 
           <div className="flex justify-end gap-2">
