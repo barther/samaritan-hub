@@ -56,6 +56,14 @@ const quickScenarios: QuickScenario[] = [
     requiresClient: true
   },
   {
+    id: "rental_assistance",
+    title: "Rental Assistance",
+    description: "Monthly rent or housing payment assistance",
+    assistanceType: "rent",
+    paymentMethod: "direct_payment",
+    requiresClient: true
+  },
+  {
     id: "kroger_card",
     title: "Kroger Gift Card",
     description: "$20 food assistance card",
