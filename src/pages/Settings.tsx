@@ -23,6 +23,7 @@ const SettingsPage = () => {
   const [loading, setLoading] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
   const [checkingRole, setCheckingRole] = useState(true);
+  const [isStaff, setIsStaff] = useState(false);
 
   // Settings state
   const [settings, setSettings] = useState({
@@ -287,13 +288,16 @@ Good Samaritan Assistance Team`,
   useEffect(() => {
     const checkRoleAndLoad = async () => {
       try {
-        const {
-          data: hasAdminRole
-        } = await supabase.rpc('verify_user_role', {
-          required_role: 'admin'
-        });
-        setIsAdmin(!!hasAdminRole);
-        if (hasAdminRole) {
+        const [adminCheck, staffCheck] = await Promise.all([
+          supabase.rpc('verify_user_role', { required_role: 'admin' }),
+          supabase.rpc('verify_user_role', { required_role: 'staff' })
+        ]);
+        
+        setIsAdmin(!!adminCheck.data);
+        setIsStaff(!!staffCheck.data);
+        
+        // Load settings if user has admin or staff role
+        if (adminCheck.data || staffCheck.data) {
           await loadSettings();
         }
       } catch (e) {
@@ -446,29 +450,34 @@ Good Samaritan Assistance Team`,
               <Mail className="h-4 w-4 mr-2" />
               Email Templates
             </TabsTrigger>
-            <TabsTrigger value="accountability">
-              <Users className="h-4 w-4 mr-2" />
-              Accountability
-            </TabsTrigger>
-            <TabsTrigger value="payments">
-              <DollarSign className="h-4 w-4 mr-2" />
-              Payments
-            </TabsTrigger>
-            <TabsTrigger value="security">
-              <Shield className="h-4 w-4 mr-2" />
-              Security & Data
-            </TabsTrigger>
+            {isAdmin && (
+              <>
+                <TabsTrigger value="accountability">
+                  <Users className="h-4 w-4 mr-2" />
+                  Accountability
+                </TabsTrigger>
+                <TabsTrigger value="payments">
+                  <DollarSign className="h-4 w-4 mr-2" />
+                  Payments
+                </TabsTrigger>
+                <TabsTrigger value="security">
+                  <Shield className="h-4 w-4 mr-2" />
+                  Security & Data
+                </TabsTrigger>
+              </>
+            )}
           </TabsList>
 
           <TabsContent value="general">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <DollarSign className="h-5 w-5" />
-                    Financial Settings
-                  </CardTitle>
-                </CardHeader>
+              {isAdmin && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <DollarSign className="h-5 w-5" />
+                      Financial Settings
+                    </CardTitle>
+                  </CardHeader>
                 <CardContent className="space-y-4">
                   <div>
                     <Label htmlFor="lowFundThreshold">Low Fund Alert Threshold ($)</Label>
@@ -505,6 +514,7 @@ Good Samaritan Assistance Team`,
                   </div>
                 </CardContent>
               </Card>
+              )}
 
               <Card>
                 <CardHeader>
@@ -679,12 +689,19 @@ Good Samaritan Assistance Team`,
                   <CardTitle>Approval Email Template</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <Textarea placeholder="Email template for approved requests..." value={settings.approvalEmailTemplate} onChange={e => setSettings(prev => ({
-                  ...prev,
-                  approvalEmailTemplate: e.target.value
-                }))} rows={8} />
+                  <Textarea 
+                    placeholder="Email template for approved requests..." 
+                    value={settings.approvalEmailTemplate} 
+                    onChange={isAdmin ? (e => setSettings(prev => ({
+                      ...prev,
+                      approvalEmailTemplate: e.target.value
+                    }))) : undefined}
+                    readOnly={!isAdmin}
+                    rows={8} 
+                  />
                   <p className="text-xs text-muted-foreground mt-2">
                     Use {"{client_name}"}, {"{assistance_type}"}, and {"{amount}"} as placeholders
+                    {!isAdmin && " (Read-only for staff)"}
                   </p>
                 </CardContent>
               </Card>
@@ -694,20 +711,28 @@ Good Samaritan Assistance Team`,
                   <CardTitle>Denial Email Template</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <Textarea placeholder="Email template for denied requests..." value={settings.denialEmailTemplate} onChange={e => setSettings(prev => ({
-                  ...prev,
-                  denialEmailTemplate: e.target.value
-                }))} rows={8} />
+                  <Textarea 
+                    placeholder="Email template for denied requests..." 
+                    value={settings.denialEmailTemplate} 
+                    onChange={isAdmin ? (e => setSettings(prev => ({
+                      ...prev,
+                      denialEmailTemplate: e.target.value
+                    }))) : undefined}
+                    readOnly={!isAdmin}
+                    rows={8} 
+                  />
                   <p className="text-xs text-muted-foreground mt-2">
                     Use {"{client_name}"} and {"{reason}"} as placeholders
+                    {!isAdmin && " (Read-only for staff)"}
                   </p>
                 </CardContent>
               </Card>
             </div>
           </TabsContent>
 
-          <TabsContent value="payments">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {isAdmin && (
+            <TabsContent value="payments">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
@@ -870,9 +895,11 @@ Good Samaritan Assistance Team`,
               </Card>
             </div>
           </TabsContent>
+          )}
 
-          <TabsContent value="security">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {isAdmin && (
+            <TabsContent value="security">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
@@ -951,13 +978,16 @@ Good Samaritan Assistance Team`,
               </Card>
             </div>
           </TabsContent>
+          )}
 
-          <TabsContent value="accountability">
+          {isAdmin && (
+            <TabsContent value="accountability">
             <div className="space-y-6">
               <AccountabilityDashboard />
               <GrantReportGenerator />
             </div>
           </TabsContent>
+          )}
         </Tabs>
 
         <div className="mt-8 flex justify-end">
