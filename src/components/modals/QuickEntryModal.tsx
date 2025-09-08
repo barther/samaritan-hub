@@ -109,7 +109,6 @@ const quickScenarios: QuickScenario[] = [
     title: "Referral Only",
     description: "Provided resources, no disbursement",
     assistanceType: "other",
-    defaultAmount: 0,
     paymentMethod: "other",
     requiresClient: false
   }
