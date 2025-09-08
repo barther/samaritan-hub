@@ -64,6 +64,14 @@ const quickScenarios: QuickScenario[] = [
     requiresClient: true
   },
   {
+    id: "transportation",
+    title: "Transportation Assistance",
+    description: "Gas voucher or bus pass assistance",
+    assistanceType: "other",
+    paymentMethod: "voucher",
+    requiresClient: true
+  },
+  {
     id: "kroger_card",
     title: "Kroger Gift Card",
     description: "$20 food assistance card",
