@@ -299,14 +299,6 @@ const ClientDetail = () => {
                 <ArrowLeft className="h-4 w-4 mr-2" />
                 Back to Dashboard
               </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => navigate('/portal/clients/search')}
-              >
-                <ArrowLeft className="h-4 w-4 mr-2" />
-                Back to Search
-              </Button>
             </div>
             <div className="flex items-center space-x-2">
               {isEditing ? (
@@ -353,6 +345,27 @@ const ClientDetail = () => {
       </header>
 
       <main className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Back to Search */}
+        <div className="mb-4">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => {
+              const searchState = sessionStorage.getItem('clientSearchState');
+              if (searchState) {
+                const { searchTerm, selectedClients } = JSON.parse(searchState);
+                navigate(`/portal/clients/search?q=${encodeURIComponent(searchTerm)}&selected=${selectedClients.join(',')}`);
+              } else {
+                navigate('/portal/clients/search');
+              }
+            }}
+            className="text-muted-foreground hover:text-foreground"
+          >
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Back to Search
+          </Button>
+        </div>
+
         {/* Client Header */}
         <div className="mb-6">
           <h1 className="text-2xl font-bold text-foreground">

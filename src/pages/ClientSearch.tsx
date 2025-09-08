@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Search, Users, Phone, Mail, MapPin, ArrowLeft, GitMerge, Plus } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { ClientMergeModal } from "@/components/modals/ClientMergeModal";
@@ -38,7 +38,28 @@ const ClientSearch = () => {
   const [selectedClients, setSelectedClients] = useState<string[]>([]);
   const [showMergeModal, setShowMergeModal] = useState(false);
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { toast } = useToast();
+
+  // Restore search state from URL params or sessionStorage on mount
+  useEffect(() => {
+    const urlSearchTerm = searchParams.get('q');
+    const urlSelectedClients = searchParams.get('selected');
+    
+    if (urlSearchTerm) {
+      setSearchTerm(urlSearchTerm);
+      setDebouncedSearchTerm(urlSearchTerm);
+    }
+    
+    if (urlSelectedClients) {
+      setSelectedClients(urlSelectedClients.split(',').filter(Boolean));
+    }
+    
+    // Clear URL params after restoring state
+    if (urlSearchTerm || urlSelectedClients) {
+      window.history.replaceState({}, '', '/portal/clients/search');
+    }
+  }, [searchParams]);
 
   // Debounce search term
   useEffect(() => {
@@ -254,7 +275,14 @@ const ClientSearch = () => {
                   {clients.map((client) => (
                     <div
                       key={client.id}
-                      onClick={() => navigate(`/portal/clients/${client.id}`)}
+                      onClick={() => {
+                        // Save search state before navigating
+                        sessionStorage.setItem('clientSearchState', JSON.stringify({
+                          searchTerm: debouncedSearchTerm,
+                          selectedClients
+                        }));
+                        navigate(`/portal/clients/${client.id}`);
+                      }}
                       className={`border border-border rounded-lg p-3 sm:p-4 hover:bg-muted/50 transition-colors cursor-pointer ${
                         selectedClients.includes(client.id) ? 'bg-muted/30 border-primary' : ''
                       }`}
@@ -323,6 +351,11 @@ const ClientSearch = () => {
                                   size="sm" 
                                   onClick={(e) => {
                                     e.stopPropagation();
+                                    // Save search state before navigating
+                                    sessionStorage.setItem('clientSearchState', JSON.stringify({
+                                      searchTerm: debouncedSearchTerm,
+                                      selectedClients
+                                    }));
                                     navigate(`/portal/clients/${client.id}`);
                                   }}
                                   className="text-xs sm:text-sm"
@@ -335,6 +368,11 @@ const ClientSearch = () => {
                                     size="sm"
                                     onClick={(e) => {
                                       e.stopPropagation();
+                                      // Save search state before navigating
+                                      sessionStorage.setItem('clientSearchState', JSON.stringify({
+                                        searchTerm: debouncedSearchTerm,
+                                        selectedClients
+                                      }));
                                       navigate(`/portal/clients/${client.id}?tab=relationships`);
                                     }}
                                     className="text-xs sm:text-sm"
