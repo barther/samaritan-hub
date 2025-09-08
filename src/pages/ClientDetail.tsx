@@ -282,7 +282,6 @@ const ClientDetail = () => {
   }
 
   const totalRequested = assistanceRequests.reduce((sum, req) => sum + (req.requested_amount || 0), 0);
-  const totalApproved = assistanceRequests.reduce((sum, req) => sum + (req.approved_amount || 0), 0);
   const totalDisbursed = disbursements.reduce((sum, d) => sum + d.amount, 0);
 
   return (
@@ -590,17 +589,11 @@ const ClientDetail = () => {
         </Card>
 
         {/* Financial Summary */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
           <Card>
             <CardContent className="p-4">
               <div className="text-2xl font-bold">${totalRequested.toFixed(2)}</div>
               <p className="text-xs text-muted-foreground">Total Requested</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="p-4">
-              <div className="text-2xl font-bold text-warning">${totalApproved.toFixed(2)}</div>
-              <p className="text-xs text-muted-foreground">Total Approved</p>
             </CardContent>
           </Card>
           <Card>
