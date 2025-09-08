@@ -300,23 +300,32 @@ const NewClient = () => {
 
           if (updateError) throw updateError;
         }
-
-        // Create assistance request
-        const { data: assistanceRequest, error: requestError } = await supabase
-          .from('assistance_requests')
-          .insert({
-            client_id: newClient.id,
-            interaction_id: interactionId,
-            help_requested: helpNeeded || summary,
-          })
-          .select('id')
-          .single();
-
-        if (requestError) throw requestError;
-
-        setAssistanceRequestId(assistanceRequest.id);
       }
 
+      // Always create assistance request for new clients
+      const { data: assistanceRequest, error: requestError } = await supabase
+        .from('assistance_requests')
+        .insert({
+          client_id: newClient.id,
+          interaction_id: interactionId || null,
+          help_requested: helpNeeded || summary || '',
+        })
+        .select('id')
+        .single();
+
+      if (requestError) {
+        console.error('Error creating assistance request:', requestError);
+        toast({
+          title: "Error",
+          description: "Client created but failed to create assistance request. Please add one manually.",
+          variant: "destructive"
+        });
+        // Navigate to client page even if assistance request fails
+        navigate(`/portal/clients/${newClient.id}`);
+        return;
+      }
+
+      setAssistanceRequestId(assistanceRequest.id);
       setNewClientId(newClient.id);
       setShowTriage(true);
 
