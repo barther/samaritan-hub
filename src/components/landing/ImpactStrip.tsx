@@ -58,7 +58,7 @@ const ImpactStrip = ({
                 {familiesThisMonth > 0 ? animatedFamilies : familiesThisMonth}
               </div>
               <div className="text-sm text-muted-foreground">
-                Families this month
+                {familiesThisMonth === 1 ? 'Family' : 'Families'} this month
               </div>
             </div>
           </div>
@@ -70,7 +70,7 @@ const ImpactStrip = ({
                 {peopleThisMonth > 0 ? animatedPeople : peopleThisMonth}
               </div>
               <div className="text-sm text-muted-foreground">
-                People this month
+                {peopleThisMonth === 1 ? 'Person' : 'People'} this month
               </div>
             </div>
           </div>
