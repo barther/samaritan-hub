@@ -45,6 +45,13 @@ const EnhancedMonthlyStats = () => {
         const currentMonthStartTs = startOfCurrentMonth.toISOString();
         const currentMonthEndTs = endOfCurrentMonth.toISOString();
 
+        console.log('Current month date range:', {
+          startStr: currentMonthStartStr,
+          endStr: currentMonthEndStr,
+          startTs: currentMonthStartTs,
+          endTs: currentMonthEndTs
+        });
+
         // Fetch last month data (for narrative) and current month data (for boxes)
         const [
           lastMonthDisbursements,
@@ -83,6 +90,11 @@ const EnhancedMonthlyStats = () => {
         if (lastMonthInteractions.error) throw lastMonthInteractions.error;
         if (currentMonthDisbursements.error) throw currentMonthDisbursements.error;
         if (currentMonthInteractions.error) throw currentMonthInteractions.error;
+
+        console.log('Current month data:', {
+          disbursements: currentMonthDisbursements.data,
+          interactions: currentMonthInteractions.data
+        });
 
         // Fetch all-time data
         const [allDisbursements, allInteractions] = await Promise.all([
@@ -125,6 +137,13 @@ const EnhancedMonthlyStats = () => {
 
         const currentMonthFamilies = (currentMonthDisbursements.data?.length || 0) + currentMonthReferralCount;
         const currentMonthPeople = currentMonthInteractions.data?.length || 0;
+
+        console.log('Calculated current month stats:', {
+          families: currentMonthFamilies,
+          people: currentMonthPeople,
+          disbursementsCount: currentMonthDisbursements.data?.length || 0,
+          referralCount: currentMonthReferralCount
+        });
 
         // Calculate all-time stats
         let familiesAllTime = 0;
