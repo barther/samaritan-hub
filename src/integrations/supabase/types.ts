@@ -623,6 +623,42 @@ export type Database = {
           },
         ]
       }
+      monthly_public_stats: {
+        Row: {
+          families_all_time: number
+          families_count: number
+          id: string
+          month: number
+          month_label: string
+          people_all_time: number
+          people_count: number
+          updated_at: string
+          year: number
+        }
+        Insert: {
+          families_all_time?: number
+          families_count?: number
+          id?: string
+          month: number
+          month_label: string
+          people_all_time?: number
+          people_count?: number
+          updated_at?: string
+          year: number
+        }
+        Update: {
+          families_all_time?: number
+          families_count?: number
+          id?: string
+          month?: number
+          month_label?: string
+          people_all_time?: number
+          people_count?: number
+          updated_at?: string
+          year?: number
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           created_at: string
@@ -1116,6 +1152,10 @@ export type Database = {
     Functions: {
       cleanup_expired_sessions: {
         Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
+      compute_and_upsert_public_stats: {
+        Args: { p_month: number; p_year: number }
         Returns: undefined
       }
       get_related_clients: {
