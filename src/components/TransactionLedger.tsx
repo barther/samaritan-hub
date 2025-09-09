@@ -3,9 +3,14 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
-import { Download, DollarSign, TrendingUp, TrendingDown } from "lucide-react";
+import { Download, DollarSign, TrendingUp, TrendingDown, Edit2 } from "lucide-react";
 import { format } from "date-fns";
+import { useUserRole } from "@/hooks/useUserRole";
+import { toast } from "sonner";
 
 interface Transaction {
   id: string;
@@ -26,6 +31,10 @@ export const TransactionLedger = ({ balance, onRefresh }: TransactionLedgerProps
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [showAll, setShowAll] = useState(false);
+  const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
+  const [editFormData, setEditFormData] = useState({ amount: '', description: '', date: '' });
+  const [isUpdating, setIsUpdating] = useState(false);
+  const { isAdmin } = useUserRole();
 
   useEffect(() => {
     loadTransactions();
@@ -132,6 +141,56 @@ export const TransactionLedger = ({ balance, onRefresh }: TransactionLedgerProps
     window.URL.revokeObjectURL(url);
   };
 
+  const handleEditTransaction = (transaction: Transaction) => {
+    setEditingTransaction(transaction);
+    setEditFormData({
+      amount: transaction.amount.toString(),
+      description: transaction.type === 'donation' 
+        ? (transaction.description === 'Anonymous Donation' ? '' : transaction.description)
+        : transaction.description,
+      date: transaction.date
+    });
+  };
+
+  const handleUpdateTransaction = async () => {
+    if (!editingTransaction) return;
+    
+    setIsUpdating(true);
+    try {
+      const table = editingTransaction.type === 'donation' ? 'donations' : 'disbursements';
+      const id = editingTransaction.id.replace(`${editingTransaction.type}-`, '');
+      
+      const updateData: any = {
+        amount: parseFloat(editFormData.amount),
+      };
+
+      if (editingTransaction.type === 'donation') {
+        updateData.donor_name = editFormData.description || null;
+        updateData.donation_date = editFormData.date;
+      } else {
+        updateData.recipient_name = editFormData.description;
+        updateData.disbursement_date = editFormData.date;
+      }
+
+      const { error } = await supabase
+        .from(table)
+        .update(updateData)
+        .eq('id', id);
+
+      if (error) throw error;
+
+      toast.success("Transaction updated successfully");
+      loadTransactions();
+      onRefresh?.();
+      setEditingTransaction(null);
+    } catch (error) {
+      console.error('Error updating transaction:', error);
+      toast.error("Failed to update transaction");
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
   const displayedTransactions = showAll ? transactions : transactions.slice(0, 10);
 
   return (
@@ -218,15 +277,27 @@ export const TransactionLedger = ({ balance, onRefresh }: TransactionLedgerProps
                         </p>
                       </div>
                     </div>
-                    <div className="text-right">
-                      <div className={`font-medium ${
-                        transaction.type === 'donation' ? 'text-green-600' : 'text-red-600'
-                      }`}>
-                        {transaction.type === 'donation' ? '+' : '-'}${transaction.amount.toFixed(2)}
+                    <div className="flex items-center gap-2">
+                      <div className="text-right">
+                        <div className={`font-medium ${
+                          transaction.type === 'donation' ? 'text-green-600' : 'text-red-600'
+                        }`}>
+                          {transaction.type === 'donation' ? '+' : '-'}${transaction.amount.toFixed(2)}
+                        </div>
+                        <div className="text-xs text-muted-foreground">
+                          Balance: ${transaction.balance.toFixed(2)}
+                        </div>
                       </div>
-                      <div className="text-xs text-muted-foreground">
-                        Balance: ${transaction.balance.toFixed(2)}
-                      </div>
+                      {isAdmin && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleEditTransaction(transaction)}
+                          className="h-8 w-8 p-0"
+                        >
+                          <Edit2 className="h-4 w-4" />
+                        </Button>
+                      )}
                     </div>
                   </div>
                 ))}
@@ -254,6 +325,56 @@ export const TransactionLedger = ({ balance, onRefresh }: TransactionLedgerProps
           </div>
         )}
       </CardContent>
+
+      {/* Edit Dialog */}
+      <Dialog open={!!editingTransaction} onOpenChange={() => setEditingTransaction(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              Edit {editingTransaction?.type === 'donation' ? 'Donation' : 'Disbursement'}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="edit-amount">Amount</Label>
+              <Input
+                id="edit-amount"
+                type="number"
+                step="0.01"
+                value={editFormData.amount}
+                onChange={(e) => setEditFormData({ ...editFormData, amount: e.target.value })}
+              />
+            </div>
+            <div>
+              <Label htmlFor="edit-description">
+                {editingTransaction?.type === 'donation' ? 'Donor Name' : 'Recipient Name'}
+              </Label>
+              <Input
+                id="edit-description"
+                value={editFormData.description}
+                onChange={(e) => setEditFormData({ ...editFormData, description: e.target.value })}
+              />
+            </div>
+            <div>
+              <Label htmlFor="edit-date">Date</Label>
+              <Input
+                id="edit-date"
+                type="date"
+                value={editFormData.date}
+                onChange={(e) => setEditFormData({ ...editFormData, date: e.target.value })}
+              />
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => setEditingTransaction(null)}>
+                Cancel
+              </Button>
+              <Button onClick={handleUpdateTransaction} disabled={isUpdating}>
+                {isUpdating ? 'Updating...' : 'Update'}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </Card>
   );
 };
