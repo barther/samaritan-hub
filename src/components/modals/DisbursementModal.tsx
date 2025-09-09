@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useToast } from "@/hooks/use-toast";
 import { useUserRole } from "@/hooks/useUserRole";
 import { supabase } from "@/integrations/supabase/client";
-import { Minus } from "lucide-react";
+import { Minus, Search, Plus } from "lucide-react";
 
 interface DisbursementModalProps {
   open: boolean;
@@ -19,6 +19,17 @@ interface DisbursementModalProps {
   defaultAmount?: number;
 }
 
+interface Client {
+  id: string;
+  first_name: string;
+  last_name: string;
+  phone?: string;
+  email?: string;
+  risk_level?: string;
+  assistance_count?: number;
+  total_assistance_received?: number;
+}
+
 
 export const DisbursementModal = ({ open, onOpenChange, onSuccess, defaultClientId, linkedAssistanceRequestId, defaultAmount }: DisbursementModalProps) => {
   const [formData, setFormData] = useState({
@@ -26,12 +37,16 @@ export const DisbursementModal = ({ open, onOpenChange, onSuccess, defaultClient
     assistanceType: "",
     recipientName: "",
     clientId: defaultClientId || "",
+    clientName: "",
     disbursementDate: new Date().toISOString().split('T')[0],
     paymentMethod: "direct_payment",
     checkNumber: "",
     notes: ""
   });
-  const [clients, setClients] = useState<Array<{id: string, first_name: string, last_name: string}>>([]);
+  const [clientSearch, setClientSearch] = useState("");
+  const [searchResults, setSearchResults] = useState<Client[]>([]);
+  const [selectedClient, setSelectedClient] = useState<Client | null>(null);
+  const [isSearching, setIsSearching] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
   const { isAdmin } = useUserRole();
@@ -45,23 +60,86 @@ export const DisbursementModal = ({ open, onOpenChange, onSuccess, defaultClient
     { value: "other", label: "Other" }
   ];
 
+  // Search for clients
   useEffect(() => {
-    if (open) {
-      loadClients();
-    }
-  }, [open]);
+    const searchClients = async () => {
+      if (clientSearch.length < 2) {
+        setSearchResults([]);
+        return;
+      }
 
-  const loadClients = async () => {
+      setIsSearching(true);
+      try {
+        const { data, error } = await supabase
+          .from('clients')
+          .select('id, first_name, last_name, phone, email, risk_level, assistance_count, total_assistance_received')
+          .or(`first_name.ilike.%${clientSearch}%,last_name.ilike.%${clientSearch}%,phone.ilike.%${clientSearch}%`)
+          .order('last_name', { ascending: true })
+          .limit(10);
+
+        if (error) throw error;
+        setSearchResults(data || []);
+      } catch (error) {
+        console.error('Error searching clients:', error);
+      } finally {
+        setIsSearching(false);
+      }
+    };
+
+    const debounceTimer = setTimeout(searchClients, 300);
+    return () => clearTimeout(debounceTimer);
+  }, [clientSearch]);
+
+  const handleClientSelect = (client: Client) => {
+    setSelectedClient(client);
+    setClientSearch(`${client.first_name} ${client.last_name}`);
+    setFormData(prev => ({
+      ...prev,
+      clientId: client.id,
+      clientName: `${client.first_name} ${client.last_name}`,
+      recipientName: prev.recipientName || `${client.first_name} ${client.last_name}`
+    }));
+    setSearchResults([]);
+  };
+
+  const handleCreateNewClient = async () => {
+    if (!clientSearch.trim()) return;
+
+    const [firstName, ...lastNameParts] = clientSearch.trim().split(' ');
+    const lastName = lastNameParts.join(' ') || '';
+
     try {
-      const { data, error } = await supabase
+      const { data: clientData, error: clientError } = await supabase
         .from('clients')
+        .insert([{
+          first_name: firstName,
+          last_name: lastName
+        }])
         .select('id, first_name, last_name')
-        .order('first_name');
+        .single();
 
-      if (error) throw error;
-      setClients(data || []);
+      if (clientError) throw clientError;
+
+      const newClient = {
+        ...clientData,
+        risk_level: 'low',
+        assistance_count: 0,
+        total_assistance_received: 0
+      };
+
+      handleClientSelect(newClient);
+      
+      toast({
+        title: "New client created",
+        description: `${firstName} ${lastName} has been added to the system.`
+      });
     } catch (error) {
-      console.error('Error loading clients:', error);
+      console.error('Error creating client:', error);
+      toast({
+        title: "Error creating client",
+        description: "Please try again.",
+        variant: "destructive"
+      });
     }
   };
 
@@ -70,53 +148,77 @@ export const DisbursementModal = ({ open, onOpenChange, onSuccess, defaultClient
     setIsSubmitting(true);
 
     try {
-      // Validate client selection for security
-      if (!formData.clientId) {
+      if (!formData.clientName && !selectedClient) {
         toast({
           title: "Client required",
-          description: "Please select a client for this disbursement.",
+          description: "Please select or create a client for this disbursement.",
           variant: "destructive"
         });
         setIsSubmitting(false);
         return;
       }
 
-      // Check if client has completed triage (required by RLS policy)
-      const { data: triageData, error: triageError } = await supabase
-        .from('assistance_requests')
-        .select('id, triage_completed_at')
-        .eq('client_id', formData.clientId)
-        .not('triage_completed_at', 'is', null)
-        .limit(1);
+      let clientId = selectedClient?.id;
 
-      if (triageError) {
-        console.error('Error checking triage status:', triageError);
-        toast({
-          title: "Error checking triage status",
-          description: "Please try again.",
-          variant: "destructive"
-        });
-        setIsSubmitting(false);
-        return;
+      // Create new client if needed
+      if (!selectedClient && formData.clientName) {
+        const [firstName, ...lastNameParts] = formData.clientName.trim().split(' ');
+        const lastName = lastNameParts.join(' ') || '';
+
+        const { data: clientData, error: clientError } = await supabase
+          .from('clients')
+          .insert([{
+            first_name: firstName,
+            last_name: lastName
+          }])
+          .select('id')
+          .single();
+
+        if (clientError) {
+          console.error('Error creating client:', clientError);
+          toast({
+            title: "Error creating client",
+            description: "Please try again.",
+            variant: "destructive"
+          });
+          setIsSubmitting(false);
+          return;
+        }
+
+        clientId = clientData.id;
       }
 
-      if (!triageData || triageData.length === 0) {
-        toast({
-          title: "Triage required",
-          description: "Disbursements are only allowed after triage is completed for this client.",
-          variant: "destructive"
-        });
-        setIsSubmitting(false);
-        return;
+      // Create interaction record first
+      const interactionSummary = `Disbursement: $${formData.amount} for ${formData.assistanceType}`;
+      const { data: interactionData, error: interactionError } = await supabase
+        .from('interactions')
+        .insert([{
+          client_id: clientId,
+          contact_name: formData.clientName || (selectedClient ? `${selectedClient.first_name} ${selectedClient.last_name}` : formData.recipientName),
+          channel: 'phone',
+          summary: interactionSummary,
+          details: formData.notes || null,
+          assistance_type: formData.assistanceType as any,
+          requested_amount: parseFloat(formData.amount),
+          occurred_at: new Date().toISOString()
+        }])
+        .select('id')
+        .single();
+
+      if (interactionError) {
+        console.error('Error creating interaction:', interactionError);
+        // Continue with disbursement even if interaction fails
       }
 
+      // Create disbursement record
       const { error } = await supabase
         .from('disbursements')
         .insert([{
           amount: parseFloat(formData.amount),
           assistance_type: formData.assistanceType as 'rent' | 'utilities' | 'food' | 'medical' | 'transportation' | 'other',
           recipient_name: formData.recipientName,
-          client_id: formData.clientId,
+          client_id: clientId,
+          interaction_id: interactionData?.id || null,
           disbursement_date: formData.disbursementDate,
           payment_method: formData.paymentMethod,
           check_number: formData.checkNumber || null,
@@ -146,11 +248,15 @@ export const DisbursementModal = ({ open, onOpenChange, onSuccess, defaultClient
         assistanceType: "",
         recipientName: "",
         clientId: "",
+        clientName: "",
         disbursementDate: new Date().toISOString().split('T')[0],
         paymentMethod: "direct_payment",
         checkNumber: "",
         notes: ""
       });
+      setClientSearch("");
+      setSelectedClient(null);
+      setSearchResults([]);
       onOpenChange(false);
       onSuccess?.();
     } catch (error) {
@@ -242,20 +348,98 @@ export const DisbursementModal = ({ open, onOpenChange, onSuccess, defaultClient
             )}
           </div>
 
+          {/* Client Search */}
           <div>
-            <Label htmlFor="clientId">Client (Optional)</Label>
-            <Select value={formData.clientId} onValueChange={(value) => setFormData(prev => ({ ...prev, clientId: value }))}>
-              <SelectTrigger>
-                <SelectValue placeholder="Select a client (optional)" />
-              </SelectTrigger>
-              <SelectContent>
-                {clients.map((client) => (
-                  <SelectItem key={client.id} value={client.id}>
-                    {client.first_name} {client.last_name}
-                  </SelectItem>
+            <Label htmlFor="clientSearch">Client *</Label>
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                id="clientSearch"
+                placeholder="Search by name or phone, or type new client name..."
+                value={clientSearch}
+                onChange={(e) => setClientSearch(e.target.value)}
+                className="pl-10"
+                required
+              />
+              {isSearching && (
+                <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></div>
+                </div>
+              )}
+            </div>
+
+            {/* Search Results */}
+            {searchResults.length > 0 && (
+              <div className="border rounded-lg mt-2 max-h-40 overflow-y-auto">
+                {searchResults.map((client) => (
+                  <button
+                    key={client.id}
+                    type="button"
+                    onClick={() => handleClientSelect(client)}
+                    className="w-full text-left px-3 py-2 hover:bg-muted border-b last:border-b-0 text-sm"
+                  >
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <div className="font-medium">{client.first_name} {client.last_name}</div>
+                        {client.phone && (
+                          <div className="text-xs text-muted-foreground">{client.phone}</div>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {(client.assistance_count || 0) > 0 && (
+                          <span className="text-xs text-muted-foreground">
+                            {client.assistance_count} prev • ${(client.total_assistance_received || 0).toFixed(0)}
+                          </span>
+                        )}
+                        {client.risk_level && client.risk_level !== 'low' && (
+                          <span className={`text-xs px-1 rounded ${
+                            client.risk_level === 'high' ? 'bg-destructive/20 text-destructive' : 'bg-warning/20 text-warning-foreground'
+                          }`}>
+                            {client.risk_level}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </button>
                 ))}
-              </SelectContent>
-            </Select>
+                {clientSearch && !selectedClient && (
+                  <button
+                    type="button"
+                    onClick={handleCreateNewClient}
+                    className="w-full text-left px-3 py-2 hover:bg-muted text-sm border-t bg-muted/30"
+                  >
+                    <div className="flex items-center gap-2 font-medium text-primary">
+                      <Plus className="h-3 w-3" />
+                      Create new client: "{clientSearch}"
+                    </div>
+                  </button>
+                )}
+              </div>
+            )}
+
+            {/* Selected Client Display */}
+            {selectedClient && (
+              <div className="mt-2 p-2 bg-muted/30 rounded border flex items-center justify-between">
+                <div>
+                  <div className="font-medium">{selectedClient.first_name} {selectedClient.last_name}</div>
+                  {selectedClient.phone && (
+                    <div className="text-xs text-muted-foreground">{selectedClient.phone}</div>
+                  )}
+                </div>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    setSelectedClient(null);
+                    setClientSearch("");
+                    setFormData(prev => ({ ...prev, clientId: "", clientName: "", recipientName: "" }));
+                  }}
+                >
+                  Change
+                </Button>
+              </div>
+            )}
           </div>
 
           <div>

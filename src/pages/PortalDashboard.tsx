@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Users, DollarSign, FileText, Search, Plus, TrendingUp, AlertCircle, Clock, Zap, Menu, X, FileDown, Download, Upload } from "lucide-react";
+import { Users, DollarSign, FileText, Search, Plus, TrendingUp, AlertCircle, Clock, Zap, Menu, X, FileDown, Download, Upload, Building2, Minus } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -10,6 +10,8 @@ import { DonationModal } from "@/components/modals/DonationModal";
 import { DisbursementModal } from "@/components/modals/DisbursementModal";
 import { NewInteractionModal } from "@/components/modals/NewInteractionModal";
 import { QuickEntryModal } from "@/components/modals/QuickEntryModal";
+import { HotelPaymentModal } from "@/components/modals/HotelPaymentModal";
+import { RecentDisbursements } from "@/components/RecentDisbursements";
 import { UnlinkedInteractions } from "@/components/UnlinkedInteractions";
 import { TransactionLedger } from "@/components/TransactionLedger";
 import { generatePDFReport, downloadPDF } from "@/utils/pdfGenerator";
@@ -34,6 +36,7 @@ const PortalDashboard = () => {
   const [showDisbursementModal, setShowDisbursementModal] = useState(false);
   const [showInteractionModal, setShowInteractionModal] = useState(false);
   const [showQuickEntryModal, setShowQuickEntryModal] = useState(false);
+  const [showHotelPaymentModal, setShowHotelPaymentModal] = useState(false);
 
   // Search term for client lookup
   const [searchTerm, setSearchTerm] = useState("");
@@ -689,10 +692,27 @@ const PortalDashboard = () => {
             </CardHeader>
             <CardContent className="space-y-2">
               {canEditData && <>
-                  <Button onClick={() => setShowQuickEntryModal(true)} className="w-full justify-start gap-2 bg-gradient-to-r from-primary to-primary-glow hover:from-primary-glow hover:to-primary text-white font-medium shadow-lg" size="sm">
+                  {/* Primary Hotel Payment Button */}
+                  <Button 
+                    onClick={() => setShowHotelPaymentModal(true)} 
+                    className="w-full justify-start gap-2 bg-gradient-to-r from-primary to-primary-glow hover:from-primary-glow hover:to-primary text-white font-medium shadow-lg" 
+                    size="sm"
+                  >
+                    <Building2 className="h-4 w-4" />
+                    Pay Hotel (Quick)
+                  </Button>
+                  
+                  {/* Other Quick Actions */}
+                  <Button onClick={() => setShowQuickEntryModal(true)} className="w-full justify-start gap-2" size="sm" variant="outline">
                     <Zap className="h-4 w-4" />
                     Quick Entry
                   </Button>
+                  
+                  <Button onClick={() => setShowDisbursementModal(true)} className="w-full justify-start gap-2" size="sm" variant="outline">
+                    <Minus className="h-4 w-4" />
+                    Record Disbursement
+                  </Button>
+                  
                   {canViewFinancials && <Button variant="outline" onClick={() => setShowDonationModal(true)} className="w-full justify-start gap-2 text-green-700 border-green-200 hover:bg-green-50" size="sm">
                       <Plus className="h-4 w-4" />
                       Add Donation
@@ -739,9 +759,20 @@ const PortalDashboard = () => {
           </Card>
         </div>
 
-        {/* Unlinked Interactions Widget */}
-        <div className="mb-6">
-          <UnlinkedInteractions />
+        {/* Recent Disbursements and Unlinked Interactions Row */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 mb-6">
+          {/* Recent Disbursements */}
+          {canViewFinancials && (
+            <RecentDisbursements onRefresh={() => {
+              loadBalance();
+              loadMonthlyTrends();
+            }} />
+          )}
+          
+          {/* Unlinked Interactions Widget */}
+          <div className={canViewFinancials ? "" : "lg:col-span-2"}>
+            <UnlinkedInteractions />
+          </div>
         </div>
 
         {/* Recent Interactions */}
@@ -874,6 +905,15 @@ const PortalDashboard = () => {
           loadBalance();
           loadMonthlyTrends();
         }} />
+            <HotelPaymentModal 
+              open={showHotelPaymentModal} 
+              onOpenChange={setShowHotelPaymentModal} 
+              onSuccess={() => {
+                loadInteractions(0, true);
+                loadBalance();
+                loadMonthlyTrends();
+              }} 
+            />
           </>}
       </main>
     </div>;
