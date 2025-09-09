@@ -7,7 +7,6 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { DonationModal } from "@/components/modals/DonationModal";
-import { DisbursementModal } from "@/components/modals/DisbursementModal";
 import { NewInteractionModal } from "@/components/modals/NewInteractionModal";
 import { QuickEntryModal } from "@/components/modals/QuickEntryModal";
 import { DirectPaymentModal } from "@/components/modals/DirectPaymentModal";
@@ -33,7 +32,6 @@ const PortalDashboard = () => {
 
   // Modal states
   const [showDonationModal, setShowDonationModal] = useState(false);
-  const [showDisbursementModal, setShowDisbursementModal] = useState(false);
   const [showInteractionModal, setShowInteractionModal] = useState(false);
   const [showQuickEntryModal, setShowQuickEntryModal] = useState(false);
   const [showDirectPaymentModal, setShowDirectPaymentModal] = useState(false);
@@ -692,7 +690,7 @@ const PortalDashboard = () => {
             </CardHeader>
             <CardContent className="space-y-2">
               {canEditData && <>
-                  {/* Primary Hotel Payment Button */}
+                  {/* Primary Quick Actions */}
                   <Button 
                     onClick={() => setShowDirectPaymentModal(true)} 
                     className="w-full justify-start gap-2 bg-gradient-to-r from-primary to-primary-glow hover:from-primary-glow hover:to-primary text-white font-medium shadow-lg" 
@@ -702,31 +700,19 @@ const PortalDashboard = () => {
                     Pay Direct (Quick)
                   </Button>
                   
-                  {/* Other Quick Actions */}
                   <Button onClick={() => setShowQuickEntryModal(true)} className="w-full justify-start gap-2" size="sm" variant="outline">
                     <Zap className="h-4 w-4" />
                     Quick Entry
-                  </Button>
-                  
-                  <Button onClick={() => setShowDisbursementModal(true)} className="w-full justify-start gap-2" size="sm" variant="outline">
-                    <Minus className="h-4 w-4" />
-                    Record Disbursement
                   </Button>
                   
                   {canViewFinancials && <Button variant="outline" onClick={() => setShowDonationModal(true)} className="w-full justify-start gap-2 text-green-700 border-green-200 hover:bg-green-50" size="sm">
                       <Plus className="h-4 w-4" />
                       Add Donation
                     </Button>}
+                    
                   <Button variant="outline" onClick={() => setShowInteractionModal(true)} className="w-full justify-start gap-2" size="sm">
                     <FileText className="h-4 w-4" />
-                    Full Interaction Form
-                  </Button>
-                  <Button variant="outline" onClick={() => { 
-                    setShowInteractionModal(true);
-                    // Pre-fill with walk-in channel
-                  }} className="w-full justify-start gap-2 text-blue-700 border-blue-200 hover:bg-blue-50" size="sm">
-                    <Users className="h-4 w-4" />
-                    Log Walk-in
+                    Full Interaction
                   </Button>
                 </>}
               <Button variant="outline" onClick={() => navigate('/portal/clients/search')} className="w-full justify-start gap-2" size="sm">
@@ -884,14 +870,6 @@ const PortalDashboard = () => {
             <DonationModal 
               open={showDonationModal} 
               onOpenChange={setShowDonationModal} 
-              onSuccess={() => {
-                loadBalance();
-                loadMonthlyTrends();
-              }}
-            />
-            <DisbursementModal 
-              open={showDisbursementModal} 
-              onOpenChange={setShowDisbursementModal} 
               onSuccess={() => {
                 loadBalance();
                 loadMonthlyTrends();
