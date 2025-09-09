@@ -6,9 +6,9 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Building2, Search, Plus } from "lucide-react";
+import { DollarSign, Search, Plus } from "lucide-react";
 
-interface HotelPaymentModalProps {
+interface DirectPaymentModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSuccess?: () => void;
@@ -22,14 +22,15 @@ interface Client {
   email?: string;
 }
 
-export const HotelPaymentModal = ({ open, onOpenChange, onSuccess }: HotelPaymentModalProps) => {
+export const DirectPaymentModal = ({ open, onOpenChange, onSuccess }: DirectPaymentModalProps) => {
   const [formData, setFormData] = useState({
     clientName: "",
-    hotelName: "",
-    hotelContact: "",
-    checkInDate: new Date().toISOString().split('T')[0],
-    nights: "1",
-    ratePerNight: "",
+    vendorName: "",
+    vendorContact: "",
+    serviceDate: new Date().toISOString().split('T')[0],
+    quantity: "1",
+    unitCost: "",
+    description: "",
     notes: ""
   });
   const [clientSearch, setClientSearch] = useState("");
@@ -94,9 +95,9 @@ export const HotelPaymentModal = ({ open, onOpenChange, onSuccess }: HotelPaymen
   };
 
   const calculateTotal = () => {
-    const nights = parseInt(formData.nights) || 0;
-    const rate = parseFloat(formData.ratePerNight) || 0;
-    return nights * rate;
+    const quantity = parseInt(formData.quantity) || 0;
+    const cost = parseFloat(formData.unitCost) || 0;
+    return quantity * cost;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -114,10 +115,10 @@ export const HotelPaymentModal = ({ open, onOpenChange, onSuccess }: HotelPaymen
         return;
       }
 
-      if (!formData.hotelName || !formData.ratePerNight) {
+      if (!formData.vendorName || !formData.unitCost) {
         toast({
-          title: "Hotel information required",
-          description: "Please provide hotel name and rate per night.",
+          title: "Vendor information required",
+          description: "Please provide vendor name and cost.",
           variant: "destructive"
         });
         setIsSubmitting(false);
@@ -128,7 +129,7 @@ export const HotelPaymentModal = ({ open, onOpenChange, onSuccess }: HotelPaymen
       if (total <= 0) {
         toast({
           title: "Invalid amount",
-          description: "Please check the number of nights and rate per night.",
+          description: "Please check the quantity and unit cost.",
           variant: "destructive"
         });
         setIsSubmitting(false);
@@ -166,7 +167,7 @@ export const HotelPaymentModal = ({ open, onOpenChange, onSuccess }: HotelPaymen
       }
 
       // Create interaction record
-      const interactionSummary = `Hotel payment: ${formData.nights} nights at ${formData.hotelName} - $${total.toFixed(2)}`;
+      const interactionSummary = `Direct payment: ${formData.description || formData.vendorName} - $${total.toFixed(2)}`;
       const { data: interactionData, error: interactionError } = await supabase
         .from('interactions')
         .insert([{
@@ -174,7 +175,7 @@ export const HotelPaymentModal = ({ open, onOpenChange, onSuccess }: HotelPaymen
           contact_name: formData.clientName,
           channel: 'phone',
           summary: interactionSummary,
-          details: `Hotel: ${formData.hotelName}\nContact: ${formData.hotelContact}\nCheck-in: ${formData.checkInDate}\nNights: ${formData.nights}\nRate: $${formData.ratePerNight}/night\n${formData.notes ? `Notes: ${formData.notes}` : ''}`,
+          details: `Vendor: ${formData.vendorName}\nContact: ${formData.vendorContact}\nService Date: ${formData.serviceDate}\nQuantity: ${formData.quantity}\nUnit Cost: $${formData.unitCost}\nDescription: ${formData.description}\n${formData.notes ? `Notes: ${formData.notes}` : ''}`,
           assistance_type: 'other',
           requested_amount: total,
           occurred_at: new Date().toISOString()
@@ -199,12 +200,12 @@ export const HotelPaymentModal = ({ open, onOpenChange, onSuccess }: HotelPaymen
         .insert([{
           amount: total,
           assistance_type: 'other',
-          recipient_name: formData.hotelContact || formData.hotelName,
+          recipient_name: formData.vendorContact || formData.vendorName,
           client_id: clientId,
           interaction_id: interactionData.id,
           disbursement_date: new Date().toISOString().split('T')[0],
           payment_method: 'direct_payment',
-          notes: `Hotel payment for ${formData.clientName}: ${formData.nights} nights at ${formData.hotelName}`
+          notes: `Direct payment to ${formData.vendorName} for ${formData.clientName}: ${formData.description || 'Service payment'}`
         }]);
 
       if (disbursementError) {
@@ -219,18 +220,19 @@ export const HotelPaymentModal = ({ open, onOpenChange, onSuccess }: HotelPaymen
       }
 
       toast({
-        title: "Hotel payment recorded successfully",
-        description: `$${total.toFixed(2)} payment to ${formData.hotelName} for ${formData.clientName}`
+        title: "Direct payment recorded successfully",
+        description: `$${total.toFixed(2)} payment to ${formData.vendorName} for ${formData.clientName}`
       });
 
       // Reset form
       setFormData({
         clientName: "",
-        hotelName: "",
-        hotelContact: "",
-        checkInDate: new Date().toISOString().split('T')[0],
-        nights: "1",
-        ratePerNight: "",
+        vendorName: "",
+        vendorContact: "",
+        serviceDate: new Date().toISOString().split('T')[0],
+        quantity: "1",
+        unitCost: "",
+        description: "",
         notes: ""
       });
       setClientSearch("");
@@ -239,7 +241,7 @@ export const HotelPaymentModal = ({ open, onOpenChange, onSuccess }: HotelPaymen
       onOpenChange(false);
       onSuccess?.();
     } catch (error) {
-      console.error('Error processing hotel payment:', error);
+      console.error('Error processing direct payment:', error);
       toast({
         title: "Error processing payment",
         description: "Please try again.",
@@ -255,8 +257,8 @@ export const HotelPaymentModal = ({ open, onOpenChange, onSuccess }: HotelPaymen
       <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Building2 className="h-5 w-5 text-primary" />
-            Hotel Payment
+            <DollarSign className="h-5 w-5 text-primary" />
+            Direct Payment
           </DialogTitle>
         </DialogHeader>
         
@@ -313,77 +315,86 @@ export const HotelPaymentModal = ({ open, onOpenChange, onSuccess }: HotelPaymen
             )}
           </div>
 
-          {/* Hotel Information */}
+          {/* Vendor Information */}
           <div>
-            <Label htmlFor="hotelName">Hotel Name *</Label>
+            <Label htmlFor="vendorName">Vendor/Provider Name *</Label>
             <Input
-              id="hotelName"
-              placeholder="e.g., Hampton Inn, Motel 6"
-              value={formData.hotelName}
-              onChange={(e) => setFormData(prev => ({ ...prev, hotelName: e.target.value }))}
+              id="vendorName"
+              placeholder="e.g., Hotel, Utility Company, Landlord"
+              value={formData.vendorName}
+              onChange={(e) => setFormData(prev => ({ ...prev, vendorName: e.target.value }))}
               required
             />
           </div>
 
           <div>
-            <Label htmlFor="hotelContact">Hotel Contact</Label>
+            <Label htmlFor="vendorContact">Vendor Contact</Label>
             <Input
-              id="hotelContact"
-              placeholder="Manager name or phone number"
-              value={formData.hotelContact}
-              onChange={(e) => setFormData(prev => ({ ...prev, hotelContact: e.target.value }))}
+              id="vendorContact"
+              placeholder="Contact name or phone number"
+              value={formData.vendorContact}
+              onChange={(e) => setFormData(prev => ({ ...prev, vendorContact: e.target.value }))}
             />
           </div>
 
-          {/* Stay Details */}
+          {/* Service Details */}
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <Label htmlFor="checkInDate">Check-in Date</Label>
+              <Label htmlFor="serviceDate">Service Date</Label>
               <Input
-                id="checkInDate"
+                id="serviceDate"
                 type="date"
-                value={formData.checkInDate}
-                onChange={(e) => setFormData(prev => ({ ...prev, checkInDate: e.target.value }))}
+                value={formData.serviceDate}
+                onChange={(e) => setFormData(prev => ({ ...prev, serviceDate: e.target.value }))}
                 required
               />
             </div>
             
             <div>
-              <Label htmlFor="nights">Number of Nights *</Label>
+              <Label htmlFor="quantity">Quantity *</Label>
               <Input
-                id="nights"
+                id="quantity"
                 type="number"
                 min="1"
-                max="7"
-                value={formData.nights}
-                onChange={(e) => setFormData(prev => ({ ...prev, nights: e.target.value }))}
+                value={formData.quantity}
+                onChange={(e) => setFormData(prev => ({ ...prev, quantity: e.target.value }))}
                 required
               />
             </div>
           </div>
 
           <div>
-            <Label htmlFor="ratePerNight">Rate per Night *</Label>
+            <Label htmlFor="unitCost">Unit Cost *</Label>
             <Input
-              id="ratePerNight"
+              id="unitCost"
               type="number"
               step="0.01"
               placeholder="0.00"
-              value={formData.ratePerNight}
-              onChange={(e) => setFormData(prev => ({ ...prev, ratePerNight: e.target.value }))}
+              value={formData.unitCost}
+              onChange={(e) => setFormData(prev => ({ ...prev, unitCost: e.target.value }))}
               required
             />
           </div>
 
+          <div>
+            <Label htmlFor="description">Description/Service Type</Label>
+            <Input
+              id="description"
+              placeholder="e.g., Hotel stay, Rent payment, Utility bill"
+              value={formData.description}
+              onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
+            />
+          </div>
+
           {/* Total Calculation */}
-          {formData.nights && formData.ratePerNight && (
+          {formData.quantity && formData.unitCost && (
             <div className="bg-muted/30 rounded-lg p-3">
               <div className="text-sm text-muted-foreground">Total Cost:</div>
               <div className="text-lg font-semibold">
                 ${calculateTotal().toFixed(2)}
               </div>
               <div className="text-xs text-muted-foreground">
-                {formData.nights} nights × ${formData.ratePerNight}/night
+                {formData.quantity} × ${formData.unitCost} each
               </div>
             </div>
           )}
@@ -392,7 +403,7 @@ export const HotelPaymentModal = ({ open, onOpenChange, onSuccess }: HotelPaymen
             <Label htmlFor="notes">Additional Notes</Label>
             <Textarea
               id="notes"
-              placeholder="Special circumstances, voucher details, etc."
+              placeholder="Special circumstances, payment details, etc."
               value={formData.notes}
               onChange={(e) => setFormData(prev => ({ ...prev, notes: e.target.value }))}
             />

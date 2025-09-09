@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Users, DollarSign, FileText, Search, Plus, TrendingUp, AlertCircle, Clock, Zap, Menu, X, FileDown, Download, Upload, Building2, Minus } from "lucide-react";
+import { Users, DollarSign, FileText, Search, Plus, TrendingUp, AlertCircle, Clock, Zap, Menu, X, FileDown, Download, Upload, Minus } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -10,7 +10,7 @@ import { DonationModal } from "@/components/modals/DonationModal";
 import { DisbursementModal } from "@/components/modals/DisbursementModal";
 import { NewInteractionModal } from "@/components/modals/NewInteractionModal";
 import { QuickEntryModal } from "@/components/modals/QuickEntryModal";
-import { HotelPaymentModal } from "@/components/modals/HotelPaymentModal";
+import { DirectPaymentModal } from "@/components/modals/DirectPaymentModal";
 import { RecentDisbursements } from "@/components/RecentDisbursements";
 import { UnlinkedInteractions } from "@/components/UnlinkedInteractions";
 import { TransactionLedger } from "@/components/TransactionLedger";
@@ -36,7 +36,7 @@ const PortalDashboard = () => {
   const [showDisbursementModal, setShowDisbursementModal] = useState(false);
   const [showInteractionModal, setShowInteractionModal] = useState(false);
   const [showQuickEntryModal, setShowQuickEntryModal] = useState(false);
-  const [showHotelPaymentModal, setShowHotelPaymentModal] = useState(false);
+  const [showDirectPaymentModal, setShowDirectPaymentModal] = useState(false);
 
   // Search term for client lookup
   const [searchTerm, setSearchTerm] = useState("");
@@ -694,12 +694,12 @@ const PortalDashboard = () => {
               {canEditData && <>
                   {/* Primary Hotel Payment Button */}
                   <Button 
-                    onClick={() => setShowHotelPaymentModal(true)} 
+                    onClick={() => setShowDirectPaymentModal(true)} 
                     className="w-full justify-start gap-2 bg-gradient-to-r from-primary to-primary-glow hover:from-primary-glow hover:to-primary text-white font-medium shadow-lg" 
                     size="sm"
                   >
-                    <Building2 className="h-4 w-4" />
-                    Pay Hotel (Quick)
+                    <DollarSign className="h-4 w-4" />
+                    Pay Direct (Quick)
                   </Button>
                   
                   {/* Other Quick Actions */}
@@ -905,9 +905,9 @@ const PortalDashboard = () => {
           loadBalance();
           loadMonthlyTrends();
         }} />
-            <HotelPaymentModal 
-              open={showHotelPaymentModal} 
-              onOpenChange={setShowHotelPaymentModal} 
+            <DirectPaymentModal 
+              open={showDirectPaymentModal} 
+              onOpenChange={setShowDirectPaymentModal} 
               onSuccess={() => {
                 loadInteractions(0, true);
                 loadBalance();
