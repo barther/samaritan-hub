@@ -19,19 +19,19 @@ const EnhancedMonthlyStats = () => {
   useEffect(() => {
     const fetchStats = async () => {
       try {
-        // Get current month data (previous month logic from original)
+        // Get current month data
         const now = new Date();
-        const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-        const startOfLastMonth = new Date(lastMonth.getFullYear(), lastMonth.getMonth(), 1);
-        const endOfLastMonth = new Date(lastMonth.getFullYear(), lastMonth.getMonth() + 1, 0);
+        const currentMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+        const startOfCurrentMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1);
+        const endOfCurrentMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 0);
         
-        const monthName = lastMonth.toLocaleString('default', { month: 'long' });
+        const monthName = currentMonth.toLocaleString('default', { month: 'long' });
         
         // Current month queries
-        const startDateStr = startOfLastMonth.toISOString().split('T')[0];
-        const endDateStr = endOfLastMonth.toISOString().split('T')[0];
-        const startTs = startOfLastMonth.toISOString();
-        const endTs = endOfLastMonth.toISOString();
+        const startDateStr = startOfCurrentMonth.toISOString().split('T')[0];
+        const endDateStr = endOfCurrentMonth.toISOString().split('T')[0];
+        const startTs = startOfCurrentMonth.toISOString();
+        const endTs = endOfCurrentMonth.toISOString();
 
         // Fetch monthly data
         const [disbursementsResult, interactionsResult] = await Promise.all([
