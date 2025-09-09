@@ -5,10 +5,19 @@ interface ImpactProps {
   monthLabel: string;
   familiesThisMonth: number;
   peopleThisMonth: number;
+  lastMonthFamilies?: number;
+  lastMonthPeople?: number;
   totals?: { familiesAllTime?: number; peopleAllTime?: number };
 }
 
-const ImpactStrip = ({ monthLabel, familiesThisMonth, peopleThisMonth, totals }: ImpactProps) => {
+const ImpactStrip = ({ 
+  monthLabel, 
+  familiesThisMonth, 
+  peopleThisMonth, 
+  lastMonthFamilies,
+  lastMonthPeople,
+  totals 
+}: ImpactProps) => {
   const [animatedFamilies, setAnimatedFamilies] = useState(0);
   const [animatedPeople, setAnimatedPeople] = useState(0);
 
@@ -32,11 +41,11 @@ const ImpactStrip = ({ monthLabel, familiesThisMonth, peopleThisMonth, totals }:
         <p className="text-lg text-foreground mb-4">
           In <span className="font-semibold text-primary">{monthLabel}</span>, we helped{' '}
           <span className="font-semibold text-primary">
-            {familiesThisMonth} {familiesThisMonth === 1 ? 'family' : 'families'}
+            {lastMonthFamilies || 0} {(lastMonthFamilies || 0) === 1 ? 'family' : 'families'}
           </span>{' '}
           and spoke with{' '}
           <span className="font-semibold text-primary">
-            {peopleThisMonth} {peopleThisMonth === 1 ? 'person' : 'people'}
+            {lastMonthPeople || 0} {(lastMonthPeople || 0) === 1 ? 'person' : 'people'}
           </span>.
         </p>
 

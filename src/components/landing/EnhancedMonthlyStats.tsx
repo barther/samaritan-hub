@@ -7,6 +7,8 @@ const EnhancedMonthlyStats = () => {
     familiesThisMonth: number;
     peopleThisMonth: number;
     monthLabel: string;
+    lastMonthFamilies?: number;
+    lastMonthPeople?: number;
     totals?: { familiesAllTime?: number; peopleAllTime?: number };
     loading: boolean;
   }>({
@@ -19,37 +21,68 @@ const EnhancedMonthlyStats = () => {
   useEffect(() => {
     const fetchStats = async () => {
       try {
-        // Get current month data
+        // Get last month data for narrative text
         const now = new Date();
+        const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+        const startOfLastMonth = new Date(lastMonth.getFullYear(), lastMonth.getMonth(), 1);
+        const endOfLastMonth = new Date(lastMonth.getFullYear(), lastMonth.getMonth() + 1, 0);
+        const lastMonthName = lastMonth.toLocaleString('default', { month: 'long' });
+        
+        // Get current month data for live boxes
         const currentMonth = new Date(now.getFullYear(), now.getMonth(), 1);
         const startOfCurrentMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1);
         const endOfCurrentMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 0);
         
-        const monthName = currentMonth.toLocaleString('default', { month: 'long' });
-        
-        // Current month queries
-        const startDateStr = startOfCurrentMonth.toISOString().split('T')[0];
-        const endDateStr = endOfCurrentMonth.toISOString().split('T')[0];
-        const startTs = startOfCurrentMonth.toISOString();
-        const endTs = endOfCurrentMonth.toISOString();
+        // Last month queries (for narrative text)
+        const lastMonthStartStr = startOfLastMonth.toISOString().split('T')[0];
+        const lastMonthEndStr = endOfLastMonth.toISOString().split('T')[0];
+        const lastMonthStartTs = startOfLastMonth.toISOString();
+        const lastMonthEndTs = endOfLastMonth.toISOString();
 
-        // Fetch monthly data
-        const [disbursementsResult, interactionsResult] = await Promise.all([
+        // Current month queries (for live boxes)
+        const currentMonthStartStr = startOfCurrentMonth.toISOString().split('T')[0];
+        const currentMonthEndStr = endOfCurrentMonth.toISOString().split('T')[0];
+        const currentMonthStartTs = startOfCurrentMonth.toISOString();
+        const currentMonthEndTs = endOfCurrentMonth.toISOString();
+
+        // Fetch last month data (for narrative) and current month data (for boxes)
+        const [
+          lastMonthDisbursements,
+          lastMonthInteractions,
+          currentMonthDisbursements,
+          currentMonthInteractions
+        ] = await Promise.all([
+          // Last month data
           supabase
             .from('disbursements')
             .select('id, interaction_id')
-            .gte('disbursement_date', startDateStr)
-            .lte('disbursement_date', endDateStr),
+            .gte('disbursement_date', lastMonthStartStr)
+            .lte('disbursement_date', lastMonthEndStr),
           
           supabase
             .from('interactions')
             .select('id, summary, details')
-            .gte('occurred_at', startTs)
-            .lte('occurred_at', endTs)
+            .gte('occurred_at', lastMonthStartTs)
+            .lte('occurred_at', lastMonthEndTs),
+            
+          // Current month data
+          supabase
+            .from('disbursements')
+            .select('id, interaction_id')
+            .gte('disbursement_date', currentMonthStartStr)
+            .lte('disbursement_date', currentMonthEndStr),
+          
+          supabase
+            .from('interactions')
+            .select('id, summary, details')
+            .gte('occurred_at', currentMonthStartTs)
+            .lte('occurred_at', currentMonthEndTs)
         ]);
 
-        if (disbursementsResult.error) throw disbursementsResult.error;
-        if (interactionsResult.error) throw interactionsResult.error;
+        if (lastMonthDisbursements.error) throw lastMonthDisbursements.error;
+        if (lastMonthInteractions.error) throw lastMonthInteractions.error;
+        if (currentMonthDisbursements.error) throw currentMonthDisbursements.error;
+        if (currentMonthInteractions.error) throw currentMonthInteractions.error;
 
         // Fetch all-time data
         const [allDisbursements, allInteractions] = await Promise.all([
@@ -57,23 +90,41 @@ const EnhancedMonthlyStats = () => {
           supabase.from('interactions').select('id, summary, details')
         ]);
 
-        // Calculate monthly stats (same logic as original)
-        const disbursedInteractionIds = new Set(
-          (disbursementsResult.data || [])
+        // Calculate last month stats (for narrative)
+        const lastMonthDisbursedIds = new Set(
+          (lastMonthDisbursements.data || [])
             .map((d: any) => d.interaction_id)
             .filter((id: string | null) => Boolean(id))
         );
 
-        const referralOnlyCount = (interactionsResult.data || []).filter((i: any) => {
+        const lastMonthReferralCount = (lastMonthInteractions.data || []).filter((i: any) => {
           const hasReferralKeyword =
             (i.summary && i.summary.toLowerCase().includes('referral')) ||
             (i.details && i.details.toLowerCase().includes('refer'));
-          const hasDisbursement = disbursedInteractionIds.has(i.id);
+          const hasDisbursement = lastMonthDisbursedIds.has(i.id);
           return hasReferralKeyword && !hasDisbursement;
         }).length;
 
-        const familiesThisMonth = (disbursementsResult.data?.length || 0) + referralOnlyCount;
-        const peopleThisMonth = interactionsResult.data?.length || 0;
+        const lastMonthFamilies = (lastMonthDisbursements.data?.length || 0) + lastMonthReferralCount;
+        const lastMonthPeople = lastMonthInteractions.data?.length || 0;
+
+        // Calculate current month stats (for live boxes)
+        const currentMonthDisbursedIds = new Set(
+          (currentMonthDisbursements.data || [])
+            .map((d: any) => d.interaction_id)
+            .filter((id: string | null) => Boolean(id))
+        );
+
+        const currentMonthReferralCount = (currentMonthInteractions.data || []).filter((i: any) => {
+          const hasReferralKeyword =
+            (i.summary && i.summary.toLowerCase().includes('referral')) ||
+            (i.details && i.details.toLowerCase().includes('refer'));
+          const hasDisbursement = currentMonthDisbursedIds.has(i.id);
+          return hasReferralKeyword && !hasDisbursement;
+        }).length;
+
+        const currentMonthFamilies = (currentMonthDisbursements.data?.length || 0) + currentMonthReferralCount;
+        const currentMonthPeople = currentMonthInteractions.data?.length || 0;
 
         // Calculate all-time stats
         let familiesAllTime = 0;
@@ -99,9 +150,11 @@ const EnhancedMonthlyStats = () => {
         }
 
         setStats({
-          familiesThisMonth,
-          peopleThisMonth,
-          monthLabel: monthName,
+          familiesThisMonth: currentMonthFamilies,
+          peopleThisMonth: currentMonthPeople,
+          monthLabel: lastMonthName,
+          lastMonthFamilies,
+          lastMonthPeople,
           totals: { familiesAllTime, peopleAllTime },
           loading: false,
         });
@@ -135,9 +188,11 @@ const EnhancedMonthlyStats = () => {
 
   return (
     <ImpactStrip
-      monthLabel={stats.monthLabel || "This month"}
+      monthLabel={stats.monthLabel || "Last month"}
       familiesThisMonth={stats.familiesThisMonth}
       peopleThisMonth={stats.peopleThisMonth}
+      lastMonthFamilies={stats.lastMonthFamilies}
+      lastMonthPeople={stats.lastMonthPeople}
       totals={stats.totals}
     />
   );
