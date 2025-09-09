@@ -386,7 +386,7 @@ export const QuickEntryModal = ({ open, onOpenChange, onSuccess }: QuickEntryMod
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={(open) => open ? onOpenChange(true) : handleCancel()}>
       <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
