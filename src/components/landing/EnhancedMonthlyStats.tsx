@@ -23,51 +23,59 @@ const EnhancedMonthlyStats = () => {
       try {
         const now = new Date();
         const currentYear = now.getFullYear();
-        const currentMonth = now.getMonth() + 1; // 1-12
+        const currentMonth = now.getMonth() + 1; // JS months are 0-based
+        const lastMonth = currentMonth === 1 ? 12 : currentMonth - 1;
+        const lastMonthYear = currentMonth === 1 ? currentYear - 1 : currentYear;
 
-        const last = new Date(currentYear, currentMonth - 2, 1); // previous month
-        const lastYear = last.getFullYear();
-        const lastMonth = last.getMonth() + 1;
-        const lastMonthName = last.toLocaleString('default', { month: 'long' });
-
-        const [currentRes, lastRes, latestTotals] = await Promise.all([
+        // Query public stats table - no auth required!
+        const [currentMonthResult, lastMonthResult] = await Promise.all([
           supabase
             .from('monthly_public_stats')
-            .select('families_count, people_count')
+            .select('*')
             .eq('year', currentYear)
             .eq('month', currentMonth)
             .maybeSingle(),
+          
           supabase
             .from('monthly_public_stats')
-            .select('families_count, people_count, month_label')
-            .eq('year', lastYear)
+            .select('*')
+            .eq('year', lastMonthYear)
             .eq('month', lastMonth)
-            .maybeSingle(),
-          supabase
-            .from('monthly_public_stats')
-            .select('families_all_time, people_all_time, year, month')
-            .order('year', { ascending: false })
-            .order('month', { ascending: false })
-            .limit(1)
             .maybeSingle()
         ]);
 
-        if (currentRes.error) throw currentRes.error;
-        if (lastRes.error) throw lastRes.error;
-        if (latestTotals.error) throw latestTotals.error;
+        if (currentMonthResult.error && currentMonthResult.error.code !== 'PGRST116') {
+          throw currentMonthResult.error;
+        }
+        if (lastMonthResult.error && lastMonthResult.error.code !== 'PGRST116') {
+          throw lastMonthResult.error;
+        }
+
+        const currentData = currentMonthResult.data;
+        const lastData = lastMonthResult.data;
+
+        // Get the most recent all-time totals from either record
+        const allTimeData = currentData || lastData;
 
         setStats({
-          familiesThisMonth: currentRes.data?.families_count || 0,
-          peopleThisMonth: currentRes.data?.people_count || 0,
-          monthLabel: lastRes.data?.month_label || lastMonthName,
-          lastMonthFamilies: lastRes.data?.families_count || 0,
-          lastMonthPeople: lastRes.data?.people_count || 0,
+          familiesThisMonth: currentData?.families_count || 0,
+          peopleThisMonth: currentData?.people_count || 0,
+          monthLabel: lastData?.month_label || new Date(lastMonthYear, lastMonth - 1).toLocaleString('default', { month: 'long' }),
+          lastMonthFamilies: lastData?.families_count || 0,
+          lastMonthPeople: lastData?.people_count || 0,
           totals: {
-            familiesAllTime: latestTotals.data?.families_all_time || 0,
-            peopleAllTime: latestTotals.data?.people_all_time || 0
+            familiesAllTime: allTimeData?.families_all_time || 0,
+            peopleAllTime: allTimeData?.people_all_time || 0
           },
           loading: false,
         });
+
+        console.log('Public stats loaded:', {
+          currentMonth: currentData,
+          lastMonth: lastData,
+          allTime: allTimeData
+        });
+
       } catch (error) {
         console.error('Error fetching public stats:', error);
         setStats(prev => ({ ...prev, loading: false }));
@@ -75,7 +83,10 @@ const EnhancedMonthlyStats = () => {
     };
 
     fetchStats();
+    
+    // Auto-refresh every 30 seconds to pick up new data
     const interval = setInterval(fetchStats, 30000);
+    
     return () => clearInterval(interval);
   }, []);
 
