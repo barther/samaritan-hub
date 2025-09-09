@@ -675,11 +675,33 @@ const ClientDetail = () => {
                     {assistanceRequests.map((request) => (
                       <div key={request.id} className="border rounded p-3">
                         <div className="flex justify-between items-start">
-                          <div>
+                          <div className="flex-1">
                             <h4 className="font-medium">{request.help_requested}</h4>
                             <p className="text-sm text-muted-foreground">
                               Requested: ${request.requested_amount || 0}
+                              {request.triage_completed_at && " • Triage Complete"}
                             </p>
+                            
+                            {/* Date and Duration Information */}
+                            <div className="flex items-center gap-4 mt-2 text-xs text-muted-foreground">
+                              <div className="flex items-center gap-1">
+                                <Calendar className="h-3 w-3" />
+                                <span>
+                                  {format(new Date(request.created_at), 'MMM dd, yyyy')}
+                                </span>
+                              </div>
+                              <div className="flex items-center gap-1">
+                                <Activity className="h-3 w-3" />
+                                <span>
+                                  {formatDistanceToNow(new Date(request.created_at), { addSuffix: true })}
+                                </span>
+                              </div>
+                              {request.triage_completed_at && (
+                                <Badge variant="secondary" className="text-xs">
+                                  Triaged {formatDistanceToNow(new Date(request.triage_completed_at), { addSuffix: true })}
+                                </Badge>
+                              )}
+                            </div>
                           </div>
                           {!request.triage_completed_at && (
                             <Button
@@ -714,15 +736,40 @@ const ClientDetail = () => {
                     {disbursements.map((disbursement) => (
                       <div key={disbursement.id} className="border rounded p-3">
                         <div className="flex justify-between items-start">
-                          <div>
+                          <div className="flex-1">
                             <h4 className="font-medium">${disbursement.amount}</h4>
                             <p className="text-sm text-muted-foreground">
                               {disbursement.assistance_type} - {disbursement.payment_method}
+                              {disbursement.recipient_name && ` • To: ${disbursement.recipient_name}`}
                             </p>
+                            {disbursement.notes && (
+                              <p className="text-sm text-muted-foreground mt-1">{disbursement.notes}</p>
+                            )}
+                            
+                            {/* Date and Duration Information */}
+                            <div className="flex items-center gap-4 mt-2 text-xs text-muted-foreground">
+                              <div className="flex items-center gap-1">
+                                <Calendar className="h-3 w-3" />
+                                <span>
+                                  {format(new Date(disbursement.disbursement_date), 'MMM dd, yyyy')}
+                                </span>
+                              </div>
+                              <div className="flex items-center gap-1">
+                                <Activity className="h-3 w-3" />
+                                <span>
+                                  {formatDistanceToNow(new Date(disbursement.disbursement_date), { addSuffix: true })}
+                                </span>
+                              </div>
+                              <Badge variant="outline" className="text-xs">
+                                {disbursement.payment_method}
+                              </Badge>
+                              {disbursement.check_number && (
+                                <Badge variant="secondary" className="text-xs">
+                                  Check #{disbursement.check_number}
+                                </Badge>
+                              )}
+                            </div>
                           </div>
-                          <span className="text-sm text-muted-foreground">
-                            {formatDistanceToNow(new Date(disbursement.disbursement_date))} ago
-                          </span>
                         </div>
                       </div>
                     ))}
