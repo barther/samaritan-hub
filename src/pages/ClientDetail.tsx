@@ -627,9 +627,30 @@ const ClientDetail = () => {
                     {interactions.map((interaction) => (
                       <div key={interaction.id} className="border rounded p-3">
                         <div className="flex justify-between items-start">
-                          <div>
+                          <div className="flex-1">
                             <h4 className="font-medium">{interaction.summary}</h4>
                             <p className="text-sm text-muted-foreground">{interaction.details}</p>
+                            
+                            {/* Date and Duration Information */}
+                            <div className="flex items-center gap-4 mt-2 text-xs text-muted-foreground">
+                              <div className="flex items-center gap-1">
+                                <Calendar className="h-3 w-3" />
+                                <span>
+                                  {format(new Date(interaction.occurred_at), 'MMM dd, yyyy')}
+                                </span>
+                              </div>
+                              <div className="flex items-center gap-1">
+                                <Activity className="h-3 w-3" />
+                                <span>
+                                  {formatDistanceToNow(new Date(interaction.occurred_at), { addSuffix: true })}
+                                </span>
+                              </div>
+                              {interaction.channel && (
+                                <Badge variant="outline" className="text-xs">
+                                  {interaction.channel}
+                                </Badge>
+                              )}
+                            </div>
                           </div>
                           <Badge variant="outline">{interaction.status}</Badge>
                         </div>
