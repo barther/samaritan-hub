@@ -790,7 +790,15 @@ const PortalDashboard = () => {
                 <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
                 <span className="ml-2 text-muted-foreground">Loading interactions...</span>
               </div> : <div className="space-y-3 sm:space-y-4">
-                {interactions.map(interaction => <div key={interaction.id} className="border border-border rounded-lg p-3 sm:p-4 hover:bg-muted/50 transition-colors">
+                {interactions.map(interaction => <div 
+                  key={interaction.id} 
+                  className="border border-border rounded-lg p-3 sm:p-4 hover:bg-muted/50 transition-colors cursor-pointer"
+                  onClick={() => {
+                    if (interaction.client_id || interaction.hasIndividual) {
+                      handleViewDetails(interaction);
+                    }
+                  }}
+                >
                     <div className="flex flex-col sm:flex-row items-start justify-between gap-3">
                       <div className="flex-1 min-w-0">
                          <div className="flex items-center gap-2 mb-2 flex-wrap">
@@ -833,18 +841,16 @@ const PortalDashboard = () => {
                        </p>
                       </div>
                       
-                      <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
-                        {interaction.client_id || interaction.hasIndividual ? <Button variant="outline" size="sm" onClick={() => handleViewDetails(interaction)} className="text-xs sm:text-sm">
-                            View Client
-                          </Button> : <Button variant="default" size="sm" onClick={() => handleAddNewClient(interaction)} className="text-xs sm:text-sm">
+                      {/* Only show button for unlinked interactions */}
+                      {!interaction.client_id && !interaction.hasIndividual && (
+                        <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto" onClick={(e) => e.stopPropagation()}>
+                          <Button variant="default" size="sm" onClick={() => handleAddNewClient(interaction)} className="text-xs sm:text-sm">
                             Add New Client
-                          </Button>}
-                        <Button variant="ghost" size="sm" onClick={() => handleViewDetails(interaction)} className="text-xs sm:text-sm">
-                          View Details
-                        </Button>
-                      </div>
-                  </div>
-                  </div>)}
+                          </Button>
+                         </div>
+                       )}
+                    </div>
+                   </div>)}
                 
                 {interactions.length === 0 && !isLoadingInteractions && <p className="text-center text-muted-foreground py-8">
                     No interactions found. Create your first interaction to get started.
