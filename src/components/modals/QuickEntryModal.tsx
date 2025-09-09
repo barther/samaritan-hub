@@ -232,6 +232,27 @@ export const QuickEntryModal = ({ open, onOpenChange, onSuccess }: QuickEntryMod
     // Don't clear client data when going back to scenarios
   };
 
+  const handleCancel = () => {
+    // Reset all state to start over
+    setSelectedScenario(null);
+    setSelectedClient(null);
+    setClientSearch("");
+    setSearchResults([]);
+    setAssistanceHistory([]);
+    setShowHistory(false);
+    setFormData({
+      firstName: "",
+      lastName: "",
+      phone: "",
+      amount: "",
+      recipientName: "",
+      notes: "",
+      referralAgencies: ""
+    });
+    setIsSubmitting(false);
+    onOpenChange(false);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
@@ -651,7 +672,7 @@ export const QuickEntryModal = ({ open, onOpenChange, onSuccess }: QuickEntryMod
                 <Button
                   type="button"
                   variant="outline"
-                  onClick={() => onOpenChange(false)}
+                  onClick={handleCancel}
                   disabled={isSubmitting}
                 >
                   Cancel
