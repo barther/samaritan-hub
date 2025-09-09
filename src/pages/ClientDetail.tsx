@@ -30,7 +30,7 @@ import {
 import { ClientRiskBadge } from "@/components/ClientRiskBadge";
 import { formatDistanceToNow, format } from "date-fns";
 import { NewInteractionModal } from "@/components/modals/NewInteractionModal";
-import { DisbursementModal } from "@/components/modals/DisbursementModal";
+import { DirectPaymentModal } from "@/components/modals/DirectPaymentModal";
 import { TriageForm } from "@/components/TriageForm";
 import { ClientRelationships } from "@/components/ClientRelationships";
 import { useUserRole } from "@/hooks/useUserRole";
@@ -1000,16 +1000,13 @@ const ClientDetail = () => {
       )}
 
       {showDisbursement && (
-        <DisbursementModal
+        <DirectPaymentModal
           open={showDisbursement}
           onOpenChange={setShowDisbursement}
           onSuccess={() => {
             setShowDisbursement(false);
             fetchClientDetails();
           }}
-          defaultClientId={clientId}
-          linkedAssistanceRequestId={selectedAssistanceRequest?.id}
-          defaultAmount={selectedAssistanceRequest?.approved_amount ?? undefined}
         />
       )}
 
