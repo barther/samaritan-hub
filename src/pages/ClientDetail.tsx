@@ -609,7 +609,7 @@ const ClientDetail = () => {
           <TabsList>
             <TabsTrigger value="interactions">Interactions</TabsTrigger>
             <TabsTrigger value="assistance">Assistance Requests</TabsTrigger>
-            <TabsTrigger value="disbursements">Disbursements</TabsTrigger>
+            <TabsTrigger value="disbursements">Assistance History</TabsTrigger>
             <TabsTrigger value="triage">Triage</TabsTrigger>
             <TabsTrigger value="relationships">Relationships</TabsTrigger>
           </TabsList>
@@ -726,47 +726,114 @@ const ClientDetail = () => {
           <TabsContent value="disbursements">
             <Card>
               <CardHeader>
-                <CardTitle>Disbursements</CardTitle>
+                <CardTitle>Assistance History</CardTitle>
               </CardHeader>
               <CardContent>
-                {disbursements.length === 0 ? (
-                  <p className="text-center text-muted-foreground py-4">No disbursements found</p>
+                {disbursements.length === 0 && assistanceRequests.filter(req => req.approved_amount !== null).length === 0 ? (
+                  <p className="text-center text-muted-foreground py-4">No assistance history found</p>
                 ) : (
-                  <div className="space-y-2">
-                    {disbursements.map((disbursement) => (
-                      <div key={disbursement.id} className="border rounded p-3">
+                  <div className="space-y-3">
+                    {/* Combine and sort disbursements and assistance requests */}
+                    {[
+                      ...disbursements.map(d => ({ ...d, type: 'disbursement', date: new Date(d.disbursement_date) })),
+                      ...assistanceRequests
+                        .filter(req => req.approved_amount !== null)
+                        .map(req => ({ ...req, type: 'request', date: new Date(req.created_at) }))
+                    ]
+                    .sort((a, b) => b.date.getTime() - a.date.getTime())
+                    .map((item) => (
+                      <div 
+                        key={`${item.type}-${item.id}`} 
+                        className={`border rounded-lg p-4 ${
+                          item.type === 'request' && item.approved_amount === 0 
+                            ? 'border-destructive/30 bg-destructive/5' 
+                            : item.type === 'request' 
+                              ? 'border-warning/30 bg-warning/5' 
+                              : 'border-border'
+                        }`}
+                      >
                         <div className="flex justify-between items-start">
                           <div className="flex-1">
-                            <h4 className="font-medium">${disbursement.amount}</h4>
-                            <p className="text-sm text-muted-foreground">
-                              {disbursement.assistance_type} - {disbursement.payment_method}
-                              {disbursement.recipient_name && ` • To: ${disbursement.recipient_name}`}
-                            </p>
-                            {disbursement.notes && (
-                              <p className="text-sm text-muted-foreground mt-1">{disbursement.notes}</p>
+                            {item.type === 'disbursement' ? (
+                              <>
+                                <div className="flex items-center gap-2 mb-1">
+                                  <h4 className="font-medium text-green-700">${item.amount}</h4>
+                                  <Badge variant="default" className="text-xs bg-green-100 text-green-800">
+                                    Disbursed
+                                  </Badge>
+                                </div>
+                                <p className="text-sm text-muted-foreground">
+                                  {item.assistance_type} - {item.payment_method}
+                                  {item.recipient_name && ` • To: ${item.recipient_name}`}
+                                </p>
+                                {item.notes && (
+                                  <p className="text-sm text-muted-foreground mt-1">{item.notes}</p>
+                                )}
+                              </>
+                            ) : (
+                              <>
+                                <div className="flex items-center gap-2 mb-1">
+                                  {item.approved_amount === 0 ? (
+                                    <>
+                                      <h4 className="font-medium text-destructive">Request Denied</h4>
+                                      <Badge variant="destructive" className="text-xs">
+                                        Denied
+                                      </Badge>
+                                    </>
+                                  ) : (
+                                    <>
+                                      <h4 className="font-medium text-warning">
+                                        ${item.requested_amount} → ${item.approved_amount}
+                                      </h4>
+                                      <Badge variant="secondary" className="text-xs bg-yellow-100 text-yellow-800">
+                                        Approved (Pending Disbursement)
+                                      </Badge>
+                                    </>
+                                  )}
+                                </div>
+                                <p className="text-sm text-muted-foreground">
+                                  {item.help_requested}
+                                </p>
+                                {item.circumstances && (
+                                  <div className="text-sm text-muted-foreground mt-2 p-2 bg-muted/30 rounded">
+                                    {item.circumstances.includes('DENIED:') ? (
+                                      <div>
+                                        <p className="font-medium text-destructive mb-1">Reason for denial:</p>
+                                        <p>{item.circumstances.split('DENIED:')[1]?.trim()}</p>
+                                      </div>
+                                    ) : (
+                                      <p>{item.circumstances}</p>
+                                    )}
+                                  </div>
+                                )}
+                              </>
                             )}
                             
                             {/* Date and Duration Information */}
-                            <div className="flex items-center gap-4 mt-2 text-xs text-muted-foreground">
+                            <div className="flex items-center gap-4 mt-3 text-xs text-muted-foreground">
                               <div className="flex items-center gap-1">
                                 <Calendar className="h-3 w-3" />
                                 <span>
-                                  {format(new Date(disbursement.disbursement_date), 'MMM dd, yyyy')}
+                                  {format(item.date, 'MMM dd, yyyy')}
                                 </span>
                               </div>
                               <div className="flex items-center gap-1">
                                 <Activity className="h-3 w-3" />
                                 <span>
-                                  {formatDistanceToNow(new Date(disbursement.disbursement_date), { addSuffix: true })}
+                                  {formatDistanceToNow(item.date, { addSuffix: true })}
                                 </span>
                               </div>
-                              <Badge variant="outline" className="text-xs">
-                                {disbursement.payment_method}
-                              </Badge>
-                              {disbursement.check_number && (
-                                <Badge variant="secondary" className="text-xs">
-                                  Check #{disbursement.check_number}
-                                </Badge>
+                              {item.type === 'disbursement' && (
+                                <>
+                                  <Badge variant="outline" className="text-xs">
+                                    {item.payment_method}
+                                  </Badge>
+                                  {item.check_number && (
+                                    <Badge variant="secondary" className="text-xs">
+                                      Check #{item.check_number}
+                                    </Badge>
+                                  )}
+                                </>
                               )}
                             </div>
                           </div>

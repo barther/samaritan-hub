@@ -30,11 +30,20 @@ interface Client {
 
 interface AssistanceHistory {
   id: string;
-  disbursement_date: string;
   amount: number;
-  assistance_type: string;
+  date: Date;
+  type: 'disbursement' | 'request';
+  // Disbursement properties
+  disbursement_date?: string;
+  assistance_type?: string;
   notes?: string;
-  recipient_name: string;
+  recipient_name?: string;
+  // Request properties
+  requested_amount?: number;
+  approved_amount?: number;
+  help_requested?: string;
+  circumstances?: string;
+  created_at?: string;
 }
 
 interface QuickScenario {
@@ -166,22 +175,49 @@ export const QuickEntryModal = ({ open, onOpenChange, onSuccess }: QuickEntryMod
     return () => clearTimeout(debounceTimer);
   }, [clientSearch]);
 
-  // Load assistance history for selected client
-  const loadAssistanceHistory = async (clientId: string) => {
-    try {
-      const { data, error } = await supabase
-        .from('disbursements')
-        .select('id, disbursement_date, amount, assistance_type, notes, recipient_name')
-        .eq('client_id', clientId)
-        .order('disbursement_date', { ascending: false });
+      // Load assistance history for selected client
+      const loadAssistanceHistory = async (clientId: string) => {
+        try {
+          // Fetch both disbursements and assistance requests with outcomes
+          const [disbursementsRes, requestsRes] = await Promise.all([
+            supabase
+              .from('disbursements')
+              .select('id, disbursement_date, amount, assistance_type, notes, recipient_name')
+              .eq('client_id', clientId)
+              .order('disbursement_date', { ascending: false }),
+            supabase
+              .from('assistance_requests')
+              .select('id, created_at, requested_amount, approved_amount, help_requested, circumstances')
+              .eq('client_id', clientId)
+              .not('approved_amount', 'is', null)
+              .order('created_at', { ascending: false })
+          ]);
 
-      if (error) throw error;
-      setAssistanceHistory(data || []);
-    } catch (error) {
-      console.error('Error loading assistance history:', error);
-      setAssistanceHistory([]);
-    }
-  };
+          if (disbursementsRes.error) throw disbursementsRes.error;
+          if (requestsRes.error) throw requestsRes.error;
+
+          // Combine and sort by date
+          const combinedHistory: AssistanceHistory[] = [
+            ...(disbursementsRes.data || []).map(d => ({
+              ...d,
+              type: 'disbursement' as const,
+              date: new Date(d.disbursement_date),
+              amount: d.amount
+            })),
+            ...(requestsRes.data || []).map(r => ({
+              ...r,
+              type: 'request' as const,
+              date: new Date(r.created_at),
+              amount: r.approved_amount || 0
+            }))
+          ].sort((a, b) => b.date.getTime() - a.date.getTime());
+
+          setAssistanceHistory(combinedHistory);
+        } catch (error) {
+          console.error('Error loading assistance history:', error);
+          setAssistanceHistory([]);
+        }
+      };
 
   const handleClientSelect = async (client: Client) => {
     setSelectedClient(client);
@@ -223,7 +259,7 @@ export const QuickEntryModal = ({ open, onOpenChange, onSuccess }: QuickEntryMod
     oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
     
     return assistanceHistory.some(assistance => 
-      new Date(assistance.disbursement_date) > oneYearAgo && assistance.amount > 0
+      assistance.date > oneYearAgo && assistance.amount > 0
     );
   };
 
@@ -495,16 +531,35 @@ export const QuickEntryModal = ({ open, onOpenChange, onSuccess }: QuickEntryMod
                       <p className="text-xs font-medium text-muted-foreground">Recent Assistance:</p>
                       <div className="space-y-1 max-h-24 overflow-y-auto">
                         {assistanceHistory.slice(0, 5).map((assistance) => (
-                          <div key={assistance.id} className="text-xs bg-background rounded p-2">
+                          <div key={`${assistance.type}-${assistance.id}`} className="text-xs bg-background rounded p-2">
                             <div className="flex justify-between">
-                              <span>${assistance.amount.toFixed(2)}</span>
+                              <span className={
+                                assistance.type === 'request' && assistance.amount === 0
+                                  ? 'text-destructive font-medium'
+                                  : assistance.type === 'request'
+                                    ? 'text-warning'
+                                    : 'text-green-600'
+                              }>
+                                {assistance.type === 'request' && assistance.amount === 0
+                                  ? 'DENIED'
+                                  : `$${assistance.amount.toFixed(2)}`
+                                }
+                              </span>
                               <span className="text-muted-foreground">
-                                {new Date(assistance.disbursement_date).toLocaleDateString()}
+                                {assistance.date.toLocaleDateString()}
                               </span>
                             </div>
                             <div className="text-muted-foreground capitalize">
-                              {assistance.assistance_type.replace('_', ' ')}
+                              {assistance.type === 'disbursement'
+                                ? assistance.assistance_type?.replace('_', ' ')
+                                : assistance.help_requested
+                              }
                               {assistance.notes && ` - ${assistance.notes.substring(0, 30)}...`}
+                              {assistance.type === 'request' && assistance.amount === 0 && (
+                                <span className="text-destructive block text-xs mt-1">
+                                  Request denied
+                                </span>
+                              )}
                             </div>
                           </div>
                         ))}
