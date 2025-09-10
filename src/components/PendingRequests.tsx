@@ -59,9 +59,10 @@ export const PendingRequests = ({ onRequestProcessed }: PendingRequestsProps) =>
           client_id,
           interaction_id,
           clients!inner(first_name, last_name, phone),
-          interactions!inner(contact_name, summary)
+          interactions(contact_name, summary)
         `)
         .is('approved_amount', null)
+        .not('requested_amount', 'is', null)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
