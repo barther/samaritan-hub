@@ -40,6 +40,20 @@ export const TransactionLedger = ({ balance, onRefresh }: TransactionLedgerProps
     loadTransactions();
   }, []);
 
+  // Auto-refresh every 30 seconds
+  useEffect(() => {
+    const interval = setInterval(() => {
+      loadTransactions();
+    }, 30000);
+
+    return () => clearInterval(interval);
+  }, []);
+
+  // Refresh when balance changes (indicates new transactions)
+  useEffect(() => {
+    loadTransactions();
+  }, [balance]);
+
   const loadTransactions = async () => {
     try {
       setIsLoading(true);
@@ -210,14 +224,6 @@ export const TransactionLedger = ({ balance, onRefresh }: TransactionLedgerProps
             >
               <Download className="h-4 w-4" />
               Export CSV
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={loadTransactions}
-              disabled={isLoading}
-            >
-              {isLoading ? 'Refreshing...' : 'Refresh'}
             </Button>
           </div>
         </div>
