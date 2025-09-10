@@ -313,7 +313,7 @@ const PortalDashboard = () => {
           occurred_at,
           client_id,
           clients(first_name, last_name)
-        `).order('occurred_at', {
+        `).order('updated_at', {
         ascending: false
       });
       if (staffError) {
