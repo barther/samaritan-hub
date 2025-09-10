@@ -194,6 +194,7 @@ export const TriageFormStepper = ({
           ...formData,
           requested_amount: formData.requested_amount ? parseFloat(formData.requested_amount) : null,
           triage_completed_at: new Date().toISOString(),
+          approved_amount: null, // Ensure this is null so it shows up in pending queue
         })
         .eq('id', assistanceRequestId);
 
@@ -201,7 +202,7 @@ export const TriageFormStepper = ({
 
       toast({
         title: "Triage Completed",
-        description: "The triage has been completed successfully.",
+        description: "The assistance request is now ready for review and approval.",
       });
       
       onComplete();
