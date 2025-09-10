@@ -313,7 +313,7 @@ export const QuickEntryModal = ({ open, onOpenChange, onSuccess }: QuickEntryMod
             ? `${formData.firstName} ${formData.lastName}`
             : "Quick Entry",
           channel: 'phone',
-          summary: selectedScenario.title + (formData.amount && parseFloat(formData.amount) > 0 ? ` - $${formData.amount}` : " - No disbursement"),
+          summary: selectedScenario.title + (formData.amount && parseFloat(formData.amount) > 0 ? ` - Request: $${formData.amount}` : " - No disbursement"),
           details: formData.notes || null,
           assistance_type: selectedScenario.assistanceType as any,
           requested_amount: formData.amount ? parseFloat(formData.amount) : null,
@@ -333,33 +333,37 @@ export const QuickEntryModal = ({ open, onOpenChange, onSuccess }: QuickEntryMod
         return;
       }
 
-      // Create disbursement if amount > 0
+      // Create assistance request if amount > 0
       if (formData.amount && parseFloat(formData.amount) > 0) {
-        const { error: disbursementError } = await supabase
-          .from('disbursements')
+        const { error: assistanceRequestError } = await supabase
+          .from('assistance_requests')
           .insert([{
-            amount: parseFloat(formData.amount),
-            assistance_type: selectedScenario.assistanceType as any,
-            recipient_name: formData.recipientName || `${formData.firstName} ${formData.lastName}`,
+            requested_amount: parseFloat(formData.amount),
+            help_requested: selectedScenario.title,
+            circumstances: formData.notes || null,
             client_id: clientId,
             interaction_id: interactionData.id,
-            disbursement_date: new Date().toISOString().split('T')[0],
-            payment_method: selectedScenario.paymentMethod,
-            notes: formData.notes || null
+            employment_status: null,
+            housing_status: null,
+            household_size: null,
+            income_range: null,
+            marital_status: null,
+            referral_source: 'quick_entry',
+            consent_given: true
           }]);
 
-        if (disbursementError) {
-          console.error('Error creating disbursement:', disbursementError);
+        if (assistanceRequestError) {
+          console.error('Error creating assistance request:', assistanceRequestError);
           // Don't fail completely, just warn
           toast({
             title: "Interaction recorded",
-            description: "Interaction saved but disbursement recording failed. You may need to add it manually.",
+            description: "Interaction saved but assistance request failed. You may need to add it manually.",
             variant: "default"
           });
         } else {
           toast({
-            title: "Entry completed successfully",
-            description: `${selectedScenario.title} recorded: $${formData.amount} to ${formData.recipientName || `${formData.firstName} ${formData.lastName}`}`
+            title: "Request submitted successfully",
+            description: `${selectedScenario.title} request for $${formData.amount} is pending approval`
           });
         }
       } else {

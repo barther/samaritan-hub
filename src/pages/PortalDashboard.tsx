@@ -13,6 +13,7 @@ import { DirectPaymentModal } from "@/components/modals/DirectPaymentModal";
 import { RecentDisbursements } from "@/components/RecentDisbursements";
 import { UnlinkedInteractions } from "@/components/UnlinkedInteractions";
 import { TransactionLedger } from "@/components/TransactionLedger";
+import { PendingRequests } from "@/components/PendingRequests";
 import { generatePDFReport, downloadPDF } from "@/utils/pdfGenerator";
 import { ImportWizard } from "@/components/ImportWizard";
 const PortalDashboard = () => {
@@ -745,7 +746,7 @@ const PortalDashboard = () => {
           </Card>
         </div>
 
-        {/* Recent Disbursements and Unlinked Interactions Row */}
+        {/* Recent Disbursements, Unlinked Interactions, and Pending Requests Row */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 mb-6">
           {/* Recent Disbursements */}
           {canViewFinancials && (
@@ -760,6 +761,17 @@ const PortalDashboard = () => {
             <UnlinkedInteractions />
           </div>
         </div>
+
+        {/* Pending Requests Section - Full Width */}
+        {(isAdmin || isStaff) && (
+          <div className="mb-6">
+            <PendingRequests onRequestProcessed={() => {
+              loadInteractions(0, true);
+              loadBalance();
+              loadMonthlyTrends();
+            }} />
+          </div>
+        )}
 
         {/* Recent Interactions */}
         <Card className="shadow-card mt-4 sm:mt-6">
