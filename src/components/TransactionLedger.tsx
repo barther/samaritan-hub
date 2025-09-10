@@ -27,6 +27,22 @@ interface TransactionLedgerProps {
   onRefresh?: () => void;
 }
 
+// Helper function to format assistance types for display
+const formatAssistanceType = (type: string | null): string => {
+  if (!type) return 'Assistance';
+  
+  const typeMap: { [key: string]: string } = {
+    'rent': 'Rent/Housing',
+    'utilities': 'Utilities',
+    'food': 'Food Assistance',
+    'medical': 'Medical',
+    'transportation': 'Transportation',
+    'other': 'Other Assistance'
+  };
+  
+  return typeMap[type] || type.charAt(0).toUpperCase() + type.slice(1);
+};
+
 export const TransactionLedger = ({ balance, onRefresh }: TransactionLedgerProps) => {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -97,7 +113,7 @@ export const TransactionLedger = ({ balance, onRefresh }: TransactionLedgerProps
         date: disbursement.disbursement_date,
         type: 'disbursement' as const,
         amount: disbursement.amount,
-        description: disbursement.assistance_type?.replace('_', ' ') || 'Assistance',
+        description: formatAssistanceType(disbursement.assistance_type),
         client_name: disbursement.clients 
           ? `${disbursement.clients.first_name} ${disbursement.clients.last_name}`
           : disbursement.recipient_name,
@@ -132,7 +148,7 @@ export const TransactionLedger = ({ balance, onRefresh }: TransactionLedgerProps
   };
 
   const exportToCSV = () => {
-    const headers = ['Date', 'Type', 'Description', 'Client', 'Amount', 'Balance'];
+    const headers = ['Date', 'Type', 'Category', 'Client', 'Amount', 'Balance'];
     const csvData = transactions.map(t => [
       format(new Date(t.date), 'MM/dd/yyyy'),
       t.type === 'donation' ? 'Donation' : 'Disbursement',
@@ -277,7 +293,7 @@ export const TransactionLedger = ({ balance, onRefresh }: TransactionLedgerProps
                             {transaction.type === 'donation' ? 'Donation' : 'Disbursement'}
                           </Badge>
                         </div>
-                        <p className="text-sm text-muted-foreground capitalize">
+                        <p className="text-sm text-muted-foreground">
                           {transaction.description}
                           {transaction.client_name && ` - ${transaction.client_name}`}
                         </p>
