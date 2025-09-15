@@ -1,5 +1,8 @@
 # Welcome to your Lovable project
 
+## Security Notice
+🔒 **Enhanced Client Data Protection Active**: All client data access is now logged and monitored. See [SECURITY_ENHANCEMENTS.md](./SECURITY_ENHANCEMENTS.md) for details.
+
 ## Project info
 
 **URL**: https://lovable.dev/projects/5c2c5d0a-3ca3-46cb-9dc3-634b2e2303e2

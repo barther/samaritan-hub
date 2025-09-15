@@ -1158,6 +1158,58 @@ export type Database = {
         Args: { p_month: number; p_year: number }
         Returns: undefined
       }
+      get_client_access_logs: {
+        Args: { p_client_id?: string; p_days?: number }
+        Returns: {
+          access_time: string
+          access_type: string
+          client_id: string
+          ip_address: string
+          user_agent: string
+          user_email: string
+        }[]
+      }
+      get_client_secure: {
+        Args: { p_client_id: string }
+        Returns: {
+          address: string
+          assistance_count: number
+          city: string
+          county: string
+          created_at: string
+          email: string
+          first_name: string
+          flagged_for_review: boolean
+          id: string
+          last_assistance_date: string
+          last_name: string
+          notes: string
+          phone: string
+          preferred_name: string
+          review_reason: string
+          risk_level: string
+          state: string
+          total_assistance_received: number
+          updated_at: string
+          zip_code: string
+        }[]
+      }
+      get_client_summary: {
+        Args: { p_client_id: string }
+        Returns: {
+          assistance_count: number
+          city: string
+          email: string
+          first_name: string
+          flagged_for_review: boolean
+          id: string
+          last_assistance_date: string
+          last_name: string
+          phone: string
+          preferred_name: string
+          risk_level: string
+        }[]
+      }
       get_related_clients: {
         Args: { p_client_id: string }
         Returns: {
@@ -1178,6 +1230,10 @@ export type Database = {
           _user_id: string
         }
         Returns: boolean
+      }
+      log_client_access: {
+        Args: { p_access_type?: string; p_client_id: string }
+        Returns: undefined
       }
       log_edge_function_usage: {
         Args: { p_action: string; p_details?: Json; p_resource?: string }
