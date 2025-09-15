@@ -65,11 +65,15 @@ const MonthlyStats = () => {
           return hasReferralKeyword && !hasDisbursement;
         }).length;
 
-        const familiesCount = (disbursements?.length || 0) + referralOnlyCount;
+        const rawFamiliesCount = (disbursements?.length || 0) + referralOnlyCount;
+        const peopleContactedCount = interactions?.length || 0;
+        
+        // Ensure families helped never exceeds people contacted (logical constraint)
+        const familiesCount = Math.min(rawFamiliesCount, peopleContactedCount);
 
         setStats({
           familiesHelped: familiesCount,
-          peopleContacted: interactions?.length || 0,
+          peopleContacted: peopleContactedCount,
           monthName,
           loading: false,
         });

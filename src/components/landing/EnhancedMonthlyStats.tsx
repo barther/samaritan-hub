@@ -57,12 +57,21 @@ const EnhancedMonthlyStats = () => {
         // Get the most recent all-time totals from either record
         const allTimeData = currentData || lastData;
 
+        // Apply logical constraints to ensure families never exceed people contacted
+        const rawFamiliesThisMonth = currentData?.families_count || 0;
+        const rawPeopleThisMonth = currentData?.people_count || 0;
+        const familiesThisMonth = Math.min(rawFamiliesThisMonth, rawPeopleThisMonth);
+
+        const rawLastMonthFamilies = lastData?.families_count || 0;
+        const rawLastMonthPeople = lastData?.people_count || 0;
+        const lastMonthFamilies = Math.min(rawLastMonthFamilies, rawLastMonthPeople);
+
         setStats({
-          familiesThisMonth: currentData?.families_count || 0,
-          peopleThisMonth: currentData?.people_count || 0,
+          familiesThisMonth,
+          peopleThisMonth: rawPeopleThisMonth,
           monthLabel: lastData?.month_label || new Date(lastMonthYear, lastMonth - 1).toLocaleString('default', { month: 'long' }),
-          lastMonthFamilies: lastData?.families_count || 0,
-          lastMonthPeople: lastData?.people_count || 0,
+          lastMonthFamilies,
+          lastMonthPeople: rawLastMonthPeople,
           totals: {
             familiesAllTime: allTimeData?.families_all_time || 0,
             peopleAllTime: allTimeData?.people_all_time || 0
